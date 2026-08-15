@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { StockTakeHistoryTable } from "@/components/stock-take-history";
 import { requireUser } from "@/lib/authorization";
 import { formatMoney, kigaliRange, paymentLabel } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
+import { STOCK_TAKE_ACTION } from "@/lib/stock-take";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -26,7 +28,7 @@ export default async function ReportsPage({
   const { fromDay, toDay, start, end } = kigaliRange(filters.from, filters.to);
   const saleWhere = { status: { not: "VOIDED" as const }, createdAt: { gte: start, lt: end } };
 
-  const [sales, payments, productRows, expenses, movements, trackedProducts, settings] = await Promise.all([
+  const [sales, payments, productRows, expenses, movements, trackedProducts, stockTakes, settings] = await Promise.all([
     prisma.sale.findMany({ where: saleWhere, select: { createdAt: true, total: true } }),
     prisma.sale.groupBy({ by: ["paymentMethod"], where: saleWhere, _sum: { total: true }, _count: true }),
     prisma.saleItem.findMany({
@@ -49,6 +51,12 @@ export default async function ReportsPage({
       where: { trackInventory: true, active: true },
       orderBy: { name: "asc" },
       select: { name: true, stockQuantity: true, reorderLevel: true, costPrice: true },
+    }),
+    prisma.auditLog.findMany({
+      where: { action: STOCK_TAKE_ACTION, createdAt: { gte: start, lt: end } },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: { user: { select: { name: true } } },
     }),
     prisma.businessSettings.findUnique({ where: { id: "default" } }),
   ]);
@@ -143,7 +151,7 @@ export default async function ReportsPage({
             {categoryList.length === 0 && empty("No category sales in this period.")}
           </div>
         </Section>
-        <Section title="Inventory — current stock">
+        <Section title="Inventory — tracked stock">
           <div className="max-h-[500px] divide-y overflow-y-auto">
             {trackedProducts.map((product) => (
               <div key={product.name} className="flex justify-between p-4">
@@ -190,6 +198,11 @@ export default async function ReportsPage({
           </div>
         </Section>
       </div>
+      <Section title="Stock-take history">
+        <div className="overflow-x-auto">
+          <StockTakeHistoryTable logs={stockTakes} />
+        </div>
+      </Section>
     </div>
   );
 }

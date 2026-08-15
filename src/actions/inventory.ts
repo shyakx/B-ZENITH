@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
+import { applyStockTake } from "@/lib/stock-take";
 
 export async function adjustInventory(formData: FormData) {
   const user = await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
@@ -46,4 +47,32 @@ export async function adjustInventory(formData: FormData) {
 
   revalidatePath("/inventory");
   revalidatePath("/pos");
+}
+
+export async function recordStockTake(formData: FormData) {
+  const user = await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  const input = z.object({
+    productId: z.string().cuid(),
+    countedQuantity: z.coerce.number().int().min(0).max(1_000_000),
+    reason: z.string().trim().min(3).max(300),
+    confirmNegative: z.coerce.boolean().optional().default(false),
+  }).parse({
+    productId: formData.get("productId"),
+    countedQuantity: formData.get("countedQuantity"),
+    reason: formData.get("reason"),
+    confirmNegative: formData.get("confirmNegative") === "on" || formData.get("confirmNegative") === "true",
+  });
+
+  await applyStockTake({
+    userId: user.id,
+    productId: input.productId,
+    countedQuantity: input.countedQuantity,
+    reason: input.reason,
+    confirmNegative: input.confirmNegative,
+  });
+
+  revalidatePath("/inventory");
+  revalidatePath("/reports");
+  revalidatePath("/pos");
+  revalidatePath("/dashboard");
 }

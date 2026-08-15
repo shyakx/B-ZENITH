@@ -64,9 +64,10 @@ async function main() {
   });
   if (!food?.variants[0] || !drink?.variants[0]) throw new Error("Need a food item and a tracked drink.");
 
+  const originalDrinkStock = drink.stockQuantity;
   if (drink.stockQuantity < 5) {
     await prisma.product.update({ where: { id: drink.id }, data: { stockQuantity: 5 } });
-    results.push(`test fixture: set ${drink.name} opening stock to 5`);
+    results.push(`test fixture: set ${drink.name} stock to 5`);
   }
   const opening = (await prisma.product.findUniqueOrThrow({ where: { id: drink.id } })).stockQuantity;
   const foodOpening = food.stockQuantity;
@@ -168,6 +169,24 @@ async function main() {
     if (!actions.has(action)) throw new Error(`Missing audit action ${action}`);
   }
   results.push("audit records exist for login, sale, purchase, and return");
+
+  const restore = await request("/api/inventory/stock-take", inventory.jar, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: drink.id,
+      countedQuantity: originalDrinkStock,
+      reason: "E2E restore original stock",
+      confirmNegative: true,
+    }),
+  });
+  const restoreBody = (await restore.json()) as { error?: string };
+  if (restore.status !== 200) throw new Error(`Could not restore ${drink.name} stock: ${restore.status} ${restoreBody.error}`);
+  const restored = await prisma.product.findUniqueOrThrow({ where: { id: drink.id } });
+  if (restored.stockQuantity !== originalDrinkStock) {
+    throw new Error(`${drink.name} was not restored to its original quantity.`);
+  }
+  results.push(`${drink.name} restored to original quantity ${originalDrinkStock}`);
 
   console.log(JSON.stringify({ ok: true, sale: stored.receiptNumber, drink: drink.name, food: food.name, results }, null, 2));
 }

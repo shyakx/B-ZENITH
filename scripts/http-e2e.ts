@@ -159,10 +159,100 @@ async function main() {
 
   const inventoryPage = await request("/inventory", inventory.jar);
   if (inventoryPage.status !== 200) throw new Error(`Inventory page failed: ${inventoryPage.status}`);
+  const inventoryHtml = await inventoryPage.text();
+  if (!inventoryHtml.includes("Tracked inventory") || !inventoryHtml.includes("Inventory tracking disabled")) {
+    throw new Error("Inventory page does not distinguish tracked and untracked products.");
+  }
+  if (!inventoryHtml.includes("Physical stock take")) {
+    throw new Error("Inventory page is missing the stock-take workflow.");
+  }
   results.push("inventory can open inventory");
 
-  const product = await prisma.product.findFirst({ where: { active: true }, select: { id: true, stockQuantity: true } });
-  if (!product) throw new Error("No product for purchase.");
+  const waiterStockTake = await request("/api/inventory/stock-take", waiter.jar, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: variant.id,
+      countedQuantity: 1,
+      reason: "Waiter should not stock take",
+    }),
+  });
+  if (waiterStockTake.status !== 403) {
+    throw new Error(`Waiter stock take should be 403, got ${waiterStockTake.status}`);
+  }
+  results.push("waiter cannot record stock take");
+
+  const trackedDrink = await prisma.product.findFirst({
+    where: { active: true, trackInventory: true, category: { name: "Drinks" } },
+  });
+  const untrackedFood = await prisma.product.findFirst({
+    where: { active: true, trackInventory: false },
+  });
+  if (!trackedDrink || !untrackedFood) throw new Error("Need a tracked drink and an untracked product.");
+
+  const untrackedTake = await request("/api/inventory/stock-take", inventory.jar, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: untrackedFood.id,
+      countedQuantity: 1,
+      reason: "Must not track food",
+    }),
+  });
+  if (untrackedTake.status !== 409) {
+    throw new Error(`Untracked stock take should be 409, got ${untrackedTake.status}`);
+  }
+  results.push("untracked product rejected from stock take");
+
+  const originalStock = trackedDrink.stockQuantity;
+  const countedStock = originalStock + 1;
+  const take = await request("/api/inventory/stock-take", inventory.jar, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: trackedDrink.id,
+      countedQuantity: countedStock,
+      reason: "E2E controlled stock take",
+    }),
+  });
+  const takeBody = (await take.json()) as { error?: string; previousQuantity?: number; countedQuantity?: number; adjustment?: number };
+  if (take.status !== 200 || takeBody.adjustment !== 1) {
+    throw new Error(`Stock take failed: ${take.status} ${takeBody.error}`);
+  }
+  const afterTake = await prisma.product.findUniqueOrThrow({ where: { id: trackedDrink.id } });
+  if (afterTake.stockQuantity !== countedStock) throw new Error("Stock take did not update quantity.");
+  const stockTakeAudit = await prisma.auditLog.findFirst({
+    where: { action: "STOCK_TAKE", entityId: trackedDrink.id },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!stockTakeAudit) throw new Error("Stock take did not write an audit record.");
+  results.push("stock take recorded with audit");
+
+  const restore = await request("/api/inventory/stock-take", inventory.jar, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: trackedDrink.id,
+      countedQuantity: originalStock,
+      reason: "E2E restore original stock",
+      confirmNegative: true,
+    }),
+  });
+  const restoreBody = (await restore.json()) as { error?: string; adjustment?: number };
+  if (restore.status !== 200 || restoreBody.adjustment !== -1) {
+    throw new Error(`Stock restore failed: ${restore.status} ${restoreBody.error}`);
+  }
+  const restored = await prisma.product.findUniqueOrThrow({ where: { id: trackedDrink.id } });
+  if (restored.stockQuantity !== originalStock) {
+    throw new Error("Controlled stock-take test did not restore original quantity.");
+  }
+  results.push("stock take restored original quantity");
+
+  const product = await prisma.product.findFirst({
+    where: { active: true, trackInventory: true },
+    select: { id: true, stockQuantity: true },
+  });
+  if (!product) throw new Error("No tracked product for purchase.");
   const purchase = await request("/api/purchases", inventory.jar, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -176,6 +266,19 @@ async function main() {
   if (purchase.status !== 201 || !purchaseBody.id) throw new Error(`Purchase failed: ${purchase.status} ${purchaseBody.error}`);
   const afterStock = await prisma.product.findUniqueOrThrow({ where: { id: product.id }, select: { stockQuantity: true } });
   if (afterStock.stockQuantity !== product.stockQuantity + 2) throw new Error("Purchase did not increase stock.");
+  const restorePurchase = await request("/api/inventory/stock-take", inventory.jar, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: product.id,
+      countedQuantity: product.stockQuantity,
+      reason: "E2E restore purchase fixture",
+      confirmNegative: true,
+    }),
+  });
+  if (restorePurchase.status !== 200) {
+    throw new Error(`Could not restore purchase fixture stock: ${restorePurchase.status}`);
+  }
   results.push("purchase received and stock increased");
 
   const badJar: CookieJar = [];

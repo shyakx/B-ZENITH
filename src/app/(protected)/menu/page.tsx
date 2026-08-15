@@ -75,7 +75,11 @@ export default async function MenuPage({
                 ) : (
                   <p className="text-xl font-black text-[#947313]">{product.sellingPrice.toFixed(0)} RWF</p>
                 )}
-                <p className="text-sm text-stone-500">{product.stockQuantity} {product.unit.toLowerCase()}</p>
+                <p className="text-sm text-stone-500">
+                  {product.trackInventory
+                    ? `${product.stockQuantity} ${product.unit.toLowerCase()}`
+                    : "Inventory tracking disabled"}
+                </p>
               </div>
               <Link href={`/menu/${product.id}`} className="grid size-11 place-items-center rounded-md border" aria-label={`Edit ${product.name}`}><Pencil size={17} /></Link>
             </div>

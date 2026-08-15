@@ -2,7 +2,7 @@ import { compare } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { z } from "zod";
-import { isLocalDeployment, isWeakNextAuthSecret } from "@/lib/env";
+import { isWeakNextAuthSecret } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 
 const credentialsSchema = z.object({
@@ -14,6 +14,7 @@ const SESSION_MAX_AGE = 8 * 60 * 60;
 const USER_RECHECK_MS = 60_000;
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt", maxAge: SESSION_MAX_AGE },
   pages: { signIn: "/login" },
   providers: [
@@ -24,7 +25,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(rawCredentials) {
-        if (process.env.NODE_ENV === "production" && isWeakNextAuthSecret() && !isLocalDeployment()) {
+        if (process.env.NODE_ENV === "production" && isWeakNextAuthSecret()) {
           return null;
         }
         const parsed = credentialsSchema.safeParse(rawCredentials);

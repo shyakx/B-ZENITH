@@ -20,9 +20,18 @@ function sku(parts: string[]) {
     .replace(/^-|-$/g, "");
 }
 
+function isLocalDatabase(url = process.env.DATABASE_URL ?? "") {
+  return url.includes("localhost") || url.includes("127.0.0.1");
+}
+
+function shouldSeedDevUsers() {
+  if (process.env.NODE_ENV === "production") return false;
+  if (!isLocalDatabase()) return false;
+  return true;
+}
+
 async function main() {
-  const seedDevUsers =
-    process.env.NODE_ENV !== "production" || process.env.SEED_DEV_USERS === "true";
+  const seedDevUsers = shouldSeedDevUsers();
 
   if (seedDevUsers) {
     const passwordHash = await hash(process.env.SEED_USER_PASSWORD ?? "BZenith@2026", 12);
@@ -34,7 +43,7 @@ async function main() {
       });
     }
   } else {
-    console.log("Skipping development staff accounts. Set SEED_DEV_USERS=true to create them.");
+    console.log("Skipping development staff accounts. Production and remote databases never receive owner@example.com or BZenith@2026.");
   }
 
   const officialCategoryNames = bzenithMenu.map((category) => category.name);
