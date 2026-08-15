@@ -1,0 +1,58 @@
+import { ProductUnit } from "@prisma/client";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { updateProduct } from "@/actions/catalog";
+import { requireUser } from "@/lib/authorization";
+import { prisma } from "@/lib/prisma";
+
+export default async function EditProductPage({
+  params,
+}: {
+  params: Promise<{ productId: string }>;
+}) {
+  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  const { productId } = await params;
+  const [product, categories] = await Promise.all([
+    prisma.product.findUnique({ where: { id: productId }, include: { variants: { orderBy: { sortOrder: "asc" } } } }),
+    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+  ]);
+  if (!product) notFound();
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <div><Link href="/menu" className="text-sm font-bold text-[#947313]">← Back to menu</Link><h1 className="mt-2 text-3xl font-black">Edit {product.name}</h1></div>
+      <form action={updateProduct.bind(null, product.id)} className="grid gap-4 rounded-lg border bg-white p-5 md:grid-cols-2">
+        <label className="text-sm font-bold">Name<input required name="name" defaultValue={product.name} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-bold">SKU<input required name="sku" defaultValue={product.sku} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-bold">Category<select required name="categoryId" defaultValue={product.categoryId} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+        <label className="text-sm font-bold">Unit<select name="unit" defaultValue={product.unit} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">{Object.values(ProductUnit).map((unit) => <option key={unit}>{unit}</option>)}</select></label>
+        <label className="text-sm font-bold">Cost price<input required name="costPrice" type="number" min="0" step="0.01" defaultValue={product.costPrice.toFixed(2)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-bold">Selling price<input required name="sellingPrice" type="number" min="0.01" step="0.01" defaultValue={product.sellingPrice.toFixed(2)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-bold">Stock quantity<input required name="stockQuantity" type="number" min="0" defaultValue={product.stockQuantity} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-bold">Image URL<input name="imageUrl" type="url" defaultValue={product.imageUrl ?? ""} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-bold md:col-span-2">Description<textarea name="description" rows={4} defaultValue={product.description ?? ""} className="mt-1 w-full rounded-md border p-3 font-normal" /></label>
+        <div className="flex gap-5 md:col-span-2">
+          <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="active" defaultChecked={product.active} /> Active</label>
+          <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="trackInventory" defaultChecked={product.trackInventory} /> Track inventory</label>
+        </div>
+        <button className="min-h-12 rounded-md bg-black px-5 font-bold text-[#d4af37] md:col-span-2">Save changes</button>
+      </form>
+      {product.variants.length > 0 && (
+        <section className="rounded-lg border bg-white p-5">
+          <h2 className="text-lg font-black">Selling units</h2>
+          <div className="mt-3 divide-y">
+            {product.variants.map((variant) => (
+              <div key={variant.id} className="flex justify-between py-3">
+                <div>
+                  <b>{variant.name}</b>
+                  <p className="text-xs text-stone-500">{variant.sku}</p>
+                </div>
+                <b className="text-[#947313]">{variant.sellingPrice.toFixed(0)} RWF</b>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
