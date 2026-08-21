@@ -33,7 +33,12 @@ export default async function AuditPage() {
               {logs.map((log) => (
                 <tr key={log.id}>
                   <td className="p-4">{formatDateTime(log.createdAt)}</td>
-                  <td className="p-4">{log.user?.name ?? "System"}</td>
+                  <td className="p-4">
+                    <span className="block font-semibold">{log.actorName ?? log.user?.name ?? "System"}</span>
+                    <span className="text-xs text-stone-500">
+                      {[log.actorRole, log.actorUsername ? `@${log.actorUsername}` : log.user?.email].filter(Boolean).join(" · ")}
+                    </span>
+                  </td>
                   <td className="p-4 font-bold">{log.action}</td>
                   <td className="p-4">{log.entity}{log.entityId ? ` · ${log.entityId.slice(0, 8)}` : ""}</td>
                 </tr>

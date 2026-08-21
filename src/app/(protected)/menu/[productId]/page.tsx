@@ -28,7 +28,19 @@ export default async function EditProductPage({
         <label className="text-sm font-bold">Unit<select name="unit" defaultValue={product.unit} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">{Object.values(ProductUnit).map((unit) => <option key={unit}>{unit}</option>)}</select></label>
         <label className="text-sm font-bold">Cost price<input required name="costPrice" type="number" min="0" step="0.01" defaultValue={product.costPrice.toFixed(2)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
         <label className="text-sm font-bold">Selling price<input required name="sellingPrice" type="number" min="0.01" step="0.01" defaultValue={product.sellingPrice.toFixed(2)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
-        <label className="text-sm font-bold">Stock quantity<input required name="stockQuantity" type="number" min="0" defaultValue={product.stockQuantity} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <div className="text-sm">
+          <p className="font-bold">Stock quantity</p>
+          <p className="mt-1 min-h-11 rounded-md border bg-stone-50 px-3 py-3 font-normal">
+            {product.trackInventory ? `${product.stockQuantity} ${product.unit.toLowerCase()}` : "Not tracked"}
+          </p>
+          {product.trackInventory ? (
+            <Link href="/inventory#stock-take" className="mt-1 inline-block font-bold text-[#947313]">
+              Change stock in Inventory
+            </Link>
+          ) : (
+            <p className="mt-1 text-xs text-stone-500">Menu edits never change stock. Use Inventory for counted quantities.</p>
+          )}
+        </div>
         <label className="text-sm font-bold">Image URL<input name="imageUrl" type="url" defaultValue={product.imageUrl ?? ""} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
         <label className="text-sm font-bold md:col-span-2">Description<textarea name="description" rows={4} defaultValue={product.description ?? ""} className="mt-1 w-full rounded-md border p-3 font-normal" /></label>
         <div className="flex gap-5 md:col-span-2">

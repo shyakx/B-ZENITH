@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/authorization";
+import { catalogProductWriteData, newProductStockQuantity } from "@/lib/catalog-fields";
 import { prisma } from "@/lib/prisma";
 
 const roles = ["OWNER", "ADMIN", "INVENTORY"] as const;
@@ -16,7 +17,6 @@ const productSchema = z.object({
   description: z.string().trim().max(1000).optional(),
   costPrice: z.coerce.number().min(0).max(100_000_000),
   sellingPrice: z.coerce.number().positive().max(100_000_000),
-  stockQuantity: z.coerce.number().int().min(0).max(1_000_000),
   unit: z.nativeEnum(ProductUnit),
   imageUrl: optionalUrl,
   active: z.coerce.boolean().default(false),
@@ -32,7 +32,6 @@ const productInput = (formData: FormData) =>
     description: text(formData, "description") || undefined,
     costPrice: text(formData, "costPrice"),
     sellingPrice: text(formData, "sellingPrice"),
-    stockQuantity: text(formData, "stockQuantity"),
     unit: text(formData, "unit"),
     imageUrl: text(formData, "imageUrl"),
     active: formData.has("active"),
@@ -46,9 +45,10 @@ export async function createProduct(formData: FormData) {
   const seedKey = `${input.categoryId}::${input.name}::${sku}`;
   const product = await prisma.product.create({
     data: {
-      ...input,
+      ...catalogProductWriteData(input),
       sku,
       seedKey,
+      stockQuantity: newProductStockQuantity(),
       variants: {
         create: {
           name: "Portion",
@@ -73,7 +73,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   const input = productInput(formData);
   await prisma.product.update({
     where: { id: productId },
-    data: { ...input, sku: input.sku || undefined },
+    data: catalogProductWriteData({ ...input, sku: input.sku }),
   });
   const defaultVariant = await prisma.productVariant.findFirst({
     where: { productId },

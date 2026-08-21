@@ -52,20 +52,28 @@ enum PurchaseStatus {
 }
 
 model User {
-  id           String              @id @default(cuid())
-  name         String
-  email        String              @unique
-  passwordHash String
-  role         Role
-  active       Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  sales        Sale[]              @relation("CashierSales")
-  movements    InventoryMovement[]
-  purchases    Purchase[]
-  expenses     Expense[]
-  returns      Return[]
-  auditLogs    AuditLog[]
+  id                String              @id @default(cuid())
+  firstName         String
+  lastName          String
+  name              String
+  username          String              @unique
+  email             String              @unique
+  passwordHash      String
+  pinHash           String?
+  pinFailedAttempts Int                 @default(0)
+  pinLockedUntil    DateTime?
+  mustChangePin     Boolean             @default(true)
+  lastLoginAt       DateTime?
+  role              Role
+  active            Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  sales             Sale[]              @relation("CashierSales")
+  movements         InventoryMovement[]
+  purchases         Purchase[]
+  expenses          Expense[]
+  returns           Return[]
+  auditLogs         AuditLog[]
 }
 
 model Category {
@@ -128,9 +136,10 @@ model ProductVariant {
 }
 
 model Sale {
-  id            String        @id @default(cuid())
-  receiptNumber String        @unique
-  cashierId     String
+  id              String        @id @default(cuid())
+  receiptNumber   String        @unique
+  idempotencyKey  String?       @unique
+  cashierId       String
   cashier       User          @relation("CashierSales", fields: [cashierId], references: [id])
   customerName  String?
   subtotal      Decimal       @db.Decimal(12, 2)
@@ -308,16 +317,20 @@ model BusinessSettings {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String?
-  details   Json?
-  ipAddress String?
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  actorUsername String?
+  actorName     String?
+  actorRole     Role?
+  action        String
+  entity        String
+  entityId      String?
+  details       Json?
+  ipAddress     String?
+  createdAt     DateTime @default(now())
 
   @@index([entity, entityId])
   @@index([createdAt])
+  @@index([userId, createdAt])
 }

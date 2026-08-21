@@ -5,8 +5,12 @@ import { routeRoles } from "@/lib/permissions";
 export default withAuth(
   function proxy(request) {
     const pathname = request.nextUrl.pathname;
+    const token = request.nextauth.token;
+    if (token?.mustChangePin && pathname !== "/change-pin") {
+      return NextResponse.redirect(new URL("/change-pin", request.url));
+    }
     const entry = Object.entries(routeRoles).find(([route]) => pathname === route || pathname.startsWith(`${route}/`));
-    const role = request.nextauth.token?.role;
+    const role = token?.role;
     if (entry && (!role || !entry[1].includes(role))) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
@@ -34,6 +38,8 @@ export const config = {
     "/returns/:path*",
     "/reports/:path*",
     "/employees/:path*",
+    "/change-pin/:path*",
+    "/account/:path*",
     "/audit/:path*",
     "/settings/:path*",
   ],

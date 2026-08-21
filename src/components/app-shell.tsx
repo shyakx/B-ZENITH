@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   ClipboardList,
   History,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   PackagePlus,
@@ -35,7 +36,7 @@ const links = [
   { href: "/expenses", label: "Expenses", icon: CircleDollarSign, roles: ["OWNER", "ADMIN"] },
   { href: "/returns", label: "Returns", icon: RotateCcw, roles: ["OWNER", "ADMIN"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["OWNER", "ADMIN"] },
-  { href: "/employees", label: "Employees", icon: Users, roles: ["OWNER"] },
+  { href: "/employees", label: "Users", icon: Users, roles: ["OWNER", "ADMIN"] },
   { href: "/audit", label: "Audit logs", icon: ClipboardList, roles: ["OWNER"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["OWNER", "ADMIN"] },
 ] satisfies Array<{ href: string; label: string; icon: typeof ClipboardList; roles: Role[] }>;
@@ -45,31 +46,38 @@ export function AppShell({
   user,
 }: {
   children: ReactNode;
-  user: { name?: string | null; role: Role };
+  user: { name?: string | null; role: Role; username?: string; hasPin?: boolean };
 }) {
   const pathname = usePathname();
   const availableLinks = links.filter((link) => link.roles.some((role: Role) => role === user.role));
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-950 lg:grid lg:grid-cols-[250px_1fr]">
-      <aside className="border-b border-stone-800 bg-black text-white lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
-        <div className="flex h-16 items-center justify-between gap-3 px-4 lg:h-24 lg:px-5">
-          <Link href="/pos" className="flex min-w-0 items-center gap-2">
-            <BrandLogo size={52} className="rounded-md" />
+      <aside className="flex flex-col border-b border-stone-800 bg-black text-white lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
+        <div className="flex min-h-16 shrink-0 items-center gap-2 px-3 py-2 lg:px-4">
+          <Link href="/pos" className="flex min-w-0 flex-1 items-center gap-2">
+            <BrandLogo size={40} className="size-9 rounded-md lg:size-10" />
             <span className="truncate text-sm font-black tracking-[0.14em] text-[#d4af37] lg:text-base">B-ZENITH</span>
           </Link>
-          <span className="rounded-full border border-[#d4af37] px-2 py-1 text-[10px] font-bold text-[#d4af37]">
+          <span className="shrink-0 rounded-full border border-[#d4af37] px-2 py-1 text-[10px] font-bold text-[#d4af37]">
             {user.role}
           </span>
+          <Link
+            href="/account"
+            className="grid size-10 shrink-0 place-items-center rounded-md text-stone-300 hover:bg-stone-900 lg:hidden"
+            aria-label={user.hasPin ? "Change PIN" : "Set PIN"}
+          >
+            <KeyRound size={18} />
+          </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="grid size-10 place-items-center rounded-md text-stone-300 hover:bg-stone-900 lg:hidden"
+            className="grid size-10 shrink-0 place-items-center rounded-md text-stone-300 hover:bg-stone-900 lg:hidden"
             aria-label="Sign out"
           >
             <LogOut size={18} />
           </button>
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:overflow-visible">
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:min-h-0 lg:flex-1 lg:flex-col lg:gap-1 lg:overflow-y-auto lg:pb-2">
           {availableLinks.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
@@ -80,14 +88,24 @@ export function AppShell({
                   active ? "bg-[#d4af37] text-black" : "text-stone-300 hover:bg-stone-900 hover:text-white"
                 }`}
               >
-                <Icon size={18} />
-                {label}
+                <Icon size={18} className="shrink-0" />
+                <span className="truncate">{label}</span>
               </Link>
             );
           })}
         </nav>
-        <div className="hidden border-t border-stone-800 p-4 lg:absolute lg:inset-x-0 lg:bottom-0 lg:block">
-          <p className="mb-3 truncate text-sm text-stone-400">{user.name}</p>
+        <div className="hidden shrink-0 border-t border-stone-800 p-4 lg:block">
+          <p className="mb-1 truncate text-sm font-semibold text-white">{user.name}</p>
+          <p className="mb-3 truncate text-xs text-stone-400">
+            {user.role}
+            {user.username ? ` · ${user.username}` : ""}
+          </p>
+          <Link
+            href="/account"
+            className="mb-1 flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-semibold text-stone-300 hover:bg-stone-900"
+          >
+            <KeyRound size={18} /> {user.hasPin ? "Change PIN" : "Set PIN"}
+          </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-semibold text-stone-300 hover:bg-stone-900"
@@ -97,7 +115,7 @@ export function AppShell({
           <PoweredBy className="mt-3 text-stone-500" />
         </div>
       </aside>
-      <main className="min-w-0 p-4 sm:p-6 lg:p-8">{children}</main>
+      <main className="min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8">{children}</main>
     </div>
   );
 }

@@ -91,7 +91,7 @@ export default async function SalesPage({
                   <td className="p-4">{sale.status.replaceAll("_", " ")}</td>
                   <td className="p-4 text-right font-bold">{formatMoney(sale.total.toNumber(), currency)}</td>
                   <td className="p-4">
-                    <Link href={`/print/receipt/${sale.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 font-bold">
+                    <Link href={`/print/receipt/${sale.id}?autoprint=1`} className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 font-bold">
                       <Printer size={16} /> Receipt
                     </Link>
                   </td>

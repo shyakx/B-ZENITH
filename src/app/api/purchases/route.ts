@@ -78,7 +78,16 @@ export async function POST(request: Request) {
         });
       }
       await tx.auditLog.create({
-        data: { userId: user.id, action: "CREATE_PURCHASE", entity: "Purchase", entityId: created.id, details: { total: total.toFixed(2) } },
+        data: {
+          userId: user.id,
+          actorUsername: user.username,
+          actorName: user.name ?? "",
+          actorRole: user.role,
+          action: "CREATE_PURCHASE",
+          entity: "Purchase",
+          entityId: created.id,
+          details: { total: total.toFixed(2) },
+        },
       });
       return created;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

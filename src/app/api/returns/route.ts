@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
+import { canReturnQuantity } from "@/lib/reporting";
 import { deductsPhysicalStock } from "@/lib/stock";
 
 const schema = z.object({
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       const itemMap = new Map(sale.items.map((item) => [item.id, item]));
       const lines = parsed.data.items.map((input) => {
         const item = itemMap.get(input.saleItemId);
-        if (!item || input.quantity > item.quantity - item.returnedQuantity) {
+        if (!item || !canReturnQuantity(item.quantity, item.returnedQuantity, input.quantity)) {
           throw new ReturnError("Return quantity is more than originally sold.");
         }
         return { item, quantity: input.quantity, total: item.unitPrice.mul(input.quantity) };
@@ -62,7 +63,18 @@ export async function POST(request: Request) {
         return item.returnedQuantity + added === item.quantity;
       });
       await tx.sale.update({ where: { id: sale.id }, data: { status: allReturned ? "RETURNED" : "PARTIALLY_RETURNED" } });
-      await tx.auditLog.create({ data: { userId: user.id, action: "CREATE_RETURN", entity: "Return", entityId: created.id, details: { saleId: sale.id, total: total.toFixed(2) } } });
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          actorUsername: user.username,
+          actorName: user.name ?? "",
+          actorRole: user.role,
+          action: "CREATE_RETURN",
+          entity: "Return",
+          entityId: created.id,
+          details: { saleId: sale.id, total: total.toFixed(2) },
+        },
+      });
       return created;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     return NextResponse.json({ id: result.id, returnNumber: result.returnNumber }, { status: 201 });

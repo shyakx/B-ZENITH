@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { hash } from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { splitName } from "../src/lib/staff";
 
 const blockedEmails = new Set([
   "owner@example.com",
@@ -29,12 +30,21 @@ async function main() {
     throw new Error("A user already exists. Create additional staff from Employees after signing in as OWNER.");
   }
 
+  const { firstName, lastName } = splitName(name);
+  const username = email.split("@")[0]!;
+  const pin = process.env.OWNER_PIN?.trim();
   const owner = await prisma.user.create({
     data: {
+      firstName,
+      lastName,
       name,
+      username,
       email,
       role: "OWNER",
       passwordHash: await hash(password, 12),
+      ...(pin && pin.length === 4
+        ? { pinHash: await hash(pin, 12), mustChangePin: true }
+        : { mustChangePin: true }),
     },
   });
 

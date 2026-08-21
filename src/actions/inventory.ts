@@ -37,6 +37,9 @@ export async function adjustInventory(formData: FormData) {
     await tx.auditLog.create({
       data: {
         userId: user.id,
+        actorUsername: user.username,
+        actorName: user.name ?? "",
+        actorRole: user.role,
         action: "INVENTORY_ADJUSTMENT",
         entity: "InventoryMovement",
         entityId: movement.id,

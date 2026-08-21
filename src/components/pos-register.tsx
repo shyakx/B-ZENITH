@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Minus, Plus, Printer, Search, ShoppingCart, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { formatMoney } from "@/lib/datetime";
 
 type PosVariant = {
@@ -60,6 +60,9 @@ export function PosRegister({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [completed, setCompleted] = useState<{ id: string; receiptNumber: string; total: string } | null>(null);
+  const checkoutLock = useRef(false);
+  const idempotencyKey = useRef<string | null>(null);
+  const cartKey = useRef("");
 
   const filtered = products.filter((product) => {
     if (category !== "all" && product.categoryId !== category) return false;
@@ -113,44 +116,64 @@ export function PosRegister({
   }
 
   async function checkout() {
+    if (checkoutLock.current) return;
     if (paymentMethod === "CASH" && Number(amountPaid) < total) {
       setError("Cash received must be at least the sale total.");
       return;
     }
+    const fingerprint = cart.map((line) => `${line.variantId}:${line.quantity}`).join("|");
+    if (cartKey.current !== fingerprint) {
+      cartKey.current = fingerprint;
+      idempotencyKey.current = null;
+    }
+    idempotencyKey.current ??= crypto.randomUUID();
+    checkoutLock.current = true;
     setError("");
     setPending(true);
-    const response = await fetch("/api/sales", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: cart.map(({ variantId, quantity }) => ({ variantId, quantity })),
-        paymentMethod,
-        amountPaid: amountPaid || total.toFixed(2),
-      }),
-    });
-    const result = (await response.json()) as {
-      id?: string;
-      receiptNumber?: string;
-      total?: string;
-      error?: string;
-    };
-    setPending(false);
-    if (!response.ok || !result.id) {
-      setError(result.error ?? "Unable to complete sale. Please try again.");
-      return;
+    try {
+      const response = await fetch("/api/sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idempotencyKey: idempotencyKey.current,
+          items: cart.map(({ variantId, quantity }) => ({ variantId, quantity })),
+          paymentMethod,
+          amountPaid: amountPaid || total.toFixed(2),
+        }),
+      });
+      const result = (await response.json()) as {
+        id?: string;
+        receiptNumber?: string;
+        total?: string;
+        error?: string;
+      };
+      if (!response.ok || !result.id) {
+        setError(result.error ?? "Unable to complete sale. Please try again.");
+        return;
+      }
+      idempotencyKey.current = null;
+      cartKey.current = "";
+      setCompleted({
+        id: result.id,
+        receiptNumber: result.receiptNumber ?? "",
+        total: result.total ?? total.toFixed(2),
+      });
+      setPaymentOpen(false);
+      setCartOpen(false);
+      setCart([]);
+      router.refresh();
+    } catch {
+      setError("Network error. If the sale completed, do not charge again — retry to reprint the same receipt.");
+    } finally {
+      checkoutLock.current = false;
+      setPending(false);
     }
-    setCompleted({
-      id: result.id,
-      receiptNumber: result.receiptNumber ?? "",
-      total: result.total ?? total.toFixed(2),
-    });
-    setPaymentOpen(false);
-    setCartOpen(false);
-    setCart([]);
-    router.refresh();
   }
 
   function newSale() {
+    checkoutLock.current = false;
+    idempotencyKey.current = null;
+    cartKey.current = "";
     setCompleted(null);
     setAmountPaid("");
     setPaymentMethod("CASH");
@@ -160,7 +183,7 @@ export function PosRegister({
   function renderCart() {
     return (
     <>
-      <div className="flex items-center gap-3 border-b p-5">
+      <div className="flex flex-wrap items-center gap-3 border-b p-5">
         <ShoppingCart className="text-[#a5821d]" />
         <h1 className="text-xl font-black">Current order</h1>
         <span className="ml-auto rounded-full bg-stone-100 px-3 py-1 text-sm font-bold">{itemCount}</span>
@@ -219,6 +242,7 @@ export function PosRegister({
         </div>
         {error && !paymentOpen && <p className="mt-3 text-sm font-semibold text-red-700">{error}</p>}
         <button
+          type="button"
           onClick={() => {
             setError("");
             setPaymentOpen(true);
@@ -238,7 +262,7 @@ export function PosRegister({
       <section className="min-w-0">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row">
           <label className="relative flex-1">
-            <Search className="absolute left-3 top-3.5 text-stone-400" size={20} />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={20} />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -381,7 +405,8 @@ export function PosRegister({
             )}
             {error && <p className="mt-3 text-sm font-semibold text-red-700">{error}</p>}
             <button
-              onClick={checkout}
+              type="button"
+              onClick={() => void checkout()}
               disabled={pending || (paymentMethod === "CASH" && Number(amountPaid) < total)}
               className="mt-6 min-h-14 w-full rounded-md bg-black text-lg font-black text-[#d4af37] disabled:opacity-40"
             >
@@ -400,7 +425,7 @@ export function PosRegister({
             <p className="mt-5 text-3xl font-black">{formatMoney(Number(completed.total), currency, 0)}</p>
             <div className="mt-7 grid gap-3 sm:grid-cols-2">
               <button
-                onClick={() => window.open(`/print/receipt/${completed.id}`, "_blank", "noopener,noreferrer")}
+                onClick={() => window.open(`/print/receipt/${completed.id}?autoprint=1`, "_blank", "noopener,noreferrer")}
                 className="flex min-h-12 items-center justify-center gap-2 rounded-md border-2 border-black font-bold"
               >
                 <Printer size={19} /> Print receipt

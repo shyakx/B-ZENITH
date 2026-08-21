@@ -1,3 +1,4 @@
+import { publicSiteUrl } from "@/lib/env";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -16,7 +17,7 @@ const siteDescription =
   "B-ZENITH restaurant, café, bar and lounge point of sale. Good food, great drinks, better moments.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(publicSiteUrl()),
   title: {
     default: "B-ZENITH POS",
     template: "%s | B-ZENITH POS",

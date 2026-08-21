@@ -1,8 +1,11 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+const CLIENT_REV = "user-pin-identity-v1";
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaRev?: string;
 };
 
 const connectionString = process.env.DATABASE_URL;
@@ -10,11 +13,7 @@ if (!connectionString) throw new Error("DATABASE_URL is required.");
 
 const adapter = new PrismaPg({ connectionString });
 
-function isCurrentClient(client: PrismaClient) {
-  return "productVariant" in client;
-}
-
-if (globalForPrisma.prisma && !isCurrentClient(globalForPrisma.prisma)) {
+if (globalForPrisma.prisma && globalForPrisma.prismaRev !== CLIENT_REV) {
   void globalForPrisma.prisma.$disconnect();
   globalForPrisma.prisma = undefined;
 }
@@ -26,4 +25,8 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+  globalForPrisma.prismaRev = CLIENT_REV;
+}
+

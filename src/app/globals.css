@@ -26,41 +26,9 @@ textarea {
   touch-action: manipulation;
 }
 
-@page {
-  size: 80mm auto;
-  margin: 0;
-}
-
 @media print {
-  html,
-  body {
-    width: 80mm;
-    min-height: auto;
-    margin: 0;
-    background: #fff !important;
-    color: #000 !important;
-  }
-
-  .print\:hidden {
+  .print\:hidden,
+  .print-hidden {
     display: none !important;
-  }
-
-  .receipt-page,
-  .receipt {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    min-height: auto !important;
-    margin: 0 !important;
-    padding: 3mm !important;
-    box-shadow: none !important;
-    background: #fff !important;
-    color: #000 !important;
-  }
-
-  .receipt-logo {
-    width: 18mm !important;
-    height: 18mm !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
   }
 }

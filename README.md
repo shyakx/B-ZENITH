@@ -22,7 +22,7 @@ Do not commit secrets. Do not use `BZenith@2026` as `NEXTAUTH_SECRET`.
 
 ## Local development
 
-PostgreSQL runs in Docker on host port **5433**, database `bzenith`.
+PostgreSQL runs in Docker on host port **5433**, database `bzenith`. `npm run db:seed` is **local only**. Never run it against production.
 
 ```bash
 npm install
@@ -36,27 +36,13 @@ Open http://localhost:3000
 
 ## Production database
 
-Fresh production Postgres:
+**Never run `npm run db:seed` or `prisma db seed` against production.** Seed overwrites menu selling prices and must not replace live data after go-live.
 
-```bash
-npx prisma migrate deploy
-NODE_ENV=production npx prisma db seed
-npx tsx scripts/create-first-owner.ts
-```
+Production schema changes are **migrations only**. Use the **unpooled** Neon URL after a confirmed backup. See `docs/production-environment.md` and `docs/backup-and-recovery.md`.
 
-`NODE_ENV=production npx prisma db seed` loads the official 40 / 270 / 302 menu and does **not** create `owner@example.com` or password `BZenith@2026`.
+Do **not** recreate products, reset inventory, or load the local seed menu into production. Opening quantities must be entered in **Inventory → Physical stock take**, not by seeding. See `docs/opening-stock.md`.
 
-Create the first OWNER once, with a real staff email (not `@example.com`):
-
-```bash
-# PowerShell
-$env:OWNER_NAME="B-ZENITH Owner"
-$env:OWNER_EMAIL="owner@your-domain"
-$env:OWNER_PASSWORD="your-own-password"
-npx tsx scripts/create-first-owner.ts
-```
-
-Do not re-run seed after go-live. Enter opening stock in Inventory after deploy.
+If you ever need a first OWNER on an empty database, that is a one-time bootstrap (`scripts/create-first-owner.ts`) on a **new** database only. It must not be used to overwrite an existing production staff list.
 
 ## Production build
 
@@ -67,9 +53,10 @@ npm run start
 
 ## Deploy on Vercel
 
-1. Create a production PostgreSQL database.
-2. In Vercel project settings, set `DATABASE_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET`.
-3. From this repo, with production `DATABASE_URL` in the shell: `npx prisma migrate deploy`, then `NODE_ENV=production npx prisma db seed`, then `npx tsx scripts/create-first-owner.ts`.
-4. Deploy: `npx vercel --prod`
+1. Confirm Production env: `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED`, `NEXTAUTH_URL` (`https://…`), `NEXTAUTH_SECRET` (32+ random characters).
+2. Backup Neon (snapshot/PITR plus off-site `pg_dump` via `scripts/backup-postgres.js`).
+3. Apply **pending Prisma migrations only** with the unpooled URL (`npx prisma migrate deploy`). Do **not** seed. Do **not** `db push` or `migrate reset`.
+4. Deploy the committed production-hardening branch.
+5. Smoke-test login and a sale. Enter opening stock through Inventory stock-take.
 
-Do not deploy until those environment variables and the database steps are done.
+Do not deploy until environment variables and the backup/migration steps are done. Existing production data must never be replaced by seed data.

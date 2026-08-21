@@ -29,7 +29,7 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
           <h1 className="mt-2 text-3xl font-black">{sale.receiptNumber}</h1>
           <p className="text-sm text-stone-500">{formatDateTime(sale.createdAt)} · {sale.cashier.name}</p>
         </div>
-        <Link href={`/print/receipt/${sale.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-black px-4 font-bold text-[#d4af37]">
+        <Link href={`/print/receipt/${sale.id}?autoprint=1`} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-black px-4 font-bold text-[#d4af37]">
           <Printer size={16} /> Print receipt
         </Link>
       </div>

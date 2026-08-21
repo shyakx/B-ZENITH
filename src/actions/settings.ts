@@ -36,7 +36,17 @@ export async function updateSettings(formData: FormData) {
       update: { ...input, timezone: "Africa/Kigali", currency: "RWF" },
       create: { id: "default", ...input, timezone: "Africa/Kigali", currency: "RWF" },
     }),
-    prisma.auditLog.create({ data: { userId: user.id, action: "UPDATE_SETTINGS", entity: "BusinessSettings", entityId: "default" } }),
+    prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        actorUsername: user.username,
+        actorName: user.name ?? "",
+        actorRole: user.role,
+        action: "UPDATE_SETTINGS",
+        entity: "BusinessSettings",
+        entityId: "default",
+      },
+    }),
   ]);
   revalidatePath("/settings");
   revalidatePath("/pos");

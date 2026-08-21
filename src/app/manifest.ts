@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "B-ZENITH POS",
     short_name: "B-ZENITH",
     description: "B-ZENITH restaurant, café, bar and lounge point of sale.",
-    start_url: "/login",
+    start_url: "/",
     display: "standalone",
     background_color: "#000000",
     theme_color: "#000000",

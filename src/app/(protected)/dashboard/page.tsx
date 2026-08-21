@@ -3,6 +3,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { requireUser } from "@/lib/authorization";
 import { formatDateTime, formatMoney, paymentLabel, todayKigaliRange } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
+import { summarizeSales } from "@/lib/reporting";
 
 export default async function DashboardPage() {
   await requireUser(["OWNER", "ADMIN"]);
@@ -12,29 +13,34 @@ export default async function DashboardPage() {
     createdAt: { gte: start, lt: end },
   };
 
-  const [summary, expenses, paymentGroups, recent, topItems, lowStock, settings] = await Promise.all([
-    prisma.sale.aggregate({ where: todaySales, _sum: { total: true }, _count: true }),
+  const [sales, expenses, recent, lowStock, settings] = await Promise.all([
+    prisma.sale.findMany({
+      where: todaySales,
+      select: {
+        createdAt: true,
+        paymentMethod: true,
+        subtotal: true,
+        tax: true,
+        discount: true,
+        total: true,
+        items: {
+          select: {
+            productName: true,
+            quantity: true,
+            returnedQuantity: true,
+            lineSubtotal: true,
+          },
+        },
+      },
+    }),
     prisma.expense.aggregate({
       where: { incurredAt: { gte: start, lt: end } },
       _sum: { amount: true },
-    }),
-    prisma.sale.groupBy({
-      by: ["paymentMethod"],
-      where: todaySales,
-      _sum: { total: true },
-      _count: true,
     }),
     prisma.sale.findMany({
       take: 8,
       orderBy: { createdAt: "desc" },
       include: { cashier: { select: { name: true } } },
-    }),
-    prisma.saleItem.groupBy({
-      by: ["productName"],
-      where: { sale: todaySales },
-      _sum: { quantity: true, lineSubtotal: true },
-      orderBy: { _sum: { quantity: "desc" } },
-      take: 5,
     }),
     prisma.product.findMany({
       where: { active: true, trackInventory: true },
@@ -46,23 +52,40 @@ export default async function DashboardPage() {
   ]);
 
   const currency = settings?.currency ?? "RWF";
-  const revenue = summary._sum.total?.toNumber() ?? 0;
-  const count = summary._count;
-  const average = count > 0 ? revenue / count : 0;
-  const payments = new Map(paymentGroups.map((group) => [group.paymentMethod, group._sum.total?.toNumber() ?? 0]));
+  const summary = summarizeSales(
+    sales.map((sale) => ({
+      createdAt: sale.createdAt,
+      paymentMethod: sale.paymentMethod,
+      subtotal: sale.subtotal.toNumber(),
+      tax: sale.tax.toNumber(),
+      discount: sale.discount.toNumber(),
+      total: sale.total.toNumber(),
+      items: sale.items.map((item) => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        returnedQuantity: item.returnedQuantity,
+        lineSubtotal: item.lineSubtotal.toNumber(),
+      })),
+    })),
+  );
+  const topItems = [...summary.products.entries()]
+    .sort((a, b) => b[1].quantity - a[1].quantity || b[1].revenue - a[1].revenue)
+    .slice(0, 5);
   const threshold = settings?.defaultReorderLevel ?? 5;
   const lowStockItems =
     settings?.lowStockEnabled === false
       ? []
       : lowStock.filter((product) => product.stockQuantity <= (product.reorderLevel || threshold)).slice(0, 8);
   const cards = [
-    ["Today's sales", formatMoney(revenue, currency)],
-    ["Transactions", String(count)],
-    ["Average sale", formatMoney(average, currency)],
+    ["Gross sales", formatMoney(summary.grossTotal, currency)],
+    ["Returns", formatMoney(summary.returnedTotal, currency)],
+    ["Net sales", formatMoney(summary.netTotal, currency)],
+    ["Transactions", String(summary.count)],
+    ["Average net sale", formatMoney(summary.averageNet, currency)],
     ["Today's expenses", formatMoney(expenses._sum.amount?.toNumber() ?? 0, currency)],
-    ["Cash", formatMoney(payments.get("CASH") ?? 0, currency)],
-    ["Mobile money", formatMoney(payments.get("MOBILE_MONEY") ?? 0, currency)],
-    ["Card", formatMoney(payments.get("CARD") ?? 0, currency)],
+    ["Cash (net)", formatMoney(summary.payments.get("CASH")?.net ?? 0, currency)],
+    ["Mobile money (net)", formatMoney(summary.payments.get("MOBILE_MONEY")?.net ?? 0, currency)],
+    ["Card (net)", formatMoney(summary.payments.get("CARD")?.net ?? 0, currency)],
   ];
 
   return (
@@ -73,7 +96,9 @@ export default async function DashboardPage() {
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#947313]">B-ZENITH</p>
         </div>
         <h1 className="text-3xl font-black">Today&apos;s business</h1>
-        <p className="mt-1 text-sm text-stone-500">Figures are live from PostgreSQL, Africa/Kigali time.</p>
+        <p className="mt-1 text-sm text-stone-500">
+          Net figures subtract returned items at original prices. Receipt totals are unchanged.
+        </p>
       </div>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(([label, value]) => (
@@ -90,13 +115,13 @@ export default async function DashboardPage() {
             <p className="p-8 text-center text-stone-500">No sales recorded today.</p>
           ) : (
             <div className="divide-y">
-              {topItems.map((item) => (
-                <div key={item.productName} className="flex justify-between gap-3 p-4">
+              {topItems.map(([name, item]) => (
+                <div key={name} className="flex justify-between gap-3 p-4">
                   <div>
-                    <b>{item.productName}</b>
-                    <p className="text-sm text-stone-500">× {item._sum.quantity ?? 0}</p>
+                    <b>{name}</b>
+                    <p className="text-sm text-stone-500">× {item.quantity}</p>
                   </div>
-                  <b>{formatMoney(item._sum.lineSubtotal?.toNumber() ?? 0, currency)}</b>
+                  <b>{formatMoney(item.revenue, currency)}</b>
                 </div>
               ))}
             </div>

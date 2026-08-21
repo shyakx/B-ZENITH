@@ -13,7 +13,7 @@ export const routeRoles: Record<string, Role[]> = {
   "/expenses": ["OWNER", "ADMIN"],
   "/returns": ["OWNER", "ADMIN"],
   "/reports": ["OWNER", "ADMIN"],
-  "/employees": ["OWNER"],
+  "/employees": ["OWNER", "ADMIN"],
   "/audit": ["OWNER"],
   "/settings": ["OWNER", "ADMIN"],
 };

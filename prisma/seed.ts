@@ -4,6 +4,7 @@ import { hash } from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import { TRACKED_CATEGORY_NAMES } from "../src/lib/stock";
 import { bzenithMenu, itemVariants } from "./bzenith-menu";
+import { splitName } from "../src/lib/staff";
 
 const users: Array<{ name: string; email: string; role: Role }> = [
   { name: "B-ZENITH Administrator", email: "admin@example.com", role: "ADMIN" },
@@ -35,11 +36,14 @@ async function main() {
 
   if (seedDevUsers) {
     const passwordHash = await hash(process.env.SEED_USER_PASSWORD ?? "BZenith@2026", 12);
+    const pinHash = await hash(process.env.SEED_USER_PIN ?? "2580", 12);
     for (const user of users) {
+      const { firstName, lastName } = splitName(user.name);
+      const username = user.email.split("@")[0]!;
       await prisma.user.upsert({
         where: { email: user.email },
-        update: { name: user.name, role: user.role, active: true },
-        create: { ...user, passwordHash },
+        update: { name: user.name, firstName, lastName, username, role: user.role, active: true, pinHash, mustChangePin: false },
+        create: { ...user, firstName, lastName, username, passwordHash, pinHash, mustChangePin: false },
       });
     }
   } else {
