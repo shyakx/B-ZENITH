@@ -1,22 +1,22 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { Role } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { writeAudit } from "@/lib/audit";
 import { requireUser } from "@/lib/authorization";
+import {
+  assignableRoles,
+  authorizeEmployeeUpdate,
+  employeeRoleSchema,
+  employeeUpdateWriteData,
+} from "@/lib/employee-update";
 import { pinSchema } from "@/lib/pin";
 import { prisma } from "@/lib/prisma";
 import { displayName, staffEmail, usernameSchema } from "@/lib/staff";
 
 const managers = ["OWNER", "ADMIN"] as const;
-
-function assignableRoles(actorRole: Role): Role[] {
-  if (actorRole === "OWNER") return ["OWNER", "ADMIN", "WAITER", "INVENTORY"];
-  return ["ADMIN", "WAITER", "INVENTORY"];
-}
 
 function formError(error: z.ZodError) {
   return { error: error.issues[0]?.message ?? "Check the form and try again." };
@@ -32,7 +32,7 @@ export async function createEmployee(formData: FormData) {
     firstName: z.string().trim().min(1).max(50),
     lastName: z.string().trim().min(1).max(50),
     username: usernameSchema,
-    role: z.nativeEnum(Role),
+    role: employeeRoleSchema,
     pin: pinSchema,
     active: z.coerce.boolean(),
   }).safeParse({
@@ -84,7 +84,7 @@ export async function updateEmployee(id: string, formData: FormData) {
     firstName: z.string().trim().min(1).max(50),
     lastName: z.string().trim().min(1).max(50),
     username: usernameSchema,
-    role: z.nativeEnum(Role),
+    role: employeeRoleSchema,
     active: z.coerce.boolean(),
     pin: z.string().optional(),
   }).safeParse({
@@ -102,17 +102,20 @@ export async function updateEmployee(id: string, formData: FormData) {
     if (!pin.success) return formError(pin.error);
   }
   const current = await prisma.user.findUniqueOrThrow({ where: { id } });
-  if (!assignableRoles(actor.role).includes(input.role) && input.role !== current.role) {
-    return { error: "You cannot assign that role." };
-  }
-  if (id === actor.id && !input.active) return { error: "You cannot deactivate your own account." };
-  if (actor.role !== "OWNER" && current.role === "OWNER") {
-    return { error: "Only an owner can edit an owner account." };
-  }
-  if (current.role === "OWNER" && current.active && (input.role !== "OWNER" || !input.active)) {
-    const otherOwners = await prisma.user.count({ where: { role: "OWNER", active: true, NOT: { id } } });
-    if (otherOwners === 0) return { error: "Keep at least one active owner. Create another owner first." };
-  }
+  const otherActiveOwnerCount = await prisma.user.count({
+    where: { role: "OWNER", active: true, NOT: { id } },
+  });
+  const allowed = authorizeEmployeeUpdate({
+    actorId: actor.id,
+    actorRole: actor.role,
+    targetId: id,
+    targetRole: current.role,
+    targetActive: current.active,
+    nextRole: input.role,
+    nextActive: input.active,
+    otherActiveOwnerCount,
+  });
+  if (!allowed.ok) return { error: allowed.error };
   const usernameTaken = await prisma.user.findFirst({
     where: { username: input.username, NOT: { id } },
   });
@@ -121,12 +124,7 @@ export async function updateEmployee(id: string, formData: FormData) {
   await prisma.user.update({
     where: { id },
     data: {
-      firstName: input.firstName,
-      lastName: input.lastName,
-      name: displayName(input.firstName, input.lastName),
-      username: input.username,
-      role: input.role,
-      active: input.active,
+      ...employeeUpdateWriteData(input),
       ...(input.pin
         ? {
             pinHash: await hashPin(input.pin),

@@ -79,9 +79,8 @@ export default async function ReceiptPage({
           {sale.payment?.cashReceived && <div className="flex justify-between"><span>Cash</span><span>{money(sale.payment.cashReceived.toNumber(), currency)}</span></div>}
           {sale.payment?.change?.isPositive() && <div className="flex justify-between"><span>Change</span><span>{money(sale.payment.change.toNumber(), currency)}</span></div>}
         </section>
-        <footer className="py-4 text-center">
-          <p className="font-semibold">{settings.receiptFooter}</p>
-          <PoweredBy className="mt-3 text-stone-600" />
+        <footer className="pt-2 pb-1 text-center">
+          <PoweredBy variant="receipt" />
         </footer>
       </article>
     </main>

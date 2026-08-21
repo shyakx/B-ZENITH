@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 type ActionResult = { error?: string } | void;
@@ -8,11 +9,14 @@ export function ActionForm({
   action,
   className,
   children,
+  footer,
 }: {
   action: (formData: FormData) => Promise<ActionResult>;
   className?: string;
   children: ReactNode;
+  footer?: ReactNode;
 }) {
+  const router = useRouter();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -26,13 +30,19 @@ export function ActionForm({
       return;
     }
     setPending(false);
+    router.refresh();
   }
 
   return (
     <form action={submit} className={className}>
+      {error ? (
+        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700 sm:col-span-2">
+          {error}
+        </p>
+      ) : null}
       {children}
-      {error ? <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700 sm:col-span-2">{error}</p> : null}
       {pending ? <p className="sr-only" aria-live="polite">Saving…</p> : null}
+      {footer}
     </form>
   );
 }

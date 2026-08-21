@@ -23,10 +23,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Choose a role first." }, { status: 400, headers: NO_STORE });
   }
 
-  const staff = await prisma.user.findMany({
-    where: { active: true, role: role as Role, pinHash: { not: null } },
-    orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
-    select: { username: true, firstName: true, lastName: true, name: true, role: true },
-  });
-  return NextResponse.json(staff, { headers: NO_STORE });
+  try {
+    const staff = await prisma.user.findMany({
+      where: { active: true, role: role as Role, pinHash: { not: null } },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+      select: { username: true, firstName: true, lastName: true, name: true, role: true },
+    });
+    return NextResponse.json(staff, { headers: NO_STORE });
+  } catch {
+    return NextResponse.json({ error: "Unable to load staff right now." }, { status: 503, headers: NO_STORE });
+  }
 }

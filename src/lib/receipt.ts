@@ -151,9 +151,10 @@ export function buildEscPosReceipt(receipt: ReceiptData) {
   if (receipt.cashReceived) chunks.push(line(columns("Cash", receipt.cashReceived)));
   if (receipt.change) chunks.push(line(columns("Change", receipt.change)));
   chunks.push(dashed(), new Uint8Array([ESC, 0x61, 0x01]));
-  for (const wrapped of wrap(receipt.footer)) chunks.push(concat(encode(wrapped), new Uint8Array([LF])));
   chunks.push(
-    concat(encode("Powered by Cloud Sync Company"), new Uint8Array([LF])),
+    new Uint8Array([ESC, 0x45, 0x01]),
+    concat(encode("Powered by Cloud Sync"), new Uint8Array([LF])),
+    new Uint8Array([ESC, 0x45, 0x00]),
     new Uint8Array([LF, LF, LF, LF]),
     new Uint8Array([GS, 0x56, 0x41, 0x03]),
     new Uint8Array([ESC, 0x69]),

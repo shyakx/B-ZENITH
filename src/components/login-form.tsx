@@ -91,9 +91,19 @@ export function LoginForm() {
     setPin("");
     setError("");
     setStaff(null);
-    const response = await fetch(`/api/staff?role=${next}`);
-    const rows = (await response.json()) as Staff[];
-    setStaff(Array.isArray(rows) ? rows : []);
+    try {
+      const response = await fetch(`/api/staff?role=${next}`);
+      const payload = (await response.json().catch(() => null)) as Staff[] | { error?: string } | null;
+      if (!response.ok || !Array.isArray(payload)) {
+        setError("Unable to load staff right now.");
+        setStaff([]);
+        return;
+      }
+      setStaff(payload);
+    } catch {
+      setError("Unable to load staff right now.");
+      setStaff([]);
+    }
   }
 
   async function submitPin() {
