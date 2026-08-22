@@ -1,6 +1,7 @@
 import { Printer } from "lucide-react";
 import Link from "next/link";
 import { requireUser } from "@/lib/authorization";
+import { tillRoles } from "@/lib/roles";
 import { formatDateTime, formatMoney, kigaliRange, paymentLabel } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 import type { PaymentMethod } from "@prisma/client";
@@ -10,7 +11,7 @@ export default async function SalesPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string; q?: string; payment?: string }>;
 }) {
-  const user = await requireUser(["OWNER", "ADMIN", "WAITER"]);
+  const user = await requireUser(tillRoles);
   const filters = await searchParams;
   const ranged = filters.from || filters.to;
   const range = ranged ? kigaliRange(filters.from, filters.to, 0) : null;

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/authorization";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -17,7 +18,7 @@ const schema = z.object({
 class PurchaseError extends Error {}
 
 export async function POST(request: Request) {
-  const auth = await requireApiUser(["OWNER", "ADMIN", "INVENTORY"]);
+  const auth = await requireApiUser(catalogRoles);
   if (!auth.ok) return auth.response;
   const user = auth.user;
   const parsed = schema.safeParse(await request.json().catch(() => null));

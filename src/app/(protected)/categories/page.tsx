@@ -1,9 +1,10 @@
 import { createCategory, updateCategory } from "@/actions/catalog";
 import { requireUser } from "@/lib/authorization";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function CategoriesPage() {
-  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  await requireUser(catalogRoles);
   const categories = await prisma.category.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { _count: { select: { products: true } } },

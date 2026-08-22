@@ -1,9 +1,10 @@
 import { updateSettings } from "@/actions/settings";
 import { requireUser } from "@/lib/authorization";
+import { userAdminRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function SettingsPage() {
-  await requireUser(["OWNER", "ADMIN"]);
+  await requireUser(userAdminRoles);
   const settings = await prisma.businessSettings.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
   const inputClass = "mt-1 min-h-11 w-full rounded-md border border-stone-300 px-3 font-normal outline-none focus:border-[#b38f20]";
   return (

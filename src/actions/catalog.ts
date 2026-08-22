@@ -4,11 +4,19 @@ import { ProductUnit } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { writeAudit } from "@/lib/audit";
 import { requireUser } from "@/lib/authorization";
-import { catalogProductWriteData, newProductStockQuantity } from "@/lib/catalog-fields";
+import {
+  DELETED_PRODUCT_SKU_PREFIX,
+  authorizeProductDelete,
+  catalogProductWriteData,
+  isDeletedProductSku,
+  newProductStockQuantity,
+} from "@/lib/catalog-fields";
+import { catalogRoles, userAdminRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
-const roles = ["OWNER", "ADMIN", "INVENTORY"] as const;
+const roles = catalogRoles;
 const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.string().url().optional());
 const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -107,6 +115,56 @@ export async function toggleProduct(productId: string, active: boolean) {
   });
   revalidatePath("/menu");
   revalidatePath("/pos");
+}
+
+export async function deleteProduct(productId: string) {
+  const user = await requireUser(userAdminRoles);
+  const allowed = authorizeProductDelete(user.role);
+  if (!allowed.ok) return { error: allowed.error };
+
+  const product = await prisma.product.findUniqueOrThrow({
+    where: { id: productId },
+    include: {
+      _count: {
+        select: { saleItems: true, purchaseItems: true, returnItems: true, movements: true },
+      },
+    },
+  });
+  if (isDeletedProductSku(product.sku)) {
+    return { error: "This menu item is already removed." };
+  }
+
+  const hasHistory = Object.values(product._count).some((count) => count > 0);
+  await writeAudit(user, {
+    action: "DELETE_PRODUCT",
+    entity: "Product",
+    entityId: productId,
+    details: { name: product.name, sku: product.sku, keptHistory: hasHistory },
+  });
+
+  if (hasHistory) {
+    const tombstone = `${DELETED_PRODUCT_SKU_PREFIX}${productId}`;
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        active: false,
+        name: tombstone,
+        sku: tombstone,
+        seedKey: tombstone,
+      },
+    });
+    await prisma.productVariant.updateMany({
+      where: { productId },
+      data: { active: false },
+    });
+  } else {
+    await prisma.product.delete({ where: { id: productId } });
+  }
+
+  revalidatePath("/menu");
+  revalidatePath("/pos");
+  revalidatePath("/inventory");
+  return {};
 }
 
 export async function createCategory(formData: FormData) {

@@ -1,5 +1,6 @@
 import { createSupplier, updateSupplier } from "@/actions/suppliers";
 import { requireUser } from "@/lib/authorization";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 const Fields = ({ supplier }: { supplier?: { name: string; phone: string | null; email: string | null; address: string | null; active: boolean } }) => (
@@ -13,7 +14,7 @@ const Fields = ({ supplier }: { supplier?: { name: string; phone: string | null;
 );
 
 export default async function SuppliersPage() {
-  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  await requireUser(catalogRoles);
   const suppliers = await prisma.supplier.findMany({ orderBy: { name: "asc" } });
   return (
     <div className="space-y-6">

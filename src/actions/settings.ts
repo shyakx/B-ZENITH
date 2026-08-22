@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/authorization";
+import { userAdminRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 const optional = z.preprocess((value) => (value === "" ? undefined : value), z.string().trim().max(200).optional());
 
 export async function updateSettings(formData: FormData) {
-  const user = await requireUser(["OWNER", "ADMIN"]);
+  const user = await requireUser(userAdminRoles);
   const input = z.object({
     businessName: z.string().trim().min(2).max(120),
     phone: optional,

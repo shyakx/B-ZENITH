@@ -2,20 +2,22 @@ import { adjustInventory } from "@/actions/inventory";
 import { StockTakeForm } from "@/components/stock-take-form";
 import { StockTakeHistoryTable } from "@/components/stock-take-history";
 import { requireUser } from "@/lib/authorization";
+import { DELETED_PRODUCT_SKU_PREFIX } from "@/lib/catalog-fields";
 import { formatDateTime, formatMoney } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
+import { catalogRoles } from "@/lib/roles";
 import { STOCK_TAKE_ACTION } from "@/lib/stock-take";
 
 export default async function InventoryPage() {
-  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  await requireUser(catalogRoles);
   const [tracked, untracked, movements, stockTakes, settings] = await Promise.all([
     prisma.product.findMany({
-      where: { trackInventory: true },
+      where: { trackInventory: true, NOT: { sku: { startsWith: DELETED_PRODUCT_SKU_PREFIX } } },
       orderBy: { name: "asc" },
       include: { category: true },
     }),
     prisma.product.findMany({
-      where: { trackInventory: false },
+      where: { trackInventory: false, NOT: { sku: { startsWith: DELETED_PRODUCT_SKU_PREFIX } } },
       orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
       select: { id: true, name: true, active: true, category: { select: { name: true } } },
     }),

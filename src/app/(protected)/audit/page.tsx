@@ -1,9 +1,10 @@
 import { requireUser } from "@/lib/authorization";
 import { formatDateTime } from "@/lib/datetime";
+import { userAdminRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function AuditPage() {
-  await requireUser(["OWNER"]);
+  await requireUser(userAdminRoles);
   const logs = await prisma.auditLog.findMany({
     take: 250,
     orderBy: { createdAt: "desc" },

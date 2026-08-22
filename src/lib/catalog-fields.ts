@@ -1,4 +1,8 @@
-import type { ProductUnit } from "@prisma/client";
+import type { ProductUnit, Role } from "@prisma/client";
+
+export const DELETED_PRODUCT_SKU_PREFIX = "__del__.";
+
+export const PRODUCT_DELETE_DENIED_MESSAGE = "Only an admin can delete menu items.";
 
 export type CatalogProductWrite = {
   name: string;
@@ -31,4 +35,13 @@ export function catalogProductWriteData(input: CatalogProductWrite) {
 
 export function newProductStockQuantity() {
   return 0;
+}
+
+export function isDeletedProductSku(sku: string) {
+  return sku.startsWith(DELETED_PRODUCT_SKU_PREFIX);
+}
+
+export function authorizeProductDelete(actorRole: Role) {
+  if (actorRole === "OWNER" || actorRole === "ADMIN") return { ok: true as const };
+  return { ok: false as const, error: PRODUCT_DELETE_DENIED_MESSAGE };
 }

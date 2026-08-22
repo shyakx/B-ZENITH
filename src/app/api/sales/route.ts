@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/authorization";
+import { tillRoles } from "@/lib/roles";
 import {
   IDEMPOTENCY_KEY_SCHEMA,
   runIdempotentCreate,
@@ -31,7 +32,7 @@ function receiptNumber(sequence: number) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireApiUser(["OWNER", "ADMIN", "WAITER"]);
+  const auth = await requireApiUser(tillRoles);
   if (!auth.ok) return auth.response;
   const user = auth.user;
 

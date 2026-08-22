@@ -5,19 +5,9 @@ import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { homePath } from "@/lib/permissions";
+import { loginRoles, publicStaffName, roleTitle } from "@/lib/roles";
 
 type Staff = { username: string; firstName: string; lastName: string; name: string; role: string };
-
-const roles = [
-  { id: "OWNER", label: "Owner", hint: "Dashboard, staff, and settings" },
-  { id: "ADMIN", label: "Admin", hint: "POS, inventory, and users" },
-  { id: "WAITER", label: "Waiter", hint: "Point of sale" },
-  { id: "INVENTORY", label: "Inventory", hint: "Stock, purchases, and suppliers" },
-] as const;
-
-function roleLabel(role: string) {
-  return roles.find((item) => item.id === role)?.label ?? role;
-}
 
 function PinPad({
   value,
@@ -77,7 +67,7 @@ function PinPad({
 
 export function LoginForm() {
   const router = useRouter();
-  const [role, setRole] = useState<(typeof roles)[number]["id"] | null>(null);
+  const [role, setRole] = useState<(typeof loginRoles)[number]["id"] | null>(null);
   const [staff, setStaff] = useState<Staff[] | null>(null);
   const [selected, setSelected] = useState<Staff | null>(null);
   const [pin, setPin] = useState("");
@@ -85,7 +75,7 @@ export function LoginForm() {
   const [pending, setPending] = useState(false);
   const [emailMode, setEmailMode] = useState(false);
 
-  async function chooseRole(next: (typeof roles)[number]["id"]) {
+  async function chooseRole(next: (typeof loginRoles)[number]["id"]) {
     setRole(next);
     setSelected(null);
     setPin("");
@@ -194,7 +184,7 @@ export function LoginForm() {
   if (!role) {
     return (
       <div className="grid gap-3">
-        {roles.map((item) => (
+        {loginRoles.map((item) => (
           <button
             key={item.id}
             type="button"
@@ -218,12 +208,12 @@ export function LoginForm() {
         <button type="button" onClick={() => setRole(null)} className="text-sm font-bold text-[#947313]">
           ← All roles
         </button>
-        <h2 className="text-lg font-black">{roleLabel(role)}s</h2>
+        <h2 className="text-lg font-black">{role === "ADMIN" ? "Admin" : `${roleTitle(role)}s`}</h2>
         {staff === null ? (
           <p className="text-sm text-stone-500">Loading staff…</p>
         ) : staff.length === 0 ? (
           <p className="rounded-md bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-            No active {roleLabel(role).toLowerCase()} accounts with a PIN. Ask an owner or admin to create a temporary PIN.
+            No active {roleTitle(role).toLowerCase()} accounts with a PIN. Ask an owner or admin to create a temporary PIN.
           </p>
         ) : (
           <div className="grid gap-2">
@@ -239,7 +229,7 @@ export function LoginForm() {
                 className="flex min-h-14 items-center gap-3 rounded-md border px-4 text-left hover:border-black"
               >
                 <UserRound className="text-stone-500" size={22} />
-                <span className="font-bold">{person.name}</span>
+                <span className="font-bold">{publicStaffName(person)}</span>
               </button>
             ))}
           </div>
@@ -259,13 +249,15 @@ export function LoginForm() {
         }}
         className="text-sm font-bold text-[#947313]"
       >
-        ← {roleLabel(role)}s
+        ← {role === "ADMIN" ? "Admin" : `${roleTitle(role)}s`}
       </button>
       <div className="text-center">
-        <p className="text-xl font-black">{selected.name}</p>
-        <p className="text-sm text-stone-500">{roleLabel(selected.role)}</p>
+        <p className="text-xl font-black">{publicStaffName(selected)}</p>
         <p className="mt-4 text-sm font-bold">Enter your PIN</p>
-        <p className="mt-2 font-mono text-3xl tracking-[0.5em]">{"●".repeat(pin.length)}{"○".repeat(4 - pin.length)}</p>
+        <p className="mt-2 font-mono text-3xl tracking-[0.5em]">
+          {"●".repeat(pin.length)}
+          {"○".repeat(4 - pin.length)}
+        </p>
       </div>
       <PinPad value={pin} onChange={setPin} disabled={pending} />
       {error && <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}

@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/authorization";
+import { businessRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 const categories = ["Rent", "Utilities", "Transport", "Supplies", "Maintenance", "Other"] as const;
 
 export async function createExpense(formData: FormData) {
-  const user = await requireUser(["OWNER", "ADMIN"]);
+  const user = await requireUser(businessRoles);
   const input = z.object({
     category: z.enum(categories),
     description: z.string().trim().min(3).max(300),

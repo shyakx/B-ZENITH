@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { StockTakeHistoryTable } from "@/components/stock-take-history";
 import { requireUser } from "@/lib/authorization";
+import { businessRoles } from "@/lib/roles";
 import { formatMoney, kigaliRange, paymentLabel } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 import { summarizeSales, type ReportSale } from "@/lib/reporting";
@@ -58,7 +59,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
-  await requireUser(["OWNER", "ADMIN"]);
+  await requireUser(businessRoles);
   const filters = await searchParams;
   const { fromDay, toDay, start, end } = kigaliRange(filters.from, filters.to);
   const saleWhere = { status: { not: "VOIDED" as const }, createdAt: { gte: start, lt: end } };

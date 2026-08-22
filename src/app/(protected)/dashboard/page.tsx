@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { requireUser } from "@/lib/authorization";
+import { businessRoles } from "@/lib/roles";
 import { formatDateTime, formatMoney, paymentLabel, todayKigaliRange } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 import { summarizeSales } from "@/lib/reporting";
 
 export default async function DashboardPage() {
-  await requireUser(["OWNER", "ADMIN"]);
+  await requireUser(businessRoles);
   const { start, end } = todayKigaliRange();
   const todaySales = {
     status: { not: "VOIDED" as const },

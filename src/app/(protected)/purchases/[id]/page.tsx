@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/authorization";
+import { catalogRoles } from "@/lib/roles";
 import { formatDateTime, formatMoney } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 
 export default async function PurchaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  await requireUser(catalogRoles);
   const { id } = await params;
   const [purchase, settings] = await Promise.all([
     prisma.purchase.findUnique({

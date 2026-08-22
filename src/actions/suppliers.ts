@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/authorization";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
-const roles = ["OWNER", "ADMIN", "INVENTORY"] as const;
+const roles = catalogRoles;
 const optional = z.preprocess((value) => (value === "" ? undefined : value), z.string().trim().max(200).optional());
 const schema = z.object({
   name: z.string().trim().min(2).max(120),

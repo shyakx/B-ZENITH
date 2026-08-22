@@ -2,11 +2,12 @@ import { Printer } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/authorization";
+import { tillRoles } from "@/lib/roles";
 import { formatDateTime, formatMoney, paymentLabel } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 
 export default async function SaleDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireUser(["OWNER", "ADMIN", "WAITER"]);
+  const user = await requireUser(tillRoles);
   const { id } = await params;
   const [sale, settings] = await Promise.all([
     prisma.sale.findFirst({

@@ -2,10 +2,11 @@ import Link from "next/link";
 import { PurchaseForm } from "@/components/purchase-form";
 import { requireUser } from "@/lib/authorization";
 import { formatDateTime, formatMoney } from "@/lib/datetime";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function PurchasesPage() {
-  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  await requireUser(catalogRoles);
   const [suppliers, products, purchases, settings] = await Promise.all([
     prisma.supplier.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.product.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
@@ -21,8 +22,14 @@ export default async function PurchasesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Inventory intake</p>
-        <h1 className="text-3xl font-black">Purchases</h1>
+        <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Buying stock</p>
+        <h1 className="text-3xl font-black">Stock in</h1>
+        <p className="mt-2 text-sm text-stone-500">
+          Record products bought from suppliers. Point of sale is for selling to customers.
+        </p>
+        <Link href="/suppliers" className="mt-2 inline-block text-sm font-bold text-[#947313]">
+          Manage suppliers
+        </Link>
       </div>
       {products.length === 0 ? (
         <p className="rounded-lg border border-dashed bg-white p-10 text-center text-stone-500">Add menu products before recording a purchase.</p>

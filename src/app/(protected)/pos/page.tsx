@@ -1,9 +1,10 @@
 import { PosRegister } from "@/components/pos-register";
 import { requireUser } from "@/lib/authorization";
+import { tillRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function PosPage() {
-  await requireUser(["OWNER", "ADMIN", "WAITER"]);
+  await requireUser(tillRoles);
   const [categories, products, settings] = await Promise.all([
     prisma.category.findMany({
       where: { active: true, products: { some: { active: true } } },

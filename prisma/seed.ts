@@ -10,7 +10,7 @@ const users: Array<{ name: string; email: string; role: Role }> = [
   { name: "B-ZENITH Administrator", email: "admin@example.com", role: "ADMIN" },
   { name: "B-ZENITH Owner", email: "owner@example.com", role: "OWNER" },
   { name: "Development Waiter", email: "waiter@example.com", role: "WAITER" },
-  { name: "Inventory Staff", email: "inventory@example.com", role: "INVENTORY" },
+  { name: "Jean Habimana", email: "inventory@example.com", role: "MANAGER" },
 ];
 
 function sku(parts: string[]) {

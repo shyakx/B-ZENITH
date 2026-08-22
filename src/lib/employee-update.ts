@@ -7,13 +7,17 @@ export const employeeRoleSchema = z.nativeEnum(Role);
 export const LAST_OWNER_MESSAGE =
   "This is the only active owner. Another active owner must exist before this account can be changed to another role.";
 
-export const ADMIN_EDIT_OWNER_MESSAGE = "Only an owner can edit an owner account.";
-
 export const INVALID_ROLE_MESSAGE = "You cannot assign that role.";
 
+export const DELETE_SELF_MESSAGE = "You cannot delete your own account.";
+
+export const OWNER_DELETE_OWNER_MESSAGE = "Only an admin can delete an owner account.";
+
+export const DELETED_USERNAME_PREFIX = "__del__.";
+
 export function assignableRoles(actorRole: Role): Role[] {
-  if (actorRole === "OWNER") return ["OWNER", "ADMIN", "WAITER", "INVENTORY"];
-  return ["ADMIN", "WAITER", "INVENTORY"];
+  if (actorRole === "OWNER" || actorRole === "ADMIN") return ["ADMIN", "OWNER", "MANAGER", "WAITER"];
+  return [];
 }
 
 export function isLastActiveOwner(targetRole: Role, targetActive: boolean, otherActiveOwnerCount: number) {
@@ -34,9 +38,6 @@ export function authorizeEmployeeUpdate(input: {
   nextActive: boolean;
   otherActiveOwnerCount: number;
 }): EmployeeUpdateDecision {
-  if (input.actorRole !== "OWNER" && input.targetRole === "OWNER") {
-    return { ok: false, error: ADMIN_EDIT_OWNER_MESSAGE };
-  }
   if (!assignableRoles(input.actorRole).includes(input.nextRole) && input.nextRole !== input.targetRole) {
     return { ok: false, error: INVALID_ROLE_MESSAGE };
   }
@@ -47,6 +48,29 @@ export function authorizeEmployeeUpdate(input: {
     isLastActiveOwner(input.targetRole, input.targetActive, input.otherActiveOwnerCount) &&
     (input.nextRole !== "OWNER" || !input.nextActive)
   ) {
+    return { ok: false, error: LAST_OWNER_MESSAGE };
+  }
+  return { ok: true };
+}
+
+export function authorizeEmployeeDelete(input: {
+  actorId: string;
+  actorRole: Role;
+  targetId: string;
+  targetRole: Role;
+  targetActive: boolean;
+  otherActiveOwnerCount: number;
+}): EmployeeUpdateDecision {
+  if (input.actorRole !== "OWNER" && input.actorRole !== "ADMIN") {
+    return { ok: false, error: "You cannot delete users." };
+  }
+  if (input.targetId === input.actorId) {
+    return { ok: false, error: DELETE_SELF_MESSAGE };
+  }
+  if (input.actorRole !== "ADMIN" && input.targetRole === "OWNER") {
+    return { ok: false, error: OWNER_DELETE_OWNER_MESSAGE };
+  }
+  if (isLastActiveOwner(input.targetRole, input.targetActive, input.otherActiveOwnerCount)) {
     return { ok: false, error: LAST_OWNER_MESSAGE };
   }
   return { ok: true };

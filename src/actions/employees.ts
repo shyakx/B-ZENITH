@@ -7,16 +7,19 @@ import { z } from "zod";
 import { writeAudit } from "@/lib/audit";
 import { requireUser } from "@/lib/authorization";
 import {
+  DELETED_USERNAME_PREFIX,
   assignableRoles,
+  authorizeEmployeeDelete,
   authorizeEmployeeUpdate,
   employeeRoleSchema,
   employeeUpdateWriteData,
 } from "@/lib/employee-update";
+import { userAdminRoles } from "@/lib/roles";
 import { pinSchema } from "@/lib/pin";
 import { prisma } from "@/lib/prisma";
 import { displayName, staffEmail, usernameSchema } from "@/lib/staff";
 
-const managers = ["OWNER", "ADMIN"] as const;
+const managers = userAdminRoles;
 
 function formError(error: z.ZodError) {
   return { error: error.issues[0]?.message ?? "Check the form and try again." };
@@ -146,6 +149,59 @@ export async function updateEmployee(id: string, formData: FormData) {
       pinReset: Boolean(input.pin),
     },
   });
+  revalidatePath("/employees");
+  return {};
+}
+
+export async function deleteEmployee(id: string) {
+  const actor = await requireUser(managers);
+  const current = await prisma.user.findUniqueOrThrow({
+    where: { id },
+    include: {
+      _count: {
+        select: { sales: true, purchases: true, expenses: true, returns: true, movements: true },
+      },
+    },
+  });
+  const otherActiveOwnerCount = await prisma.user.count({
+    where: { role: "OWNER", active: true, NOT: { id } },
+  });
+  const allowed = authorizeEmployeeDelete({
+    actorId: actor.id,
+    actorRole: actor.role,
+    targetId: id,
+    targetRole: current.role,
+    targetActive: current.active,
+    otherActiveOwnerCount,
+  });
+  if (!allowed.ok) return { error: allowed.error };
+
+  const hasHistory = Object.values(current._count).some((count) => count > 0);
+  await writeAudit(actor, {
+    action: "DELETE_USER",
+    entity: "User",
+    entityId: id,
+    details: { username: current.username, role: current.role, keptHistory: hasHistory },
+  });
+
+  if (hasHistory) {
+    await prisma.user.update({
+      where: { id },
+      data: {
+        active: false,
+        pinHash: null,
+        pinFailedAttempts: 0,
+        pinLockedUntil: null,
+        mustChangePin: false,
+        username: `${DELETED_USERNAME_PREFIX}${id}`,
+        email: `deleted.${id}@staff.bzenith.local`,
+      },
+    });
+  } else {
+    await prisma.auditLog.updateMany({ where: { userId: id }, data: { userId: null } });
+    await prisma.user.delete({ where: { id } });
+  }
+
   revalidatePath("/employees");
   return {};
 }

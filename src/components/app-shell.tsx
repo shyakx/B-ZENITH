@@ -15,7 +15,6 @@ import {
   Settings,
   ShoppingCart,
   Tags,
-  Truck,
   Users,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -24,22 +23,22 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { PoweredBy } from "@/components/powered-by";
+import { businessRoles, catalogRoles, publicStaffName, tillRoles, userAdminRoles } from "@/lib/roles";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["OWNER", "ADMIN"] },
-  { href: "/pos", label: "Point of sale", icon: ShoppingCart, roles: ["OWNER", "ADMIN", "WAITER"] },
-  { href: "/sales", label: "Sales", icon: History, roles: ["OWNER", "ADMIN", "WAITER"] },
-  { href: "/menu", label: "Menu", icon: Tags, roles: ["OWNER", "ADMIN", "INVENTORY"] },
-  { href: "/inventory", label: "Inventory", icon: Boxes, roles: ["OWNER", "ADMIN", "INVENTORY"] },
-  { href: "/purchases", label: "Purchases", icon: PackagePlus, roles: ["OWNER", "ADMIN", "INVENTORY"] },
-  { href: "/suppliers", label: "Suppliers", icon: Truck, roles: ["OWNER", "ADMIN", "INVENTORY"] },
-  { href: "/expenses", label: "Expenses", icon: CircleDollarSign, roles: ["OWNER", "ADMIN"] },
-  { href: "/returns", label: "Returns", icon: RotateCcw, roles: ["OWNER", "ADMIN"] },
-  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["OWNER", "ADMIN"] },
-  { href: "/employees", label: "Users", icon: Users, roles: ["OWNER", "ADMIN"] },
-  { href: "/audit", label: "Audit logs", icon: ClipboardList, roles: ["OWNER"] },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["OWNER", "ADMIN"] },
-] satisfies Array<{ href: string; label: string; icon: typeof ClipboardList; roles: Role[] }>;
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: businessRoles },
+  { href: "/pos", label: "Point of sale", icon: ShoppingCart, roles: tillRoles },
+  { href: "/sales", label: "Sales", icon: History, roles: tillRoles },
+  { href: "/menu", label: "Menu", icon: Tags, roles: catalogRoles },
+  { href: "/inventory", label: "Inventory", icon: Boxes, roles: catalogRoles },
+  { href: "/purchases", label: "Stock in", icon: PackagePlus, roles: catalogRoles },
+  { href: "/expenses", label: "Expenses", icon: CircleDollarSign, roles: businessRoles },
+  { href: "/returns", label: "Returns", icon: RotateCcw, roles: businessRoles },
+  { href: "/reports", label: "Reports", icon: BarChart3, roles: businessRoles },
+  { href: "/employees", label: "Users", icon: Users, roles: userAdminRoles },
+  { href: "/audit", label: "Audit logs", icon: ClipboardList, roles: userAdminRoles },
+  { href: "/settings", label: "Settings", icon: Settings, roles: userAdminRoles },
+] satisfies Array<{ href: string; label: string; icon: typeof ClipboardList; roles: readonly Role[] }>;
 
 export function AppShell({
   children,
@@ -50,6 +49,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const availableLinks = links.filter((link) => link.roles.some((role: Role) => role === user.role));
+  const identity = publicStaffName(user);
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-950 lg:grid lg:grid-cols-[250px_1fr]">
@@ -60,7 +60,7 @@ export function AppShell({
             <span className="truncate text-sm font-black tracking-[0.14em] text-[#d4af37] lg:text-base">B-ZENITH</span>
           </Link>
           <span className="shrink-0 rounded-full border border-[#d4af37] px-2 py-1 text-[10px] font-bold text-[#d4af37]">
-            {user.role}
+            {identity}
           </span>
           <Link
             href="/account"
@@ -95,11 +95,12 @@ export function AppShell({
           })}
         </nav>
         <div className="hidden shrink-0 border-t border-stone-800 p-4 lg:block">
-          <p className="mb-1 truncate text-sm font-semibold text-white">{user.name}</p>
-          <p className="mb-3 truncate text-xs text-stone-400">
-            {user.role}
-            {user.username ? ` · ${user.username}` : ""}
-          </p>
+          <p className="mb-1 truncate text-sm font-semibold text-white">{identity}</p>
+          {user.role === "ADMIN" ? (
+            <p className="mb-3 truncate text-xs text-stone-400">System admin</p>
+          ) : (
+            <p className="mb-3 truncate text-xs text-stone-400">{user.username ? `@${user.username}` : ""}</p>
+          )}
           <Link
             href="/account"
             className="mb-1 flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-semibold text-stone-300 hover:bg-stone-900"

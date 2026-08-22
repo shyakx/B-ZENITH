@@ -1,10 +1,11 @@
 import { createExpense } from "@/actions/expenses";
 import { requireUser } from "@/lib/authorization";
+import { businessRoles } from "@/lib/roles";
 import { formatDate, formatMoney } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 
 export default async function ExpensesPage() {
-  await requireUser(["OWNER", "ADMIN"]);
+  await requireUser(businessRoles);
   const expenses = await prisma.expense.findMany({
     take: 250,
     orderBy: { incurredAt: "desc" },

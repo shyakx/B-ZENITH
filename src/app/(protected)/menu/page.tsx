@@ -2,7 +2,10 @@ import { ProductUnit } from "@prisma/client";
 import { Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { createProduct, toggleProduct } from "@/actions/catalog";
+import { DeleteProductButton } from "@/components/delete-product-button";
 import { requireUser } from "@/lib/authorization";
+import { DELETED_PRODUCT_SKU_PREFIX, authorizeProductDelete } from "@/lib/catalog-fields";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function MenuPage({
@@ -10,11 +13,13 @@ export default async function MenuPage({
 }: {
   searchParams: Promise<{ q?: string; category?: string }>;
 }) {
-  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  const user = await requireUser(catalogRoles);
+  const canDelete = authorizeProductDelete(user.role).ok;
   const filters = await searchParams;
   const [products, categories] = await Promise.all([
     prisma.product.findMany({
       where: {
+        NOT: { sku: { startsWith: DELETED_PRODUCT_SKU_PREFIX } },
         ...(filters.q ? { name: { contains: filters.q, mode: "insensitive" } } : {}),
         ...(filters.category ? { categoryId: filters.category } : {}),
       },
@@ -86,6 +91,11 @@ export default async function MenuPage({
               <Link href={`/menu/${product.id}`} className="grid size-11 place-items-center rounded-md border" aria-label={`Edit ${product.name}`}><Pencil size={17} /></Link>
             </div>
             <form action={toggleProduct.bind(null, product.id, !product.active)} className="mt-3"><button className="min-h-11 w-full rounded-md border font-bold">{product.active ? "Deactivate" : "Activate"}</button></form>
+            {canDelete ? (
+              <div className="mt-2">
+                <DeleteProductButton productId={product.id} name={product.name} />
+              </div>
+            ) : null}
           </article>
         ))}
         {products.length === 0 && <p className="col-span-full rounded-lg border border-dashed bg-white p-10 text-center text-stone-500">No menu items found. Add products from the verified B-ZENITH menu.</p>}

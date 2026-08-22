@@ -4,11 +4,12 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/authorization";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { applyStockTake } from "@/lib/stock-take";
 
 export async function adjustInventory(formData: FormData) {
-  const user = await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  const user = await requireUser(catalogRoles);
   const input = z.object({
     productId: z.string().cuid(),
     quantity: z.coerce.number().int().min(-1_000_000).max(1_000_000).refine((value) => value !== 0),
@@ -53,7 +54,7 @@ export async function adjustInventory(formData: FormData) {
 }
 
 export async function recordStockTake(formData: FormData) {
-  const user = await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  const user = await requireUser(catalogRoles);
   const input = z.object({
     productId: z.string().cuid(),
     countedQuantity: z.coerce.number().int().min(0).max(1_000_000),

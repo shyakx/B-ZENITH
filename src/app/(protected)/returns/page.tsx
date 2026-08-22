@@ -1,6 +1,7 @@
 import { ReturnForm } from "@/components/return-form";
 import { requireUser } from "@/lib/authorization";
 import { formatDateTime, formatMoney } from "@/lib/datetime";
+import { businessRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function ReturnsPage({
@@ -8,7 +9,7 @@ export default async function ReturnsPage({
 }: {
   searchParams: Promise<{ receipt?: string }>;
 }) {
-  await requireUser(["OWNER", "ADMIN"]);
+  await requireUser(businessRoles);
   const { receipt } = await searchParams;
   const sale = receipt
     ? await prisma.sale.findUnique({

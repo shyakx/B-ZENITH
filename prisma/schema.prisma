@@ -7,10 +7,10 @@ datasource db {
 }
 
 enum Role {
-  OWNER
   ADMIN
+  OWNER
+  MANAGER
   WAITER
-  INVENTORY
 }
 
 enum PaymentMethod {

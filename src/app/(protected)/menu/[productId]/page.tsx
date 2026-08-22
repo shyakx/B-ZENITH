@@ -2,7 +2,10 @@ import { ProductUnit } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateProduct } from "@/actions/catalog";
+import { DeleteProductButton } from "@/components/delete-product-button";
 import { requireUser } from "@/lib/authorization";
+import { authorizeProductDelete, isDeletedProductSku } from "@/lib/catalog-fields";
+import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export default async function EditProductPage({
@@ -10,13 +13,14 @@ export default async function EditProductPage({
 }: {
   params: Promise<{ productId: string }>;
 }) {
-  await requireUser(["OWNER", "ADMIN", "INVENTORY"]);
+  const user = await requireUser(catalogRoles);
   const { productId } = await params;
   const [product, categories] = await Promise.all([
     prisma.product.findUnique({ where: { id: productId }, include: { variants: { orderBy: { sortOrder: "asc" } } } }),
     prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
   ]);
-  if (!product) notFound();
+  if (!product || isDeletedProductSku(product.sku)) notFound();
+  const canDelete = authorizeProductDelete(user.role).ok;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -49,6 +53,11 @@ export default async function EditProductPage({
         </div>
         <button className="min-h-12 rounded-md bg-black px-5 font-bold text-[#d4af37] md:col-span-2">Save changes</button>
       </form>
+      {canDelete ? (
+        <div className="rounded-lg border bg-white p-5">
+          <DeleteProductButton productId={product.id} name={product.name} />
+        </div>
+      ) : null}
       {product.variants.length > 0 && (
         <section className="rounded-lg border bg-white p-5">
           <h2 className="text-lg font-black">Selling units</h2>

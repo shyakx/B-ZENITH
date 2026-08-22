@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { catalogProductWriteData, newProductStockQuantity } from "./catalog-fields";
+import { catalogProductWriteData, newProductStockQuantity, authorizeProductDelete, isDeletedProductSku, PRODUCT_DELETE_DENIED_MESSAGE } from "./catalog-fields";
 
 describe("catalog writes", () => {
   it("never includes stockQuantity when updating menu fields", () => {
@@ -33,5 +33,15 @@ describe("catalog writes", () => {
       ...({ stockQuantity: 99 } as object),
     } as never);
     assert.equal("stockQuantity" in data, false);
+  });
+
+  it("allows OWNER and ADMIN to delete products, but not MANAGER", () => {
+    assert.equal(authorizeProductDelete("ADMIN").ok, true);
+    assert.equal(authorizeProductDelete("OWNER").ok, true);
+    const denied = authorizeProductDelete("MANAGER");
+    assert.equal(denied.ok, false);
+    if (!denied.ok) assert.equal(denied.error, PRODUCT_DELETE_DENIED_MESSAGE);
+    assert.equal(isDeletedProductSku("__del__.abc"), true);
+    assert.equal(isDeletedProductSku("BZ-FOOD-BURGER"), false);
   });
 });

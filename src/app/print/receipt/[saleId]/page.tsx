@@ -3,6 +3,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { ReceiptPrintControls } from "@/components/receipt-print-controls";
 import { PoweredBy } from "@/components/powered-by";
 import { requireUser } from "@/lib/authorization";
+import { tillRoles } from "@/lib/roles";
 import { formatDateTime, formatMoney, paymentLabel, VENUE_LINE } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 
@@ -17,7 +18,7 @@ export default async function ReceiptPage({
   params: Promise<{ saleId: string }>;
   searchParams: Promise<{ autoprint?: string }>;
 }) {
-  const user = await requireUser(["OWNER", "ADMIN", "WAITER"]);
+  const user = await requireUser(tillRoles);
   const { saleId } = await params;
   const { autoprint } = await searchParams;
   const sale = await prisma.sale.findFirst({
