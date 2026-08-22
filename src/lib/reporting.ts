@@ -118,3 +118,45 @@ export function summarizeSales(sales: ReportSale[]) {
     categories,
   };
 }
+
+export function applyBilliardTotals(
+  summary: ReturnType<typeof summarizeSales>,
+  rows: Array<{ businessDay: string; amount: number }>,
+) {
+  const next = {
+    ...summary,
+    daily: new Map(summary.daily),
+    products: new Map(summary.products),
+    categories: new Map(summary.categories),
+    payments: new Map(summary.payments),
+  };
+
+  for (const row of rows) {
+    const amount = money(row.amount);
+    next.grossTotal = money(next.grossTotal + amount);
+    next.netTotal = money(next.netTotal + amount);
+    next.count += 1;
+
+    const dayRow = next.daily.get(row.businessDay) ?? { count: 0, gross: 0, net: 0, returned: 0 };
+    next.daily.set(row.businessDay, {
+      count: dayRow.count + 1,
+      gross: money(dayRow.gross + amount),
+      net: money(dayRow.net + amount),
+      returned: dayRow.returned,
+    });
+
+    const product = { ...(next.products.get("Billiard") ?? { quantity: 0, revenue: 0 }) };
+    product.quantity += 1;
+    product.revenue = money(product.revenue + amount);
+    next.products.set("Billiard", product);
+
+    const category = { ...(next.categories.get("Billiard") ?? { quantity: 0, revenue: 0 }) };
+    category.quantity += 1;
+    category.revenue = money(category.revenue + amount);
+    next.categories.set("Billiard", category);
+  }
+
+  const saleCount = next.count;
+  next.averageNet = saleCount > 0 ? money(next.netTotal / saleCount) : 0;
+  return next;
+}

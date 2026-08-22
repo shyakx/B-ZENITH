@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { catalogProductWriteData, newProductStockQuantity, authorizeProductDelete, isDeletedProductSku, PRODUCT_DELETE_DENIED_MESSAGE } from "./catalog-fields";
+import { catalogProductWriteData, newProductStockQuantity, authorizeProductDelete, authorizePriceAdjust, canAdjustPrices, isDeletedProductSku, PRODUCT_DELETE_DENIED_MESSAGE, PRICE_ADJUST_DENIED_MESSAGE } from "./catalog-fields";
 
 describe("catalog writes", () => {
   it("never includes stockQuantity when updating menu fields", () => {
@@ -19,6 +19,20 @@ describe("catalog writes", () => {
     assert.equal(data.name, "House Burger");
     assert.equal(data.sellingPrice, 8000);
     assert.equal(newProductStockQuantity(), 0);
+    const withoutPrices = catalogProductWriteData(
+      {
+        name: "House Burger",
+        categoryId: "cat1",
+        costPrice: 1,
+        sellingPrice: 1,
+        unit: "PLATE",
+        active: true,
+        trackInventory: false,
+      },
+      { includePrices: false },
+    );
+    assert.equal("sellingPrice" in withoutPrices, false);
+    assert.equal("costPrice" in withoutPrices, false);
   });
 
   it("ignores a spoofed stock field on the input object", () => {
@@ -33,6 +47,16 @@ describe("catalog writes", () => {
       ...({ stockQuantity: 99 } as object),
     } as never);
     assert.equal("stockQuantity" in data, false);
+  });
+
+  it("allows only MANAGER to adjust prices", () => {
+    assert.equal(canAdjustPrices("MANAGER"), true);
+    assert.equal(canAdjustPrices("OWNER"), false);
+    assert.equal(canAdjustPrices("ADMIN"), false);
+    assert.equal(canAdjustPrices("WAITER"), false);
+    const denied = authorizePriceAdjust("OWNER");
+    assert.equal(denied.ok, false);
+    if (!denied.ok) assert.equal(denied.error, PRICE_ADJUST_DENIED_MESSAGE);
   });
 
   it("allows OWNER and ADMIN to delete products, but not MANAGER", () => {

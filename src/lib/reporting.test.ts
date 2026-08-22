@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canReturnQuantity, netSaleAmounts, remainingQuantity, summarizeSales } from "./reporting";
+import { applyBilliardTotals, canReturnQuantity, netSaleAmounts, remainingQuantity, summarizeSales } from "./reporting";
 
 function sale(overrides: Partial<Parameters<typeof netSaleAmounts>[0]> & { items?: Parameters<typeof netSaleAmounts>[0]["items"] }) {
   return {
@@ -99,5 +99,27 @@ describe("returns and net reporting", () => {
     assert.equal(summary.netTotal, 10000);
     assert.equal(summary.products.get("Cola")?.quantity, 0);
     assert.equal(summary.products.get("Burger")?.quantity, 1);
+  });
+
+  it("includes billiard day totals in net sales, daily totals, and the Billiard category", () => {
+    const summary = applyBilliardTotals(
+      summarizeSales([
+        {
+          createdAt: new Date("2026-08-21T10:00:00+02:00"),
+          paymentMethod: "CASH",
+          subtotal: 10000,
+          tax: 0,
+          discount: 0,
+          total: 10000,
+          items: [{ productName: "Burger", quantity: 1, returnedQuantity: 0, lineSubtotal: 10000, categoryName: "Food" }],
+        },
+      ]),
+      [{ businessDay: "2026-08-21", amount: 25000 }],
+    );
+    assert.equal(summary.netTotal, 35000);
+    assert.equal(summary.grossTotal, 35000);
+    assert.equal(summary.daily.get("2026-08-21")?.net, 35000);
+    assert.equal(summary.categories.get("Billiard")?.revenue, 25000);
+    assert.equal(summary.products.get("Billiard")?.revenue, 25000);
   });
 });

@@ -11,6 +11,7 @@ const users: Array<{ name: string; email: string; role: Role }> = [
   { name: "B-ZENITH Owner", email: "owner@example.com", role: "OWNER" },
   { name: "Development Waiter", email: "waiter@example.com", role: "WAITER" },
   { name: "Jean Habimana", email: "inventory@example.com", role: "MANAGER" },
+  { name: "Development Billiard", email: "billiard@example.com", role: "BILLIARD" },
 ];
 
 function sku(parts: string[]) {

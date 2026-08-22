@@ -4,12 +4,14 @@ export const userAdminRoles = ["ADMIN", "OWNER"] as const;
 export const businessRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
 export const catalogRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
 export const tillRoles = ["ADMIN", "OWNER", "MANAGER", "WAITER"] as const;
+export const billiardRoles = ["ADMIN", "OWNER", "MANAGER", "WAITER", "BILLIARD"] as const;
 
 export const loginRoles = [
   { id: "ADMIN", label: "Admin", hint: "Users, settings, and full system access" },
   { id: "OWNER", label: "Owner", hint: "Business overview and settings" },
   { id: "MANAGER", label: "Manager", hint: "Day sales, inventory, and operations" },
   { id: "WAITER", label: "Waiter", hint: "Sell at the register" },
+  { id: "BILLIARD", label: "Billiard", hint: "Record today’s billiard sales total" },
 ] as const;
 
 export function isAdminRole(role: Role | string) {
@@ -21,6 +23,7 @@ export function roleTitle(role: Role | string) {
   if (role === "OWNER") return "Owner";
   if (role === "MANAGER") return "Manager";
   if (role === "WAITER") return "Waiter";
+  if (role === "BILLIARD") return "Billiard";
   return role;
 }
 

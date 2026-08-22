@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { updateProduct } from "@/actions/catalog";
 import { DeleteProductButton } from "@/components/delete-product-button";
 import { requireUser } from "@/lib/authorization";
-import { authorizeProductDelete, isDeletedProductSku } from "@/lib/catalog-fields";
+import { authorizeProductDelete, canAdjustPrices, isDeletedProductSku } from "@/lib/catalog-fields";
 import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
@@ -21,6 +21,7 @@ export default async function EditProductPage({
   ]);
   if (!product || isDeletedProductSku(product.sku)) notFound();
   const canDelete = authorizeProductDelete(user.role).ok;
+  const canPrice = canAdjustPrices(user.role);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -30,8 +31,11 @@ export default async function EditProductPage({
         <label className="text-sm font-bold">SKU<input required name="sku" defaultValue={product.sku} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
         <label className="text-sm font-bold">Category<select required name="categoryId" defaultValue={product.categoryId} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
         <label className="text-sm font-bold">Unit<select name="unit" defaultValue={product.unit} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">{Object.values(ProductUnit).map((unit) => <option key={unit}>{unit}</option>)}</select></label>
-        <label className="text-sm font-bold">Cost price<input required name="costPrice" type="number" min="0" step="0.01" defaultValue={product.costPrice.toFixed(2)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
-        <label className="text-sm font-bold">Selling price<input required name="sellingPrice" type="number" min="0.01" step="0.01" defaultValue={product.sellingPrice.toFixed(2)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-bold">Cost price<input required name="costPrice" type="number" min="0" step="0.01" defaultValue={product.costPrice.toFixed(2)} readOnly={!canPrice} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal read-only:bg-stone-50" /></label>
+        <label className="text-sm font-bold">Selling price<input required name="sellingPrice" type="number" min="0.01" step="0.01" defaultValue={product.sellingPrice.toFixed(2)} readOnly={!canPrice} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal read-only:bg-stone-50" /></label>
+        {!canPrice ? (
+          <p className="text-sm text-amber-800 md:col-span-2">Only a manager can change cost or selling prices.</p>
+        ) : null}
         <div className="text-sm">
           <p className="font-bold">Stock quantity</p>
           <p className="mt-1 min-h-11 rounded-md border bg-stone-50 px-3 py-3 font-normal">

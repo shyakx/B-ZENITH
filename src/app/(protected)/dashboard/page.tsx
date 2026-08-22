@@ -1,20 +1,23 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
+import { BilliardSalesForm } from "@/components/billiard-sales-form";
 import { requireUser } from "@/lib/authorization";
 import { businessRoles } from "@/lib/roles";
-import { formatDateTime, formatMoney, paymentLabel, todayKigaliRange } from "@/lib/datetime";
+import { sumBilliardAmounts, billiardReceiptNumber } from "@/lib/billiard";
+import { formatDateTime, formatMoney, kigaliDateString, paymentLabel, todayKigaliRange } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
-import { summarizeSales } from "@/lib/reporting";
+import { applyBilliardTotals, summarizeSales } from "@/lib/reporting";
 
 export default async function DashboardPage() {
-  await requireUser(businessRoles);
+  const user = await requireUser(businessRoles);
   const { start, end } = todayKigaliRange();
+  const today = kigaliDateString();
   const todaySales = {
     status: { not: "VOIDED" as const },
     createdAt: { gte: start, lt: end },
   };
 
-  const [sales, expenses, recent, lowStock, settings] = await Promise.all([
+  const [sales, expenses, billiardRows, recent, recentBilliard, lowStock, settings] = await Promise.all([
     prisma.sale.findMany({
       where: todaySales,
       select: {
@@ -38,10 +41,19 @@ export default async function DashboardPage() {
       where: { incurredAt: { gte: start, lt: end } },
       _sum: { amount: true },
     }),
+    prisma.billiardDaySale.findMany({
+      where: { businessDay: today },
+      select: { amount: true, note: true, operatorId: true },
+    }),
     prisma.sale.findMany({
       take: 8,
       orderBy: { createdAt: "desc" },
       include: { cashier: { select: { name: true } } },
+    }),
+    prisma.billiardDaySale.findMany({
+      take: 8,
+      orderBy: { updatedAt: "desc" },
+      include: { operator: { select: { name: true } } },
     }),
     prisma.product.findMany({
       where: { active: true, trackInventory: true },
@@ -53,7 +65,7 @@ export default async function DashboardPage() {
   ]);
 
   const currency = settings?.currency ?? "RWF";
-  const summary = summarizeSales(
+  const posSummary = summarizeSales(
     sales.map((sale) => ({
       createdAt: sale.createdAt,
       paymentMethod: sale.paymentMethod,
@@ -69,9 +81,37 @@ export default async function DashboardPage() {
       })),
     })),
   );
+  const billiardToday = sumBilliardAmounts(billiardRows);
+  const summary = applyBilliardTotals(
+    posSummary,
+    billiardRows.map((row) => ({ businessDay: today, amount: row.amount.toNumber() })),
+  );
   const topItems = [...summary.products.entries()]
     .sort((a, b) => b[1].quantity - a[1].quantity || b[1].revenue - a[1].revenue)
     .slice(0, 5);
+  const myBilliard = billiardRows.find((row) => row.operatorId === user.id);
+  const recentFeed = [
+    ...recent.map((sale) => ({
+      id: sale.id,
+      href: `/sales/${sale.id}`,
+      title: sale.receiptNumber,
+      staff: sale.cashier.name,
+      at: sale.createdAt,
+      method: paymentLabel(sale.paymentMethod),
+      total: sale.total.toNumber(),
+    })),
+    ...recentBilliard.map((row) => ({
+      id: row.id,
+      href: `/sales/${row.id}`,
+      title: billiardReceiptNumber(row.businessDay),
+      staff: row.operator.name,
+      at: row.updatedAt,
+      method: "Billiard day total",
+      total: row.amount.toNumber(),
+    })),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 8);
   const threshold = settings?.defaultReorderLevel ?? 5;
   const lowStockItems =
     settings?.lowStockEnabled === false
@@ -84,6 +124,7 @@ export default async function DashboardPage() {
     ["Transactions", String(summary.count)],
     ["Average net sale", formatMoney(summary.averageNet, currency)],
     ["Today's expenses", formatMoney(expenses._sum.amount?.toNumber() ?? 0, currency)],
+    ["Billiard today", formatMoney(billiardToday, currency)],
     ["Cash (net)", formatMoney(summary.payments.get("CASH")?.net ?? 0, currency)],
     ["Mobile money (net)", formatMoney(summary.payments.get("MOBILE_MONEY")?.net ?? 0, currency)],
     ["Card (net)", formatMoney(summary.payments.get("CARD")?.net ?? 0, currency)],
@@ -108,6 +149,16 @@ export default async function DashboardPage() {
             <p className="mt-2 text-2xl font-black">{value}</p>
           </article>
         ))}
+      </section>
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-black">Billiard sales</h2>
+            <p className="text-sm text-stone-500">Save today’s total take. Games are not entered one by one.</p>
+          </div>
+          <Link href="/billiard" className="font-bold text-[#947313]">Open billiard</Link>
+        </div>
+        <BilliardSalesForm defaultAmount={myBilliard?.amount.toNumber()} defaultNote={myBilliard?.note ?? undefined} />
       </section>
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="rounded-lg border border-stone-200 bg-white">
@@ -152,21 +203,21 @@ export default async function DashboardPage() {
           <h2 className="text-xl font-black">Recent transactions</h2>
           <Link href="/sales" className="font-bold text-[#947313]">View all</Link>
         </div>
-        {recent.length === 0 ? (
+        {recentFeed.length === 0 ? (
           <p className="p-8 text-center text-stone-500">No sales recorded yet.</p>
         ) : (
           <div className="divide-y">
-            {recent.map((sale) => (
-              <Link key={sale.id} href={`/sales/${sale.id}`} className="grid gap-2 p-4 hover:bg-stone-50 sm:grid-cols-[1fr_1fr_auto]">
+            {recentFeed.map((sale) => (
+              <Link key={sale.id} href={sale.href} className="grid gap-2 p-4 hover:bg-stone-50 sm:grid-cols-[1fr_1fr_auto]">
                 <div>
-                  <b>{sale.receiptNumber}</b>
-                  <p className="text-sm text-stone-500">{sale.cashier.name}</p>
+                  <b>{sale.title}</b>
+                  <p className="text-sm text-stone-500">{sale.staff}</p>
                 </div>
                 <div className="text-sm">
-                  <p>{formatDateTime(sale.createdAt)}</p>
-                  <p className="text-stone-500">{paymentLabel(sale.paymentMethod)}</p>
+                  <p>{formatDateTime(sale.at)}</p>
+                  <p className="text-stone-500">{sale.method}</p>
                 </div>
-                <b>{formatMoney(sale.total.toNumber(), currency)}</b>
+                <b>{formatMoney(sale.total, currency)}</b>
               </Link>
             ))}
           </div>

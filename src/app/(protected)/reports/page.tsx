@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import { StockTakeHistoryTable } from "@/components/stock-take-history";
 import { requireUser } from "@/lib/authorization";
 import { businessRoles } from "@/lib/roles";
+import { sumBilliardAmounts } from "@/lib/billiard";
 import { formatMoney, kigaliRange, paymentLabel } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
-import { summarizeSales, type ReportSale } from "@/lib/reporting";
+import { applyBilliardTotals, summarizeSales, type ReportSale } from "@/lib/reporting";
 import { STOCK_TAKE_ACTION } from "@/lib/stock-take";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -64,7 +65,7 @@ export default async function ReportsPage({
   const { fromDay, toDay, start, end } = kigaliRange(filters.from, filters.to);
   const saleWhere = { status: { not: "VOIDED" as const }, createdAt: { gte: start, lt: end } };
 
-  const [sales, expenses, movements, trackedProducts, stockTakes, settings] = await Promise.all([
+  const [sales, expenses, billiardRows, movements, trackedProducts, stockTakes, settings] = await Promise.all([
     prisma.sale.findMany({
       where: saleWhere,
       select: {
@@ -86,6 +87,11 @@ export default async function ReportsPage({
       },
     }),
     prisma.expense.groupBy({ by: ["category"], where: { incurredAt: { gte: start, lt: end } }, _sum: { amount: true }, _count: true }),
+    prisma.billiardDaySale.findMany({
+      where: { businessDay: { gte: fromDay, lte: toDay } },
+      include: { operator: { select: { name: true } } },
+      orderBy: [{ businessDay: "desc" }, { updatedAt: "desc" }],
+    }),
     prisma.inventoryMovement.findMany({
       where: { createdAt: { gte: start, lt: end } },
       orderBy: { createdAt: "desc" },
@@ -106,8 +112,12 @@ export default async function ReportsPage({
     prisma.businessSettings.findUnique({ where: { id: "default" } }),
   ]);
 
+  const billiardTotal = sumBilliardAmounts(billiardRows);
   const currency = settings?.currency ?? "RWF";
-  const summary = summarizeSales(toReportSales(sales));
+  const summary = applyBilliardTotals(
+    summarizeSales(toReportSales(sales)),
+    billiardRows.map((row) => ({ businessDay: row.businessDay, amount: row.amount.toNumber() })),
+  );
   const productList = [...summary.products.entries()].sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 50);
   const categoryList = [...summary.categories.entries()].sort((a, b) => b[1].revenue - a[1].revenue);
   const paymentList = [...summary.payments.entries()];
@@ -120,7 +130,7 @@ export default async function ReportsPage({
         <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Performance</p>
         <h1 className="text-3xl font-black">Reports</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Net sales subtract returned quantities at the original line prices, including proportional tax. Historical receipts are not changed.
+          Net sales include billiard day totals. Returned food and drink quantities are subtracted at original line prices.
         </p>
       </div>
       <form className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4 print:hidden">
@@ -128,10 +138,11 @@ export default async function ReportsPage({
         <label className="text-sm font-bold">To<input name="to" type="date" defaultValue={toDay} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" /></label>
         <button className="min-h-11 rounded-md bg-black px-5 font-bold text-[#d4af37]">Apply</button>
       </form>
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Gross sales</p><p className="mt-1 text-2xl font-black">{formatMoney(summary.grossTotal, currency)}</p></article>
         <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Returns</p><p className="mt-1 text-2xl font-black">{formatMoney(summary.returnedTotal, currency)}</p></article>
         <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Net sales</p><p className="mt-1 text-2xl font-black">{formatMoney(summary.netTotal, currency)}</p></article>
+        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Billiard</p><p className="mt-1 text-2xl font-black">{formatMoney(billiardTotal, currency)}</p></article>
         <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Tracked stock value</p><p className="mt-1 text-2xl font-black">{formatMoney(valuation, currency)}</p></article>
       </section>
       <div className="grid gap-6 xl:grid-cols-2">
@@ -212,6 +223,20 @@ export default async function ReportsPage({
               </div>
             ))}
             {movements.length === 0 && empty("No stock movements in this period.")}
+          </div>
+        </Section>
+        <Section title="Billiard day totals">
+          <div className="divide-y">
+            {billiardRows.map((row) => (
+              <div key={row.id} className="flex justify-between p-4">
+                <span>
+                  {row.businessDay}
+                  <small className="ml-2 text-stone-500">{row.operator.name}</small>
+                </span>
+                <b>{formatMoney(row.amount.toNumber(), currency)}</b>
+              </div>
+            ))}
+            {billiardRows.length === 0 && empty("No billiard totals in this period.")}
           </div>
         </Section>
         <Section title="Expenses">

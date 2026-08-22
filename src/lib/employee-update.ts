@@ -16,7 +16,7 @@ export const OWNER_DELETE_OWNER_MESSAGE = "Only an admin can delete an owner acc
 export const DELETED_USERNAME_PREFIX = "__del__.";
 
 export function assignableRoles(actorRole: Role): Role[] {
-  if (actorRole === "OWNER" || actorRole === "ADMIN") return ["ADMIN", "OWNER", "MANAGER", "WAITER"];
+  if (actorRole === "OWNER" || actorRole === "ADMIN") return ["ADMIN", "OWNER", "MANAGER", "WAITER", "BILLIARD"];
   return [];
 }
 

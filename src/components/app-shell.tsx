@@ -15,6 +15,7 @@ import {
   Settings,
   ShoppingCart,
   Tags,
+  Target,
   Users,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -23,11 +24,13 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { PoweredBy } from "@/components/powered-by";
-import { businessRoles, catalogRoles, publicStaffName, tillRoles, userAdminRoles } from "@/lib/roles";
+import { homePath } from "@/lib/permissions";
+import { billiardRoles, businessRoles, catalogRoles, publicStaffName, tillRoles, userAdminRoles } from "@/lib/roles";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: businessRoles },
   { href: "/pos", label: "Point of sale", icon: ShoppingCart, roles: tillRoles },
+  { href: "/billiard", label: "Billiard sales", icon: Target, roles: billiardRoles },
   { href: "/sales", label: "Sales", icon: History, roles: tillRoles },
   { href: "/menu", label: "Menu", icon: Tags, roles: catalogRoles },
   { href: "/inventory", label: "Inventory", icon: Boxes, roles: catalogRoles },
@@ -55,7 +58,7 @@ export function AppShell({
     <div className="min-h-screen bg-stone-100 text-stone-950 lg:grid lg:grid-cols-[250px_1fr]">
       <aside className="flex flex-col border-b border-stone-800 bg-black text-white lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
         <div className="flex min-h-16 shrink-0 items-center gap-2 px-3 py-2 lg:px-4">
-          <Link href="/pos" className="flex min-w-0 flex-1 items-center gap-2">
+          <Link href={homePath(user.role)} className="flex min-w-0 flex-1 items-center gap-2">
             <BrandLogo size={40} className="size-9 rounded-md lg:size-10" />
             <span className="truncate text-sm font-black tracking-[0.14em] text-[#d4af37] lg:text-base">B-ZENITH</span>
           </Link>

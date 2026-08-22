@@ -10,6 +10,7 @@ import {
   DELETED_PRODUCT_SKU_PREFIX,
   authorizeProductDelete,
   catalogProductWriteData,
+  canAdjustPrices,
   isDeletedProductSku,
   newProductStockQuantity,
 } from "@/lib/catalog-fields";
@@ -79,9 +80,10 @@ export async function createProduct(formData: FormData) {
 export async function updateProduct(productId: string, formData: FormData) {
   const user = await requireUser(roles);
   const input = productInput(formData);
+  const includePrices = canAdjustPrices(user.role);
   await prisma.product.update({
     where: { id: productId },
-    data: catalogProductWriteData({ ...input, sku: input.sku }),
+    data: catalogProductWriteData({ ...input, sku: input.sku }, { includePrices }),
   });
   const defaultVariant = await prisma.productVariant.findFirst({
     where: { productId },
@@ -90,7 +92,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   if (defaultVariant) {
     await prisma.productVariant.update({
       where: { id: defaultVariant.id },
-      data: { sellingPrice: input.sellingPrice, unit: input.unit },
+      data: includePrices ? { sellingPrice: input.sellingPrice, unit: input.unit } : { unit: input.unit },
     });
   }
   await prisma.auditLog.create({

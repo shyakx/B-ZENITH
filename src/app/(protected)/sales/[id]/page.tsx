@@ -2,6 +2,7 @@ import { Printer } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/authorization";
+import { billiardReceiptNumber } from "@/lib/billiard";
 import { tillRoles } from "@/lib/roles";
 import { formatDateTime, formatMoney, paymentLabel } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 export default async function SaleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(tillRoles);
   const { id } = await params;
-  const [sale, settings] = await Promise.all([
+  const [sale, billiard, settings] = await Promise.all([
     prisma.sale.findFirst({
       where: {
         id,
@@ -17,10 +18,53 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
       },
       include: { cashier: { select: { name: true } }, items: true, payment: true },
     }),
+    user.role === "WAITER"
+      ? Promise.resolve(null)
+      : prisma.billiardDaySale.findUnique({
+          where: { id },
+          include: { operator: { select: { name: true } } },
+        }),
     prisma.businessSettings.findUnique({ where: { id: "default" } }),
   ]);
-  if (!sale) notFound();
   const currency = settings?.currency ?? "RWF";
+
+  if (billiard && !sale) {
+    const amount = billiard.amount.toNumber();
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div>
+          <Link href="/sales" className="text-sm font-bold text-[#947313]">← Sales history</Link>
+          <h1 className="mt-2 text-3xl font-black">{billiardReceiptNumber(billiard.businessDay)}</h1>
+          <p className="text-sm text-stone-500">{formatDateTime(billiard.updatedAt)} · {billiard.operator.name}</p>
+        </div>
+        <section className="grid gap-4 rounded-lg border bg-white p-5 sm:grid-cols-3">
+          <div><p className="text-sm text-stone-500">Type</p><b>Billiard day total</b></div>
+          <div><p className="text-sm text-stone-500">Business day</p><b>{billiard.businessDay}</b></div>
+          <div><p className="text-sm text-stone-500">Total</p><b>{formatMoney(amount, currency)}</b></div>
+        </section>
+        <section className="overflow-x-auto rounded-lg border bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-stone-100">
+              <tr>
+                <th className="p-4">Item</th>
+                <th className="p-4">Note</th>
+                <th className="p-4 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="p-4 font-bold">Billiard sales</td>
+                <td className="p-4 text-stone-500">{billiard.note || "Day total — games not listed"}</td>
+                <td className="p-4 text-right font-bold">{formatMoney(amount, currency)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    );
+  }
+
+  if (!sale) notFound();
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

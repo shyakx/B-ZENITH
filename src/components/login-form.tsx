@@ -208,7 +208,9 @@ export function LoginForm() {
         <button type="button" onClick={() => setRole(null)} className="text-sm font-bold text-[#947313]">
           ← All roles
         </button>
-        <h2 className="text-lg font-black">{role === "ADMIN" ? "Admin" : `${roleTitle(role)}s`}</h2>
+        <h2 className="text-lg font-black">
+          {role === "ADMIN" ? "Admin" : role === "BILLIARD" ? "Billiard operators" : `${roleTitle(role)}s`}
+        </h2>
         {staff === null ? (
           <p className="text-sm text-stone-500">Loading staff…</p>
         ) : staff.length === 0 ? (

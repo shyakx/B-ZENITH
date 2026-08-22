@@ -139,6 +139,15 @@ describe("staff deletes", () => {
     if (!auth.ok) assert.equal(auth.error, OWNER_DELETE_OWNER_MESSAGE);
   });
 
+  it("OWNER can assign BILLIARD operators", () => {
+    const auth = decision(ownerActor, { targetId: "new-1", targetRole: "WAITER" }, { nextRole: "BILLIARD" }, 1);
+    assert.equal(auth.ok, true);
+    assert.equal(
+      employeeUpdateWriteData({ firstName: "A", lastName: "B", username: "ab", role: "BILLIARD", active: true }).role,
+      "BILLIARD",
+    );
+  });
+
   it("OWNER can delete a WAITER", () => {
     const auth = deleteDecision(ownerActor, { targetId: "waiter-1", targetRole: "WAITER" }, 1);
     assert.equal(auth.ok, true);
