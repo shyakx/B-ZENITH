@@ -27,9 +27,19 @@ export function roleTitle(role: Role | string) {
   return role;
 }
 
-/** Only the admin account is labeled Admin. Everyone else is shown by their real name. */
-export function publicStaffName(person: { role: Role | string; name?: string | null }) {
-  if (isAdminRole(person.role)) return "Admin";
+/** Staff are shown by their real name. Role is separate (Admin, Owner, …). */
+export function publicStaffName(person: {
+  role?: Role | string;
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+}) {
   const name = person.name?.trim();
-  return name || "Staff";
+  if (name) return name;
+  const fromParts = [person.firstName, person.lastName].filter(Boolean).join(" ").trim();
+  if (fromParts) return fromParts;
+  const username = person.username?.trim();
+  if (username) return username;
+  return "Staff";
 }

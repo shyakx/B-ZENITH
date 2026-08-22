@@ -209,7 +209,7 @@ export function LoginForm() {
           ← All roles
         </button>
         <h2 className="text-lg font-black">
-          {role === "ADMIN" ? "Admin" : role === "BILLIARD" ? "Billiard operators" : `${roleTitle(role)}s`}
+          {role === "ADMIN" ? "Admins" : role === "BILLIARD" ? "Billiard operators" : `${roleTitle(role)}s`}
         </h2>
         {staff === null ? (
           <p className="text-sm text-stone-500">Loading staff…</p>
@@ -231,7 +231,12 @@ export function LoginForm() {
                 className="flex min-h-14 items-center gap-3 rounded-md border px-4 text-left hover:border-black"
               >
                 <UserRound className="text-stone-500" size={22} />
-                <span className="font-bold">{publicStaffName(person)}</span>
+                <span>
+                  <span className="block font-bold">{publicStaffName(person)}</span>
+                  {person.role === "ADMIN" ? (
+                    <span className="text-sm font-normal text-stone-500">@{person.username}</span>
+                  ) : null}
+                </span>
               </button>
             ))}
           </div>
@@ -251,10 +256,13 @@ export function LoginForm() {
         }}
         className="text-sm font-bold text-[#947313]"
       >
-        ← {role === "ADMIN" ? "Admin" : `${roleTitle(role)}s`}
+        ← {role === "ADMIN" ? "Admins" : `${roleTitle(role)}s`}
       </button>
       <div className="text-center">
         <p className="text-xl font-black">{publicStaffName(selected)}</p>
+        {selected.role === "ADMIN" ? (
+          <p className="text-sm text-stone-500">@{selected.username}</p>
+        ) : null}
         <p className="mt-4 text-sm font-bold">Enter your PIN</p>
         <p className="mt-2 font-mono text-3xl tracking-[0.5em]">
           {"●".repeat(pin.length)}

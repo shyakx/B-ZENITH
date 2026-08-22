@@ -100,7 +100,9 @@ export function AppShell({
         <div className="hidden shrink-0 border-t border-stone-800 p-4 lg:block">
           <p className="mb-1 truncate text-sm font-semibold text-white">{identity}</p>
           {user.role === "ADMIN" ? (
-            <p className="mb-3 truncate text-xs text-stone-400">System admin</p>
+            <p className="mb-3 truncate text-xs text-stone-400">
+              System admin{user.username ? ` · @${user.username}` : ""}
+            </p>
           ) : (
             <p className="mb-3 truncate text-xs text-stone-400">{user.username ? `@${user.username}` : ""}</p>
           )}
