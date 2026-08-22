@@ -19,9 +19,23 @@ export type CatalogProductWrite = {
   trackInventory: boolean;
 };
 
-export function catalogProductWriteData(input: CatalogProductWrite, options: { includePrices?: boolean } = {}) {
-  const includePrices = options.includePrices !== false;
-  const data = {
+export function catalogProductWriteData(input: CatalogProductWrite) {
+  return {
+    name: input.name,
+    categoryId: input.categoryId,
+    description: input.description,
+    unit: input.unit,
+    imageUrl: input.imageUrl,
+    active: input.active,
+    trackInventory: input.trackInventory,
+    costPrice: input.costPrice,
+    sellingPrice: input.sellingPrice,
+    ...(input.sku ? { sku: input.sku } : {}),
+  };
+}
+
+export function catalogProductNonPriceWriteData(input: CatalogProductWrite) {
+  return {
     name: input.name,
     categoryId: input.categoryId,
     description: input.description,
@@ -30,9 +44,7 @@ export function catalogProductWriteData(input: CatalogProductWrite, options: { i
     active: input.active,
     trackInventory: input.trackInventory,
     ...(input.sku ? { sku: input.sku } : {}),
-    ...(includePrices ? { costPrice: input.costPrice, sellingPrice: input.sellingPrice } : {}),
   };
-  return data;
 }
 
 export function newProductStockQuantity() {

@@ -10,6 +10,7 @@ import {
   DELETED_PRODUCT_SKU_PREFIX,
   authorizeProductDelete,
   catalogProductWriteData,
+  catalogProductNonPriceWriteData,
   canAdjustPrices,
   isDeletedProductSku,
   newProductStockQuantity,
@@ -83,7 +84,9 @@ export async function updateProduct(productId: string, formData: FormData) {
   const includePrices = canAdjustPrices(user.role);
   await prisma.product.update({
     where: { id: productId },
-    data: catalogProductWriteData({ ...input, sku: input.sku }, { includePrices }),
+    data: includePrices
+      ? catalogProductWriteData({ ...input, sku: input.sku })
+      : catalogProductNonPriceWriteData({ ...input, sku: input.sku }),
   });
   const defaultVariant = await prisma.productVariant.findFirst({
     where: { productId },
