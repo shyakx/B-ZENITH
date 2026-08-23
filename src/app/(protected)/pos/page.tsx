@@ -19,6 +19,8 @@ export default async function PosPage() {
         name: true,
         stockQuantity: true,
         trackInventory: true,
+        sellingLocationId: true,
+        locationStocks: { include: { location: { select: { id: true, code: true } } } },
         categoryId: true,
         variants: {
           where: { active: true },
@@ -41,7 +43,10 @@ export default async function PosPage() {
       name: product.name,
       categoryId: product.categoryId,
       trackInventory: product.trackInventory,
-      stockQuantity: product.stockQuantity,
+      stockQuantity:
+        product.locationStocks.find((row) => row.locationId === product.sellingLocationId)?.quantity ??
+        product.locationStocks.find((row) => row.location.code === "BAR")?.quantity ??
+        product.stockQuantity,
       variants: product.variants.map((variant) => ({
         id: variant.id,
         name: variant.name,

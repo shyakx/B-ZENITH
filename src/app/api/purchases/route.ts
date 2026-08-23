@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireApiUser } from "@/lib/authorization";
 import { catalogRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { applyLocationDelta, getLocationByCode, LOCATION_CODES, StockError } from "@/lib/location-stock";
 
 const schema = z.object({
   supplierId: z.string().cuid().nullable(),
@@ -62,21 +63,26 @@ export async function POST(request: Request) {
         },
       });
       for (const line of lines) {
-        const updated = await tx.product.update({
+        await tx.product.update({
           where: { id: line.productId },
-          data: { stockQuantity: { increment: line.quantity }, costPrice: line.unitCost },
+          data: { costPrice: line.unitCost },
         });
-        await tx.inventoryMovement.create({
-          data: {
+        if (!line.product.trackInventory) continue;
+        const main = await getLocationByCode(tx, LOCATION_CODES.MAIN_STOCK);
+        try {
+          await applyLocationDelta(tx, {
             productId: line.productId,
+            locationId: main.id,
+            delta: line.quantity,
             type: "PURCHASE",
-            quantity: line.quantity,
-            balanceAfter: updated.stockQuantity,
+            performedById: user.id,
             referenceId: created.id,
             note: created.referenceNumber,
-            performedById: user.id,
-          },
-        });
+          });
+        } catch (error) {
+          if (error instanceof StockError) throw new PurchaseError(error.message);
+          throw error;
+        }
       }
       await tx.auditLog.create({
         data: {

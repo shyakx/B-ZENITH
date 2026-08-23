@@ -60,6 +60,12 @@ export default async function MenuPage({
           <div className="flex flex-wrap gap-5 md:col-span-2">
             <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="active" defaultChecked /> Active</label>
             <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="trackInventory" defaultChecked /> Track inventory</label>
+            <label className="text-sm font-bold">POS selling location
+              <select name="sellingLocationCode" defaultValue="BAR" className="ml-2 min-h-11 rounded-md border px-3 font-normal">
+                <option value="BAR">Bar</option>
+                <option value="KITCHEN">Kitchen</option>
+              </select>
+            </label>
           </div>
           <button className="min-h-12 rounded-md bg-black px-5 font-bold text-[#d4af37] md:col-span-2">Create menu item</button>
         </form>

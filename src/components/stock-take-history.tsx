@@ -21,6 +21,7 @@ export function StockTakeHistoryTable({ logs }: { logs: Log[] }) {
           <th className="p-4">Date</th>
           <th className="p-4">User</th>
           <th className="p-4">Product</th>
+          <th className="p-4">Location</th>
           <th className="p-4">Previous stock</th>
           <th className="p-4">Counted stock</th>
           <th className="p-4">Adjustment</th>
@@ -35,6 +36,7 @@ export function StockTakeHistoryTable({ logs }: { logs: Log[] }) {
               <td className="p-4">{formatDateTime(log.createdAt)}</td>
               <td className="p-4">{log.user?.name ?? "System"}</td>
               <td className="p-4 font-bold">{details?.productName ?? "—"}</td>
+              <td className="p-4">{details?.locationCode ?? "—"}</td>
               <td className="p-4">{details?.previousQuantity ?? "—"}</td>
               <td className="p-4">{details?.countedQuantity ?? "—"}</td>
               <td className={`p-4 font-bold ${(details?.adjustment ?? 0) < 0 ? "text-red-700" : "text-green-700"}`}>

@@ -7,6 +7,7 @@ import { applyStockTake, StockTakeError } from "@/lib/stock-take";
 
 const schema = z.object({
   productId: z.string().cuid(),
+  locationCode: z.enum(["MAIN_STOCK", "BAR", "KITCHEN"]).optional(),
   countedQuantity: z.number().int().min(0).max(1_000_000),
   reason: z.string().trim().min(3).max(300),
   confirmNegative: z.boolean().optional().default(false),
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
       countedQuantity: parsed.data.countedQuantity,
       reason: parsed.data.reason,
       confirmNegative: parsed.data.confirmNegative,
+      locationCode: parsed.data.locationCode,
     });
     revalidatePath("/inventory");
     revalidatePath("/reports");

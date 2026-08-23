@@ -17,6 +17,7 @@ import {
 } from "@/lib/catalog-fields";
 import { catalogRoles, userAdminRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { ensureTrackedProductStock } from "@/lib/location-stock";
 
 const roles = catalogRoles;
 const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.string().url().optional());
@@ -31,6 +32,7 @@ const productSchema = z.object({
   imageUrl: optionalUrl,
   active: z.coerce.boolean().default(false),
   trackInventory: z.coerce.boolean().default(false),
+  sellingLocationCode: z.enum(["BAR", "KITCHEN"]).default("BAR"),
 });
 
 const text = (formData: FormData, key: string) => String(formData.get(key) ?? "");
@@ -46,6 +48,7 @@ const productInput = (formData: FormData) =>
     imageUrl: text(formData, "imageUrl"),
     active: formData.has("active"),
     trackInventory: formData.has("trackInventory"),
+    sellingLocationCode: text(formData, "sellingLocationCode") || "BAR",
   });
 
 export async function createProduct(formData: FormData) {
@@ -53,22 +56,26 @@ export async function createProduct(formData: FormData) {
   const input = productInput(formData);
   const sku = input.sku || `BZ-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   const seedKey = `${input.categoryId}::${input.name}::${sku}`;
-  const product = await prisma.product.create({
-    data: {
-      ...catalogProductWriteData(input),
-      sku,
-      seedKey,
-      stockQuantity: newProductStockQuantity(),
-      variants: {
-        create: {
-          name: "Portion",
-          sku: `${sku}-PORTION`,
-          sellingPrice: input.sellingPrice,
-          unit: input.unit,
-          sortOrder: 0,
+  const product = await prisma.$transaction(async (tx) => {
+    const created = await tx.product.create({
+      data: {
+        ...catalogProductWriteData(input),
+        sku,
+        seedKey,
+        stockQuantity: newProductStockQuantity(),
+        variants: {
+          create: {
+            name: "Portion",
+            sku: `${sku}-PORTION`,
+            sellingPrice: input.sellingPrice,
+            unit: input.unit,
+            sortOrder: 0,
+          },
         },
       },
-    },
+    });
+    await ensureTrackedProductStock(tx, created.id, input.trackInventory, input.sellingLocationCode);
+    return created;
   });
   await prisma.auditLog.create({
     data: { userId: user.id, action: "CREATE_PRODUCT", entity: "Product", entityId: product.id },
@@ -82,22 +89,25 @@ export async function updateProduct(productId: string, formData: FormData) {
   const user = await requireUser(roles);
   const input = productInput(formData);
   const includePrices = canAdjustPrices(user.role);
-  await prisma.product.update({
-    where: { id: productId },
-    data: includePrices
-      ? catalogProductWriteData({ ...input, sku: input.sku })
-      : catalogProductNonPriceWriteData({ ...input, sku: input.sku }),
-  });
-  const defaultVariant = await prisma.productVariant.findFirst({
-    where: { productId },
-    orderBy: { sortOrder: "asc" },
-  });
-  if (defaultVariant) {
-    await prisma.productVariant.update({
-      where: { id: defaultVariant.id },
-      data: includePrices ? { sellingPrice: input.sellingPrice, unit: input.unit } : { unit: input.unit },
+  await prisma.$transaction(async (tx) => {
+    await tx.product.update({
+      where: { id: productId },
+      data: includePrices
+        ? catalogProductWriteData({ ...input, sku: input.sku })
+        : catalogProductNonPriceWriteData({ ...input, sku: input.sku }),
     });
-  }
+    await ensureTrackedProductStock(tx, productId, input.trackInventory, input.sellingLocationCode);
+    const defaultVariant = await tx.productVariant.findFirst({
+      where: { productId },
+      orderBy: { sortOrder: "asc" },
+    });
+    if (defaultVariant) {
+      await tx.productVariant.update({
+        where: { id: defaultVariant.id },
+        data: includePrices ? { sellingPrice: input.sellingPrice, unit: input.unit } : { unit: input.unit },
+      });
+    }
+  });
   await prisma.auditLog.create({
     data: { userId: user.id, action: "UPDATE_MENU_ITEM", entity: "Product", entityId: productId },
   });

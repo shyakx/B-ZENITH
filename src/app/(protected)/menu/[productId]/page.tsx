@@ -16,7 +16,7 @@ export default async function EditProductPage({
   const user = await requireUser(catalogRoles);
   const { productId } = await params;
   const [product, categories] = await Promise.all([
-    prisma.product.findUnique({ where: { id: productId }, include: { variants: { orderBy: { sortOrder: "asc" } } } }),
+    prisma.product.findUnique({ where: { id: productId }, include: { variants: { orderBy: { sortOrder: "asc" } }, sellingLocation: true } }),
     prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
   ]);
   if (!product || isDeletedProductSku(product.sku)) notFound();
@@ -51,9 +51,15 @@ export default async function EditProductPage({
         </div>
         <label className="text-sm font-bold">Image URL<input name="imageUrl" type="url" defaultValue={product.imageUrl ?? ""} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
         <label className="text-sm font-bold md:col-span-2">Description<textarea name="description" rows={4} defaultValue={product.description ?? ""} className="mt-1 w-full rounded-md border p-3 font-normal" /></label>
-        <div className="flex gap-5 md:col-span-2">
+        <div className="flex flex-wrap gap-5 md:col-span-2">
           <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="active" defaultChecked={product.active} /> Active</label>
           <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="trackInventory" defaultChecked={product.trackInventory} /> Track inventory</label>
+          <label className="text-sm font-bold">POS selling location
+            <select name="sellingLocationCode" defaultValue={product.sellingLocation?.code === "KITCHEN" ? "KITCHEN" : "BAR"} className="ml-2 min-h-11 rounded-md border px-3 font-normal">
+              <option value="BAR">Bar</option>
+              <option value="KITCHEN">Kitchen</option>
+            </select>
+          </label>
         </div>
         <button className="min-h-12 rounded-md bg-black px-5 font-bold text-[#d4af37] md:col-span-2">Save changes</button>
       </form>

@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
+import { LiveRefresh } from "@/components/live-refresh";
 import { StockTakeHistoryTable } from "@/components/stock-take-history";
 import { requireUser } from "@/lib/authorization";
 import { businessRoles } from "@/lib/roles";
 import { sumBilliardAmounts } from "@/lib/billiard";
 import { formatMoney, kigaliRange, paymentLabel } from "@/lib/datetime";
+import { LOCATION_CODES, stockByLocation } from "@/lib/location-stock";
 import { prisma } from "@/lib/prisma";
 import { applyBilliardTotals, summarizeSales, type ReportSale } from "@/lib/reporting";
 import { STOCK_TAKE_ACTION } from "@/lib/stock-take";
@@ -62,10 +64,10 @@ export default async function ReportsPage({
 }) {
   await requireUser(businessRoles);
   const filters = await searchParams;
-  const { fromDay, toDay, start, end } = kigaliRange(filters.from, filters.to);
+  const { fromDay, toDay, start, end } = kigaliRange(filters.from, filters.to, 0);
   const saleWhere = { status: { not: "VOIDED" as const }, createdAt: { gte: start, lt: end } };
 
-  const [sales, expenses, billiardRows, movements, trackedProducts, stockTakes, settings] = await Promise.all([
+  const [sales, expenses, billiardRows, movements, trackedProducts, transfers, stockTakes, settings] = await Promise.all([
     prisma.sale.findMany({
       where: saleWhere,
       select: {
@@ -96,12 +98,22 @@ export default async function ReportsPage({
       where: { createdAt: { gte: start, lt: end } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      include: { product: { select: { name: true } } },
+      include: { product: { select: { name: true } }, location: { select: { code: true } } },
     }),
     prisma.product.findMany({
       where: { trackInventory: true, active: true },
       orderBy: { name: "asc" },
-      select: { name: true, stockQuantity: true, reorderLevel: true, costPrice: true },
+      include: { locationStocks: { include: { location: { select: { code: true } } } } },
+    }),
+    prisma.stockTransfer.findMany({
+      where: { createdAt: { gte: start, lt: end } },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        fromLocation: { select: { code: true } },
+        toLocation: { select: { code: true } },
+        lines: { include: { product: { select: { name: true } } } },
+      },
     }),
     prisma.auditLog.findMany({
       where: { action: STOCK_TAKE_ACTION, createdAt: { gte: start, lt: end } },
@@ -121,16 +133,23 @@ export default async function ReportsPage({
   const productList = [...summary.products.entries()].sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 50);
   const categoryList = [...summary.categories.entries()].sort((a, b) => b[1].revenue - a[1].revenue);
   const paymentList = [...summary.payments.entries()];
-  const lowStock = trackedProducts.filter((product) => product.stockQuantity <= product.reorderLevel);
-  const valuation = trackedProducts.reduce((sum, product) => sum + product.stockQuantity * product.costPrice.toNumber(), 0);
+  const locationCodes = [LOCATION_CODES.MAIN_STOCK, LOCATION_CODES.BAR, LOCATION_CODES.KITCHEN];
+  const stockRows = trackedProducts.map((product) => {
+    const qty = stockByLocation(product.locationStocks, locationCodes);
+    const total = qty.MAIN_STOCK + qty.BAR + qty.KITCHEN;
+    return { name: product.name, qty, total, reorderLevel: product.reorderLevel, costPrice: product.costPrice.toNumber() };
+  });
+  const lowStock = stockRows.filter((product) => product.total <= product.reorderLevel);
+  const valuation = stockRows.reduce((sum, product) => sum + product.total * product.costPrice, 0);
 
   return (
     <div className="space-y-6">
+      <LiveRefresh />
       <div>
         <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Performance</p>
         <h1 className="text-3xl font-black">Reports</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Net sales include billiard day totals. Returned food and drink quantities are subtracted at original line prices.
+          Defaults to today. Pick dates to look back. Net sales include billiard day totals.
         </p>
       </div>
       <form className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4 print:hidden">
@@ -190,23 +209,25 @@ export default async function ReportsPage({
             {categoryList.length === 0 && empty("No category sales in this period.")}
           </div>
         </Section>
-        <Section title="Inventory — tracked stock">
+        <Section title="Inventory — stock by location">
           <div className="max-h-[500px] divide-y overflow-y-auto">
-            {trackedProducts.map((product) => (
-              <div key={product.name} className="flex justify-between p-4">
+            {stockRows.map((product) => (
+              <div key={product.name} className="flex justify-between gap-3 p-4">
                 <span>{product.name}</span>
-                <b className={product.stockQuantity <= product.reorderLevel ? "text-amber-700" : ""}>{product.stockQuantity}</b>
+                <span className="text-right text-sm">
+                  Main {product.qty.MAIN_STOCK} · Bar {product.qty.BAR} · Kitchen {product.qty.KITCHEN} · <b>Total {product.total}</b>
+                </span>
               </div>
             ))}
-            {trackedProducts.length === 0 && empty("No products are currently tracking stock.")}
+            {stockRows.length === 0 && empty("No products are currently tracking stock.")}
           </div>
         </Section>
-        <Section title="Low stock">
+        <Section title="Low stock (total across locations)">
           <div className="divide-y">
             {lowStock.map((product) => (
               <div key={product.name} className="flex justify-between p-4">
                 <span>{product.name}</span>
-                <b className="text-amber-700">{product.stockQuantity}</b>
+                <b className="text-amber-700">{product.total}</b>
               </div>
             ))}
             {lowStock.length === 0 && empty("No low-stock products.")}
@@ -216,13 +237,29 @@ export default async function ReportsPage({
           <div className="max-h-[500px] divide-y overflow-y-auto">
             {movements.map((movement) => (
               <div key={movement.id} className="flex justify-between p-4">
-                <span>{movement.product.name}<small className="ml-2 text-stone-500">{movement.type}</small></span>
+                <span>
+                  {movement.product.name}
+                  <small className="ml-2 text-stone-500">{movement.type} · {movement.location?.code ?? "MAIN_STOCK"}</small>
+                </span>
                 <b className={movement.quantity < 0 ? "text-red-700" : "text-green-700"}>
                   {movement.quantity > 0 ? "+" : ""}{movement.quantity}
                 </b>
               </div>
             ))}
             {movements.length === 0 && empty("No stock movements in this period.")}
+          </div>
+        </Section>
+        <Section title="Transfer history">
+          <div className="max-h-[500px] divide-y overflow-y-auto">
+            {transfers.map((transfer) => (
+              <div key={transfer.id} className="p-4">
+                <p className="font-bold">{transfer.fromLocation.code} → {transfer.toLocation.code}</p>
+                <p className="text-sm text-stone-500">
+                  {transfer.lines.map((line) => `${line.quantity} × ${line.product.name}`).join(", ")}
+                </p>
+              </div>
+            ))}
+            {transfers.length === 0 && empty("No transfers in this period.")}
           </div>
         </Section>
         <Section title="Billiard day totals">

@@ -8,11 +8,13 @@ type TrackedProduct = {
   name: string;
   stockQuantity: number;
   unit: string;
+  locationQuantities: Record<string, number>;
 };
 
 export function StockTakeForm({ products }: { products: TrackedProduct[] }) {
   const router = useRouter();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
+  const [locationCode, setLocationCode] = useState("MAIN_STOCK");
   const [counted, setCounted] = useState("");
   const [reason, setReason] = useState("");
   const [confirmNegative, setConfirmNegative] = useState(false);
@@ -20,9 +22,10 @@ export function StockTakeForm({ products }: { products: TrackedProduct[] }) {
   const [message, setMessage] = useState("");
 
   const product = products.find((item) => item.id === productId);
+  const currentQuantity = product?.locationQuantities[locationCode] ?? 0;
   const countedQuantity = counted === "" ? null : Number(counted);
   const adjustment = product && countedQuantity !== null && Number.isInteger(countedQuantity)
-    ? countedQuantity - product.stockQuantity
+    ? countedQuantity - currentQuantity
     : null;
 
   const canSubmit = useMemo(() => {
@@ -43,6 +46,7 @@ export function StockTakeForm({ products }: { products: TrackedProduct[] }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         productId: product.id,
+        locationCode,
         countedQuantity,
         reason: reason.trim(),
         confirmNegative: adjustment !== null && adjustment < 0,
@@ -73,6 +77,13 @@ export function StockTakeForm({ products }: { products: TrackedProduct[] }) {
   return (
     <div className="rounded-lg border bg-white p-4">
       <div className="grid gap-3 md:grid-cols-2">
+        <label className="text-sm font-bold">Location
+          <select value={locationCode} onChange={(event) => setLocationCode(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">
+            <option value="MAIN_STOCK">Main Stock</option>
+            <option value="BAR">Bar</option>
+            <option value="KITCHEN">Kitchen</option>
+          </select>
+        </label>
         <label className="text-sm font-bold">Product
           <select
             value={productId}
@@ -108,7 +119,7 @@ export function StockTakeForm({ products }: { products: TrackedProduct[] }) {
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <article className="rounded-md bg-stone-50 p-3">
           <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Current stock</p>
-          <p className="mt-1 text-2xl font-black">{product?.stockQuantity ?? 0}</p>
+          <p className="mt-1 text-2xl font-black">{currentQuantity}</p>
         </article>
         <article className="rounded-md bg-stone-50 p-3">
           <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Physical count</p>

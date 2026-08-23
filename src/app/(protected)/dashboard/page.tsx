@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { BilliardSalesForm } from "@/components/billiard-sales-form";
+import { LiveRefresh } from "@/components/live-refresh";
 import { requireUser } from "@/lib/authorization";
+import { canViewLifetimeSales } from "@/lib/business-day";
 import { businessRoles } from "@/lib/roles";
 import { sumBilliardAmounts, billiardReceiptNumber } from "@/lib/billiard";
 import { formatDateTime, formatMoney, kigaliDateString, paymentLabel, todayKigaliRange } from "@/lib/datetime";
@@ -17,7 +19,9 @@ export default async function DashboardPage() {
     createdAt: { gte: start, lt: end },
   };
 
-  const [sales, expenses, billiardRows, recent, recentBilliard, lowStock, settings] = await Promise.all([
+  const showLifetime = canViewLifetimeSales(user.role);
+
+  const [sales, expenses, billiardRows, recent, recentBilliard, lowStock, settings, lifetimePos, lifetimeBilliard] = await Promise.all([
     prisma.sale.findMany({
       where: todaySales,
       select: {
@@ -46,11 +50,13 @@ export default async function DashboardPage() {
       select: { amount: true, note: true, operatorId: true },
     }),
     prisma.sale.findMany({
+      where: todaySales,
       take: 8,
       orderBy: { createdAt: "desc" },
       include: { cashier: { select: { name: true } } },
     }),
     prisma.billiardDaySale.findMany({
+      where: { businessDay: today },
       take: 8,
       orderBy: { updatedAt: "desc" },
       include: { operator: { select: { name: true } } },
@@ -62,6 +68,14 @@ export default async function DashboardPage() {
       select: { id: true, name: true, stockQuantity: true, reorderLevel: true },
     }),
     prisma.businessSettings.findUnique({ where: { id: "default" } }),
+    showLifetime
+      ? prisma.sale.aggregate({
+          where: { status: { not: "VOIDED" } },
+          _sum: { total: true },
+          _count: true,
+        })
+      : Promise.resolve(null),
+    showLifetime ? prisma.billiardDaySale.aggregate({ _sum: { amount: true } }) : Promise.resolve(null),
   ]);
 
   const currency = settings?.currency ?? "RWF";
@@ -132,6 +146,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-7">
+      <LiveRefresh />
       <div>
         <div className="mb-2 flex items-center gap-3">
           <BrandLogo size={48} className="rounded-md" />
@@ -139,7 +154,7 @@ export default async function DashboardPage() {
         </div>
         <h1 className="text-3xl font-black">Today&apos;s business</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Net figures subtract returned items at original prices. Receipt totals are unchanged.
+          Live Kigali day only. Closed days stay archived and can be opened from Sales → Closed days.
         </p>
       </div>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -150,6 +165,22 @@ export default async function DashboardPage() {
           </article>
         ))}
       </section>
+      {showLifetime && lifetimePos ? (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <article className="rounded-lg border border-stone-200 bg-white p-5">
+            <p className="text-sm font-semibold text-stone-500">All POS since start</p>
+            <p className="mt-2 text-2xl font-black">{formatMoney(lifetimePos._sum.total?.toNumber() ?? 0, currency)}</p>
+          </article>
+          <article className="rounded-lg border border-stone-200 bg-white p-5">
+            <p className="text-sm font-semibold text-stone-500">All POS tickets</p>
+            <p className="mt-2 text-2xl font-black">{lifetimePos._count}</p>
+          </article>
+          <article className="rounded-lg border border-stone-200 bg-white p-5">
+            <p className="text-sm font-semibold text-stone-500">All billiard since start</p>
+            <p className="mt-2 text-2xl font-black">{formatMoney(lifetimeBilliard?._sum.amount?.toNumber() ?? 0, currency)}</p>
+          </article>
+        </section>
+      ) : null}
       <section className="space-y-3">
         <div className="flex items-end justify-between gap-3">
           <div>
@@ -200,7 +231,7 @@ export default async function DashboardPage() {
       </div>
       <section className="rounded-lg border border-stone-200 bg-white">
         <div className="flex items-center justify-between border-b p-5">
-          <h2 className="text-xl font-black">Recent transactions</h2>
+          <h2 className="text-xl font-black">Today’s transactions</h2>
           <Link href="/sales" className="font-bold text-[#947313]">View all</Link>
         </div>
         {recentFeed.length === 0 ? (

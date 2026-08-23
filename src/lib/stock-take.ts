@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getLocationByCode, LOCATION_CODES, setLocationQuantity, StockError } from "@/lib/location-stock";
 
 export const STOCK_TAKE_ACTION = "STOCK_TAKE";
 
@@ -12,6 +13,7 @@ export type StockTakeDetails = {
   countedQuantity: number;
   adjustment: number;
   reason: string;
+  locationCode?: string;
   movementId?: string;
 };
 
@@ -31,6 +33,7 @@ export function parseStockTakeDetails(details: Prisma.JsonValue | null | undefin
     countedQuantity: value.countedQuantity,
     adjustment: value.adjustment,
     reason: value.reason,
+    locationCode: typeof value.locationCode === "string" ? value.locationCode : undefined,
     movementId: typeof value.movementId === "string" ? value.movementId : undefined,
   };
 }
@@ -41,6 +44,7 @@ export async function applyStockTake(input: {
   countedQuantity: number;
   reason: string;
   confirmNegative: boolean;
+  locationCode?: string;
 }) {
   return prisma.$transaction(async (tx) => {
     const product = await tx.product.findUnique({ where: { id: input.productId } });
@@ -49,10 +53,13 @@ export async function applyStockTake(input: {
       throw new StockTakeError("Inventory tracking is disabled for this product.");
     }
 
-    const previousQuantity = product.stockQuantity;
+    const location = await getLocationByCode(tx, input.locationCode || LOCATION_CODES.MAIN_STOCK);
+    const current = await tx.productLocationStock.findUnique({
+      where: { productId_locationId: { productId: product.id, locationId: location.id } },
+    });
+    const previousQuantity = current?.quantity ?? 0;
     const countedQuantity = input.countedQuantity;
     if (countedQuantity < 0) throw new StockTakeError("Physical count cannot be negative.");
-
     const adjustment = countedQuantity - previousQuantity;
     if (adjustment === 0) {
       throw new StockTakeError("Physical count matches system stock. No adjustment needed.");
@@ -61,20 +68,23 @@ export async function applyStockTake(input: {
       throw new StockTakeError("Confirm this negative adjustment before applying it.");
     }
 
-    await tx.product.update({
-      where: { id: product.id },
-      data: { stockQuantity: countedQuantity },
-    });
-
-    const movement = await tx.inventoryMovement.create({
-      data: {
+    try {
+      await setLocationQuantity(tx, {
         productId: product.id,
-        type: "ADJUSTMENT",
-        quantity: adjustment,
-        balanceAfter: countedQuantity,
-        note: `Stock take: ${input.reason}`,
+        locationId: location.id,
+        quantity: countedQuantity,
+        type: "STOCK_TAKE",
         performedById: input.userId,
-      },
+        note: `Stock take (${location.code}): ${input.reason}`,
+      });
+    } catch (error) {
+      if (error instanceof StockError) throw new StockTakeError(error.message);
+      throw error;
+    }
+
+    const movement = await tx.inventoryMovement.findFirst({
+      where: { productId: product.id, type: "STOCK_TAKE", performedById: input.userId },
+      orderBy: { createdAt: "desc" },
     });
 
     await tx.auditLog.create({
@@ -90,7 +100,8 @@ export async function applyStockTake(input: {
           countedQuantity,
           adjustment,
           reason: input.reason,
-          movementId: movement.id,
+          locationCode: location.code,
+          movementId: movement?.id,
         },
       },
     });
@@ -100,6 +111,7 @@ export async function applyStockTake(input: {
       previousQuantity,
       countedQuantity,
       adjustment,
+      locationCode: location.code,
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

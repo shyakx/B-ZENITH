@@ -11,6 +11,7 @@ import {
 } from "@/lib/idempotency";
 import { prisma } from "@/lib/prisma";
 import { deductsPhysicalStock } from "@/lib/stock";
+import { applyLocationDelta, sellingLocationId, StockError } from "@/lib/location-stock";
 
 const checkoutSchema = z.object({
   idempotencyKey: z.string().regex(IDEMPOTENCY_KEY_SCHEMA, "Invalid checkout key."),
@@ -73,6 +74,12 @@ export async function POST(request: Request) {
               throw new CheckoutError("Product is currently unavailable.");
             }
 
+            const locationByVariant = new Map<string, string>();
+            for (const variant of variants) {
+              if (!variant.product.trackInventory || !deductsPhysicalStock(variant.unit)) continue;
+              locationByVariant.set(variant.id, await sellingLocationId(tx, variant.product));
+            }
+
             const lineItems = variants.map((variant) => {
               const quantity = combined.get(variant.id)!;
               const lineSubtotal = variant.sellingPrice.mul(quantity);
@@ -126,33 +133,29 @@ export async function POST(request: Request) {
                     unitCost: variant.product.costPrice,
                     quantity,
                     lineSubtotal,
+                    inventoryLocationId: locationByVariant.get(variant.id) ?? null,
                   })),
                 },
               },
             });
 
             for (const { variant, quantity } of lineItems) {
-              if (!variant.product.trackInventory || !deductsPhysicalStock(variant.unit)) continue;
-              const stock = await tx.product.updateMany({
-                where: { id: variant.productId, active: true, stockQuantity: { gte: quantity } },
-                data: { stockQuantity: { decrement: quantity } },
-              });
-              if (stock.count !== 1) throw new CheckoutError("Insufficient stock.");
-              const updated = await tx.product.findUniqueOrThrow({
-                where: { id: variant.productId },
-                select: { stockQuantity: true },
-              });
-              await tx.inventoryMovement.create({
-                data: {
+              const locationId = locationByVariant.get(variant.id);
+              if (!locationId) continue;
+              try {
+                await applyLocationDelta(tx, {
                   productId: variant.productId,
+                  locationId,
+                  delta: -quantity,
                   type: "SALE",
-                  quantity: -quantity,
-                  balanceAfter: updated.stockQuantity,
+                  performedById: user.id,
                   referenceId: created.id,
                   note: created.receiptNumber,
-                  performedById: user.id,
-                },
-              });
+                });
+              } catch (error) {
+                if (error instanceof StockError) throw new CheckoutError(error.message);
+                throw error;
+              }
             }
 
             await tx.auditLog.create({

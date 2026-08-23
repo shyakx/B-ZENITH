@@ -6,6 +6,7 @@ import { businessRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { canReturnQuantity } from "@/lib/reporting";
 import { deductsPhysicalStock } from "@/lib/stock";
+import { applyLocationDelta, getLocationByCode, LOCATION_CODES, StockError } from "@/lib/location-stock";
 
 const schema = z.object({
   saleId: z.string().cuid(),
@@ -53,10 +54,21 @@ export async function POST(request: Request) {
       for (const line of lines) {
         await tx.saleItem.update({ where: { id: line.item.id }, data: { returnedQuantity: { increment: line.quantity } } });
         if (line.item.product.trackInventory && line.item.productVariant && deductsPhysicalStock(line.item.productVariant.unit)) {
-          const product = await tx.product.update({ where: { id: line.item.productId }, data: { stockQuantity: { increment: line.quantity } } });
-          await tx.inventoryMovement.create({
-            data: { productId: product.id, type: "RETURN", quantity: line.quantity, balanceAfter: product.stockQuantity, referenceId: created.id, note: created.returnNumber, performedById: user.id },
-          });
+          const locationId = line.item.inventoryLocationId ?? (await getLocationByCode(tx, LOCATION_CODES.MAIN_STOCK)).id;
+          try {
+            await applyLocationDelta(tx, {
+              productId: line.item.productId,
+              locationId,
+              delta: line.quantity,
+              type: "RETURN",
+              performedById: user.id,
+              referenceId: created.id,
+              note: created.returnNumber,
+            });
+          } catch (error) {
+            if (error instanceof StockError) throw new ReturnError(error.message);
+            throw error;
+          }
         }
       }
       const allReturned = sale.items.every((item) => {
