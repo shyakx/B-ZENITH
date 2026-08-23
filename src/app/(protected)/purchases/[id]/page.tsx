@@ -25,7 +25,7 @@ export default async function PurchaseDetailPage({ params }: { params: Promise<{
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <Link href="/purchases" className="text-sm font-bold text-[#947313]">← Purchases</Link>
+        <Link href="/inventory/operations?tab=receive" className="text-sm font-bold text-[#947313]">← Stock operations</Link>
         <h1 className="mt-2 text-3xl font-black">{purchase.referenceNumber}</h1>
         <p className="text-sm text-stone-500">
           {formatDateTime(purchase.createdAt)} · {purchase.createdBy.name} · {purchase.status}

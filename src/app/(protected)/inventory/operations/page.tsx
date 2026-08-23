@@ -79,7 +79,7 @@ export default async function InventoryOperationsPage({
         <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Inventory</p>
         <h1 className="text-3xl font-black">Stock operations</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Receive from suppliers into Main Stock, then transfer to Bar or Kitchen. Count, adjust, and record waste by location. Categories are not locations.
+          Receive from suppliers into MAIN STOCK, then transfer to BAR or KITCHEN. Count, adjust, and record waste by location. Categories are not locations.
         </p>
       </div>
       <nav className="flex flex-wrap gap-2">

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  availableTotal,
   existingStockMigratesToMain,
   movementTotals,
+  overviewStatus,
   stockStatus,
   totalsByProduct,
   validateWasteQuantity,
@@ -67,5 +69,38 @@ describe("inventory totals and opening stock", () => {
     assert.equal(stockStatus(0, 5), "ZERO");
     assert.equal(stockStatus(3, 5), "LOW");
     assert.equal(stockStatus(20, 5), "OK");
+  });
+
+  it("computes total available as Main + Bar + Kitchen", () => {
+    assert.equal(availableTotal(120, 35, 0), 155);
+    assert.equal(availableTotal(100, 20, 10), 130);
+  });
+
+  it("keeps total available unchanged when transferring Main to Bar or Kitchen", () => {
+    const before = { main: 100, bar: 20, kitchen: 10 };
+    const afterBar = { main: before.main - 15, bar: before.bar + 15, kitchen: before.kitchen };
+    const afterKitchen = { main: before.main - 8, bar: before.bar, kitchen: before.kitchen + 8 };
+    assert.equal(availableTotal(afterBar.main, afterBar.bar, afterBar.kitchen), availableTotal(before.main, before.bar, before.kitchen));
+    assert.equal(availableTotal(afterKitchen.main, afterKitchen.bar, afterKitchen.kitchen), 130);
+  });
+
+  it("does not treat transfers as received, sold, or wasted", () => {
+    const afterTransfer = movementTotals([
+      { type: "PURCHASE", quantity: 100 },
+      { type: "TRANSFER_OUT", quantity: -15 },
+      { type: "TRANSFER_IN", quantity: 15 },
+    ]);
+    assert.equal(afterTransfer.supplied, 100);
+    assert.equal(afterTransfer.sold, 0);
+    assert.equal(afterTransfer.wasted, 0);
+    assert.equal(afterTransfer.transferredOut, 15);
+    assert.equal(afterTransfer.transferredIn, 15);
+  });
+
+  it("maps overview status without inventing a low-stock threshold of zero", () => {
+    assert.equal(overviewStatus(0, 5), "OUT_OF_STOCK");
+    assert.equal(overviewStatus(3, 5), "LOW_STOCK");
+    assert.equal(overviewStatus(3, 0), "IN_STOCK");
+    assert.equal(overviewStatus(20, 5), "IN_STOCK");
   });
 });

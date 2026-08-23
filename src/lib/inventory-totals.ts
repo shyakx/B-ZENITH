@@ -31,9 +31,9 @@ export function isWasteReason(value: string): value is WasteReason {
 }
 
 export function locationLabel(code: string) {
-  if (code === "MAIN_STOCK") return "Main Stock";
-  if (code === "BAR") return "Bar";
-  if (code === "KITCHEN") return "Kitchen";
+  if (code === "MAIN_STOCK") return "MAIN STOCK";
+  if (code === "BAR") return "BAR";
+  if (code === "KITCHEN") return "KITCHEN";
   return code;
 }
 
@@ -42,6 +42,16 @@ export function stockStatus(total: number, reorderLevel: number) {
   if (total === 0) return "ZERO";
   if (total <= reorderLevel) return "LOW";
   return "OK";
+}
+
+export function availableTotal(main: number, bar: number, kitchen: number) {
+  return main + bar + kitchen;
+}
+
+export function overviewStatus(total: number, reorderLevel: number) {
+  if (total <= 0) return "OUT_OF_STOCK";
+  if (reorderLevel > 0 && total <= reorderLevel) return "LOW_STOCK";
+  return "IN_STOCK";
 }
 
 export type ProductMovement = MovementSlice & { productId: string };
