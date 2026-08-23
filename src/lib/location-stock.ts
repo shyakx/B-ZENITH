@@ -7,10 +7,8 @@ export const LOCATION_CODES = {
 } as const;
 
 export type LocationCode = (typeof LOCATION_CODES)[keyof typeof LOCATION_CODES];
-
 export const ALLOWED_TRANSFER_FROM = LOCATION_CODES.MAIN_STOCK;
 export const ALLOWED_TRANSFER_TO = [LOCATION_CODES.BAR, LOCATION_CODES.KITCHEN] as const;
-
 export class StockError extends Error {}
 
 export function requireSellingLocationId(sellingLocationId: string | null | undefined) {
@@ -20,26 +18,25 @@ export function requireSellingLocationId(sellingLocationId: string | null | unde
   return sellingLocationId;
 }
 
-/** Pre-migration sale lines have no location. Restore to MAIN_STOCK, never the current selling location. */
 export function saleVoidClaimed(updatedCount: number) {
   return updatedCount === 1;
 }
 
-/** Pre-migration sale lines have no location. Restore to MAIN_STOCK, never the current selling location. */
 export function restoreLocationId(inventoryLocationId: string | null | undefined, mainStockId: string) {
   return inventoryLocationId || mainStockId;
 }
 
-
-/** Opening MAIN qty when tracking is turned on. Do not overwrite existing location rows. */
-export function openingMainQuantity(existingMainQty: number | null, totalLocationQty: number, productStockQuantity: number) {
+export function openingMainQuantity(
+  existingMainQty: number | null,
+  totalLocationQty: number,
+  productStockQuantity: number,
+) {
   if (existingMainQty === null) return Math.max(0, productStockQuantity);
   if (totalLocationQty === 0 && productStockQuantity > 0) return productStockQuantity;
   return existingMainQty;
 }
 
 type Tx = Prisma.TransactionClient;
-
 export type TransferLineInput = { productId: string; quantity: number };
 
 export function validateTransferRequest(fromCode: string, toCode: string, lines: TransferLineInput[]) {
@@ -49,12 +46,8 @@ export function validateTransferRequest(fromCode: string, toCode: string, lines:
   if (!ALLOWED_TRANSFER_TO.includes(toCode as (typeof ALLOWED_TRANSFER_TO)[number])) {
     return { ok: false as const, error: "Stock can only be sent to Bar or Kitchen in this phase." };
   }
-  if (fromCode === toCode) {
-    return { ok: false as const, error: "Source and destination must be different." };
-  }
-  if (lines.length === 0) {
-    return { ok: false as const, error: "Add at least one product." };
-  }
+  if (fromCode === toCode) return { ok: false as const, error: "Source and destination must be different." };
+  if (lines.length === 0) return { ok: false as const, error: "Add at least one product." };
   const seen = new Set<string>();
   for (const line of lines) {
     if (!line.productId) return { ok: false as const, error: "Choose a product." };
@@ -83,10 +76,7 @@ export async function locationQuantity(tx: Tx, productId: string, locationId: st
 }
 
 async function syncProductTotal(tx: Tx, productId: string) {
-  const aggregate = await tx.productLocationStock.aggregate({
-    where: { productId },
-    _sum: { quantity: true },
-  });
+  const aggregate = await tx.productLocationStock.aggregate({ where: { productId }, _sum: { quantity: true } });
   const total = aggregate._sum.quantity ?? 0;
   await tx.product.update({ where: { id: productId }, data: { stockQuantity: total } });
   return total;
@@ -110,20 +100,26 @@ export async function applyLocationDelta(
     performedById: string;
     referenceId?: string;
     note?: string;
+    reason?: string;
     counterpartLocationId?: string;
+    allowNegative?: boolean;
   },
 ) {
   if (input.delta === 0) throw new StockError("Quantity change cannot be zero.");
   await ensureRow(tx, input.productId, input.locationId);
-
   if (input.delta < 0) {
     const needed = -input.delta;
-    const updated = await tx.productLocationStock.updateMany({
-      where: { productId: input.productId, locationId: input.locationId, quantity: { gte: needed } },
-      data: { quantity: { decrement: needed } },
-    });
-    if (updated.count !== 1) {
-      throw new StockError("Insufficient stock at this location.");
+    if (input.allowNegative) {
+      await tx.productLocationStock.update({
+        where: { productId_locationId: { productId: input.productId, locationId: input.locationId } },
+        data: { quantity: { decrement: needed } },
+      });
+    } else {
+      const updated = await tx.productLocationStock.updateMany({
+        where: { productId: input.productId, locationId: input.locationId, quantity: { gte: needed } },
+        data: { quantity: { decrement: needed } },
+      });
+      if (updated.count !== 1) throw new StockError("Insufficient stock at this location.");
     }
   } else {
     await tx.productLocationStock.update({
@@ -131,7 +127,6 @@ export async function applyLocationDelta(
       data: { quantity: { increment: input.delta } },
     });
   }
-
   const row = await tx.productLocationStock.findUniqueOrThrow({
     where: { productId_locationId: { productId: input.productId, locationId: input.locationId } },
   });
@@ -143,6 +138,7 @@ export async function applyLocationDelta(
       quantity: input.delta,
       balanceAfter: row.quantity,
       referenceId: input.referenceId,
+      reason: input.reason,
       note: input.note,
       performedById: input.performedById,
       locationId: input.locationId,
@@ -162,6 +158,7 @@ export async function setLocationQuantity(
     performedById: string;
     referenceId?: string;
     note?: string;
+    reason?: string;
   },
 ) {
   if (input.quantity < 0) throw new StockError("Quantity cannot be negative.");
@@ -181,6 +178,7 @@ export async function setLocationQuantity(
       quantity: delta,
       balanceAfter: input.quantity,
       referenceId: input.referenceId,
+      reason: input.reason,
       note: input.note,
       performedById: input.performedById,
       locationId: input.locationId,
@@ -192,9 +190,7 @@ export async function setLocationQuantity(
 export async function sellingLocationId(tx: Tx, product: { sellingLocationId: string | null }) {
   const locationId = requireSellingLocationId(product.sellingLocationId);
   const location = await tx.inventoryLocation.findUnique({ where: { id: locationId } });
-  if (!location?.active) {
-    throw new StockError("This product's selling location is missing or inactive.");
-  }
+  if (!location?.active) throw new StockError("This product's selling location is missing or inactive.");
   if (location.code === LOCATION_CODES.MAIN_STOCK) {
     throw new StockError("Tracked sales cannot deduct from Main Stock. Set the selling location to Bar or Kitchen.");
   }
@@ -215,14 +211,10 @@ export async function recordStockTransfer(
   if (!valid.ok) throw new StockError(valid.error);
   const from = await getLocationByCode(tx, input.fromCode);
   const to = await getLocationByCode(tx, input.toCode);
-
   for (const line of input.lines) {
     const product = await tx.product.findUnique({ where: { id: line.productId } });
-    if (!product?.trackInventory) {
-      throw new StockError("Only tracked products can be transferred.");
-    }
+    if (!product?.trackInventory) throw new StockError("Only tracked products can be transferred.");
   }
-
   const transfer = await tx.stockTransfer.create({
     data: {
       fromLocationId: from.id,
@@ -232,7 +224,6 @@ export async function recordStockTransfer(
       lines: { create: input.lines.map((line) => ({ productId: line.productId, quantity: line.quantity })) },
     },
   });
-
   for (const line of input.lines) {
     await applyLocationDelta(tx, {
       productId: line.productId,
@@ -255,7 +246,6 @@ export async function recordStockTransfer(
       counterpartLocationId: from.id,
     });
   }
-
   return transfer;
 }
 
@@ -273,28 +263,19 @@ export async function ensureTrackedProductStock(
   const main = await getLocationByCode(tx, LOCATION_CODES.MAIN_STOCK);
   const selling = await getLocationByCode(tx, sellingLocationCode);
   await tx.product.update({ where: { id: productId }, data: { sellingLocationId: selling.id } });
-
   const existingMain = await tx.productLocationStock.findUnique({
     where: { productId_locationId: { productId, locationId: main.id } },
   });
-  const totals = await tx.productLocationStock.aggregate({
-    where: { productId },
-    _sum: { quantity: true },
-  });
+  const totals = await tx.productLocationStock.aggregate({ where: { productId }, _sum: { quantity: true } });
   const mainQty = openingMainQuantity(
     existingMain ? existingMain.quantity : null,
     totals._sum.quantity ?? 0,
     product.stockQuantity,
   );
   if (!existingMain) {
-    await tx.productLocationStock.create({
-      data: { productId, locationId: main.id, quantity: mainQty },
-    });
+    await tx.productLocationStock.create({ data: { productId, locationId: main.id, quantity: mainQty } });
   } else if (existingMain.quantity !== mainQty) {
-    await tx.productLocationStock.update({
-      where: { id: existingMain.id },
-      data: { quantity: mainQty },
-    });
+    await tx.productLocationStock.update({ where: { id: existingMain.id }, data: { quantity: mainQty } });
   }
   await ensureRow(tx, productId, selling.id);
   await syncProductTotal(tx, productId);
@@ -310,5 +291,4 @@ export function stockByLocation(
   }
   return map;
 }
-
 

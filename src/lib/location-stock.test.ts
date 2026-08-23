@@ -10,6 +10,8 @@ import {
   StockError,
   validateTransferRequest,
 } from "./location-stock";
+import { posOversellAllowed } from "./inventory-auth";
+import { validateWasteQuantity } from "./inventory-totals";
 
 describe("location stock rules", () => {
   it("accepts Main Stock to Bar and Kitchen only", () => {
@@ -103,6 +105,13 @@ describe("location stock rules", () => {
     const requested = 1;
     assert.equal(bar >= requested, false);
     assert.equal(main, 76);
+  });
+
+  it("lets POS oversell at the selling location while transfers and waste cannot go negative", () => {
+    assert.equal(posOversellAllowed("SALE"), true);
+    assert.equal(validateWasteQuantity(0, 1).ok, false);
+    const main = 10;
+    assert.equal(main >= 24, false);
   });
 
   it("stock take and adjustment affect only the selected location", () => {

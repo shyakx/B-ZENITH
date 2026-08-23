@@ -35,6 +35,7 @@ enum InventoryMovementType {
   STOCK_TAKE
   TRANSFER_OUT
   TRANSFER_IN
+  WASTE
 }
 
 enum ProductUnit {
@@ -276,6 +277,7 @@ model InventoryMovement {
   quantity               Int
   balanceAfter           Int
   referenceId            String?
+  reason                 String?
   note                   String?
   performedById          String
   performedBy            User                   @relation(fields: [performedById], references: [id])

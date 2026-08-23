@@ -16,6 +16,7 @@ describe("catalog writes", () => {
       trackInventory: false,
     });
     assert.equal("stockQuantity" in data, false);
+    assert.equal(data.trackInventory, true);
     assert.equal(data.name, "House Burger");
     assert.equal(data.sellingPrice, 8000);
     assert.equal(newProductStockQuantity(), 0);

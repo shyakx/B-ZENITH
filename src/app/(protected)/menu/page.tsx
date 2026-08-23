@@ -23,7 +23,7 @@ export default async function MenuPage({
         ...(filters.q ? { name: { contains: filters.q, mode: "insensitive" } } : {}),
         ...(filters.category ? { categoryId: filters.category } : {}),
       },
-      include: { category: true, variants: { orderBy: { sortOrder: "asc" } } },
+      include: { category: true, variants: { orderBy: { sortOrder: "asc" } }, sellingLocation: true },
       orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
     }),
     prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
@@ -59,7 +59,6 @@ export default async function MenuPage({
           <label className="text-sm font-bold md:col-span-2">Description<textarea name="description" rows={3} className="mt-1 w-full rounded-md border p-3 font-normal" /></label>
           <div className="flex flex-wrap gap-5 md:col-span-2">
             <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="active" defaultChecked /> Active</label>
-            <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="trackInventory" defaultChecked /> Track inventory</label>
             <label className="text-sm font-bold">POS selling location
               <select name="sellingLocationCode" defaultValue="BAR" className="ml-2 min-h-11 rounded-md border px-3 font-normal">
                 <option value="BAR">Bar</option>
@@ -89,9 +88,7 @@ export default async function MenuPage({
                   <p className="text-xl font-black text-[#947313]">{product.sellingPrice.toFixed(0)} RWF</p>
                 )}
                 <p className="text-sm text-stone-500">
-                  {product.trackInventory
-                    ? `${product.stockQuantity} ${product.unit.toLowerCase()}`
-                    : "Inventory tracking disabled"}
+                  {product.stockQuantity} {product.unit.toLowerCase()} · {product.sellingLocation?.code === "KITCHEN" ? "Kitchen" : "Bar"}
                 </p>
               </div>
               <Link href={`/menu/${product.id}`} className="grid size-11 place-items-center rounded-md border" aria-label={`Edit ${product.name}`}><Pencil size={17} /></Link>

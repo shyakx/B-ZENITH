@@ -75,6 +75,7 @@ export async function applyStockTake(input: {
         quantity: countedQuantity,
         type: "STOCK_TAKE",
         performedById: input.userId,
+        reason: input.reason,
         note: `Stock take (${location.code}): ${input.reason}`,
       });
     } catch (error) {

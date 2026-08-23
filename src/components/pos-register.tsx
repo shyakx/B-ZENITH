@@ -82,7 +82,6 @@ export function PosRegister({
     setCart((current) => {
       const existing = current.find((line) => line.variantId === variant.id);
       const nextQuantity = (existing?.quantity ?? 0) + 1;
-      if (product.trackInventory && nextQuantity > product.stockQuantity) return current;
       if (existing) {
         return current.map((line) => (line.variantId === variant.id ? { ...line, quantity: nextQuantity } : line));
       }
@@ -108,7 +107,6 @@ export function PosRegister({
         .map((line) => {
           if (line.variantId !== variantId) return line;
           const quantity = Math.max(0, line.quantity + delta);
-          if (line.trackInventory && quantity > line.stockQuantity) return line;
           return { ...line, quantity };
         })
         .filter((line) => line.quantity > 0),
@@ -289,25 +287,36 @@ export function PosRegister({
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((product) => {
-              const unavailable = product.trackInventory && product.stockQuantity < 1;
+              const stockTone =
+                !product.trackInventory
+                  ? ""
+                  : product.stockQuantity < 0
+                    ? "border-red-300 bg-red-50"
+                    : product.stockQuantity === 0
+                      ? "border-amber-200 bg-amber-50"
+                      : product.stockQuantity <= 5
+                        ? "border-amber-100"
+                        : "border-stone-200 bg-white";
               const single = product.variants.length === 1;
               return (
                 <article
                   key={product.id}
-                  className={`rounded-lg border border-stone-200 bg-white p-4 shadow-sm ${unavailable ? "opacity-45" : ""}`}
+                  className={`rounded-lg border p-4 shadow-sm ${stockTone || "border-stone-200 bg-white"}`}
                 >
                   <p className="line-clamp-2 font-bold">{product.name}</p>
                   {product.trackInventory && (
-                    <p className="mt-1 text-xs text-stone-500">{product.stockQuantity} in stock</p>
+                    <p className={`mt-1 text-xs font-bold ${product.stockQuantity <= 0 ? "text-red-700" : "text-stone-500"}`}>
+                      Available: {product.stockQuantity}
+                      {product.stockQuantity <= 0 ? " · can still order" : ""}
+                    </p>
                   )}
                   <div className="mt-3 space-y-2">
                     {product.variants.map((variant) => (
                       <button
                         key={variant.id}
-                        disabled={unavailable}
                         onClick={() => addVariant(product, variant)}
-                        className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-md border px-3 text-left font-bold transition hover:border-[#d4af37] disabled:cursor-not-allowed ${
-                          single ? "border-stone-200 bg-stone-50" : "border-stone-200"
+                        className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-md border px-3 text-left font-bold transition hover:border-[#d4af37] ${
+                          single ? "border-stone-200 bg-white/80" : "border-stone-200"
                         }`}
                       >
                         <span>{variant.name === "Portion" && single ? "Add" : variant.name}</span>

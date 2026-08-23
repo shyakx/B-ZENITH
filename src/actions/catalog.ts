@@ -31,7 +31,7 @@ const productSchema = z.object({
   unit: z.nativeEnum(ProductUnit),
   imageUrl: optionalUrl,
   active: z.coerce.boolean().default(false),
-  trackInventory: z.coerce.boolean().default(false),
+  trackInventory: z.coerce.boolean().default(true),
   sellingLocationCode: z.enum(["BAR", "KITCHEN"]).default("BAR"),
 });
 
@@ -47,7 +47,7 @@ const productInput = (formData: FormData) =>
     unit: text(formData, "unit"),
     imageUrl: text(formData, "imageUrl"),
     active: formData.has("active"),
-    trackInventory: formData.has("trackInventory"),
+    trackInventory: true,
     sellingLocationCode: text(formData, "sellingLocationCode") || "BAR",
   });
 
@@ -74,7 +74,7 @@ export async function createProduct(formData: FormData) {
         },
       },
     });
-    await ensureTrackedProductStock(tx, created.id, input.trackInventory, input.sellingLocationCode);
+    await ensureTrackedProductStock(tx, created.id, true, input.sellingLocationCode);
     return created;
   });
   await prisma.auditLog.create({
@@ -96,7 +96,7 @@ export async function updateProduct(productId: string, formData: FormData) {
         ? catalogProductWriteData({ ...input, sku: input.sku })
         : catalogProductNonPriceWriteData({ ...input, sku: input.sku }),
     });
-    await ensureTrackedProductStock(tx, productId, input.trackInventory, input.sellingLocationCode);
+    await ensureTrackedProductStock(tx, productId, true, input.sellingLocationCode);
     const defaultVariant = await tx.productVariant.findFirst({
       where: { productId },
       orderBy: { sortOrder: "asc" },

@@ -33,8 +33,9 @@ const links = [
   { href: "/billiard", label: "Billiard sales", icon: Target, roles: billiardRoles },
   { href: "/sales", label: "Sales", icon: History, roles: tillRoles },
   { href: "/menu", label: "Menu", icon: Tags, roles: catalogRoles },
-  { href: "/inventory", label: "Inventory", icon: Boxes, roles: catalogRoles },
-  { href: "/purchases", label: "Stock in", icon: PackagePlus, roles: catalogRoles },
+  { href: "/inventory", label: "Inventory overview", icon: Boxes, roles: catalogRoles },
+  { href: "/inventory/operations", label: "Stock operations", icon: ClipboardList, roles: catalogRoles },
+  { href: "/suppliers", label: "Suppliers", icon: PackagePlus, roles: catalogRoles },
   { href: "/expenses", label: "Expenses", icon: CircleDollarSign, roles: businessRoles },
   { href: "/returns", label: "Returns", icon: RotateCcw, roles: businessRoles },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: businessRoles },
@@ -82,7 +83,7 @@ export function AppShell({
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:min-h-0 lg:flex-1 lg:flex-col lg:gap-1 lg:overflow-y-auto lg:pb-2">
           {availableLinks.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const active = pathname === href || (href !== "/inventory" && pathname.startsWith(`${href}/`)) || (href === "/inventory" && pathname === "/inventory");
             return (
               <Link
                 key={href}

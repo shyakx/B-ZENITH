@@ -39,21 +39,16 @@ export default async function EditProductPage({
         <div className="text-sm">
           <p className="font-bold">Stock quantity</p>
           <p className="mt-1 min-h-11 rounded-md border bg-stone-50 px-3 py-3 font-normal">
-            {product.trackInventory ? `${product.stockQuantity} ${product.unit.toLowerCase()}` : "Not tracked"}
+            {product.stockQuantity} {product.unit.toLowerCase()}
           </p>
-          {product.trackInventory ? (
-            <Link href="/inventory#stock-take" className="mt-1 inline-block font-bold text-[#947313]">
-              Change stock in Inventory
-            </Link>
-          ) : (
-            <p className="mt-1 text-xs text-stone-500">Menu edits never change stock. Use Inventory for counted quantities.</p>
-          )}
+          <Link href="/inventory#stock-take" className="mt-1 inline-block font-bold text-[#947313]">
+            Change stock in Inventory
+          </Link>
         </div>
         <label className="text-sm font-bold">Image URL<input name="imageUrl" type="url" defaultValue={product.imageUrl ?? ""} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
         <label className="text-sm font-bold md:col-span-2">Description<textarea name="description" rows={4} defaultValue={product.description ?? ""} className="mt-1 w-full rounded-md border p-3 font-normal" /></label>
         <div className="flex flex-wrap gap-5 md:col-span-2">
           <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="active" defaultChecked={product.active} /> Active</label>
-          <label className="flex items-center gap-2 font-bold"><input type="checkbox" name="trackInventory" defaultChecked={product.trackInventory} /> Track inventory</label>
           <label className="text-sm font-bold">POS selling location
             <select name="sellingLocationCode" defaultValue={product.sellingLocation?.code === "KITCHEN" ? "KITCHEN" : "BAR"} className="ml-2 min-h-11 rounded-md border px-3 font-normal">
               <option value="BAR">Bar</option>

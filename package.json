@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/idempotency.test.ts src/lib/reporting.test.ts src/lib/catalog-fields.test.ts src/lib/rate-limit.test.ts src/lib/employee-update.test.ts src/lib/billiard.test.ts src/lib/location-stock.test.ts",
+    "test": "tsx --test src/lib/idempotency.test.ts src/lib/reporting.test.ts src/lib/catalog-fields.test.ts src/lib/rate-limit.test.ts src/lib/employee-update.test.ts src/lib/billiard.test.ts src/lib/location-stock.test.ts src/lib/inventory-groups.test.ts src/lib/inventory-auth.test.ts src/lib/inventory-totals.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",

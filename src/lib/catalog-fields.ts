@@ -27,7 +27,7 @@ export function catalogProductWriteData(input: CatalogProductWrite) {
     unit: input.unit,
     imageUrl: input.imageUrl,
     active: input.active,
-    trackInventory: input.trackInventory,
+    trackInventory: true,
     costPrice: input.costPrice,
     sellingPrice: input.sellingPrice,
     ...(input.sku ? { sku: input.sku } : {}),
@@ -42,7 +42,7 @@ export function catalogProductNonPriceWriteData(input: CatalogProductWrite) {
     unit: input.unit,
     imageUrl: input.imageUrl,
     active: input.active,
-    trackInventory: input.trackInventory,
+    trackInventory: true,
     ...(input.sku ? { sku: input.sku } : {}),
   };
 }

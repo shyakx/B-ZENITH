@@ -124,5 +124,65 @@ export async function transferStock(formData: FormData) {
   revalidatePath("/pos");
   revalidatePath("/reports");
   revalidatePath("/dashboard");
+  revalidatePath("/inventory/operations");
   return { ok: true as const };
+}
+
+export async function recordWaste(formData: FormData) {
+  const user = await requireUser(catalogRoles);
+  const input = z.object({
+    productId: z.string().cuid(),
+    locationCode: z.enum([LOCATION_CODES.MAIN_STOCK, LOCATION_CODES.BAR, LOCATION_CODES.KITCHEN]),
+    quantity: z.coerce.number().int().positive().max(1_000_000),
+    reason: z.enum(["BREAKAGE", "SPOILAGE", "EXPIRED", "DAMAGED", "INTERNAL_USE", "OTHER"]),
+    note: z.string().trim().max(300).optional().default(""),
+  }).parse({
+    productId: formData.get("productId"),
+    locationCode: formData.get("locationCode"),
+    quantity: formData.get("quantity"),
+    reason: formData.get("reason"),
+    note: formData.get("note") || "",
+  });
+
+  await prisma.$transaction(async (tx) => {
+    const location = await getLocationByCode(tx, input.locationCode);
+    const current = await tx.productLocationStock.findUnique({
+      where: { productId_locationId: { productId: input.productId, locationId: location.id } },
+    });
+    const onHand = current?.quantity ?? 0;
+    if (onHand < input.quantity) {
+      throw new StockError("Waste cannot take stock below zero.");
+    }
+    await applyLocationDelta(tx, {
+      productId: input.productId,
+      locationId: location.id,
+      delta: -input.quantity,
+      type: "WASTE",
+      performedById: user.id,
+      reason: input.reason,
+      note: input.note || undefined,
+    });
+    await tx.auditLog.create({
+      data: {
+        userId: user.id,
+        actorUsername: user.username,
+        actorName: user.name ?? "",
+        actorRole: user.role,
+        action: "INVENTORY_WASTE",
+        entity: "Product",
+        entityId: input.productId,
+        details: {
+          productId: input.productId,
+          quantity: input.quantity,
+          locationCode: input.locationCode,
+          reason: input.reason,
+        },
+      },
+    });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  revalidatePath("/inventory");
+  revalidatePath("/inventory/operations");
+  revalidatePath("/pos");
+  revalidatePath("/reports");
 }

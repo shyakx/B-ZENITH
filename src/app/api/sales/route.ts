@@ -151,6 +151,7 @@ export async function POST(request: Request) {
                   performedById: user.id,
                   referenceId: created.id,
                   note: created.receiptNumber,
+                  allowNegative: true,
                 });
               } catch (error) {
                 if (error instanceof StockError) throw new CheckoutError(error.message);
