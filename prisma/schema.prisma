@@ -79,7 +79,6 @@ model User {
   returns           Return[]
   auditLogs         AuditLog[]
   billiardDaySales  BilliardDaySale[]
-  closedDays        BusinessDayClose[]
   stockTransfers    StockTransfer[]
 }
 
@@ -372,22 +371,6 @@ model ReturnItem {
   quantity   Int
   unitPrice  Decimal  @db.Decimal(12, 2)
   total      Decimal  @db.Decimal(12, 2)
-}
-
-model BusinessDayClose {
-  id             String   @id @default(cuid())
-  businessDay    String   @unique
-  closedAt       DateTime @default(now())
-  closedById     String
-  closedBy       User     @relation(fields: [closedById], references: [id])
-  posCount       Int
-  posGross       Decimal  @db.Decimal(12, 2)
-  posNet         Decimal  @db.Decimal(12, 2)
-  billiardTotal  Decimal  @db.Decimal(12, 2)
-  expenseTotal   Decimal  @db.Decimal(12, 2)
-  note           String?
-
-  @@index([closedAt])
 }
 
 model BilliardDaySale {

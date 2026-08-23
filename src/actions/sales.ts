@@ -4,15 +4,14 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { writeAudit } from "@/lib/audit";
 import { requireUser } from "@/lib/authorization";
-import { canDeleteTransactions } from "@/lib/business-day";
-import { kigaliDateString } from "@/lib/datetime";
+import { isAdminRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { applyLocationDelta, getLocationByCode, LOCATION_CODES, restoreLocationId, saleVoidClaimed, StockError } from "@/lib/location-stock";
 import { deductsPhysicalStock } from "@/lib/stock";
 
 export async function voidSale(saleId: string) {
   const user = await requireUser(["ADMIN"]);
-  if (!canDeleteTransactions(user.role)) return { error: "Only an admin can delete transactions." };
+  if (!isAdminRole(user.role)) return { error: "Only an admin can delete transactions." };
 
   const sale = await prisma.sale.findUnique({
     where: { id: saleId },
@@ -22,12 +21,6 @@ export async function voidSale(saleId: string) {
   if (sale.status === "VOIDED") return { error: "This sale is already deleted." };
   if (sale.status !== "COMPLETED" || sale.items.some((item) => item.returnedQuantity > 0)) {
     return { error: "Returned sales cannot be deleted. Use a return instead." };
-  }
-
-  const businessDay = kigaliDateString(sale.createdAt);
-  const closed = await prisma.businessDayClose.findUnique({ where: { businessDay } });
-  if (closed) {
-    return { error: "This day’s sales are archived. Open them from Closed days instead of deleting." };
   }
 
   try {
@@ -82,8 +75,6 @@ export async function deleteBilliardDaySale(id: string) {
   const user = await requireUser(["ADMIN"]);
   const row = await prisma.billiardDaySale.findUnique({ where: { id } });
   if (!row) return { error: "Billiard total not found." };
-  const closed = await prisma.businessDayClose.findUnique({ where: { businessDay: row.businessDay } });
-  if (closed) return { error: "That business day is already closed." };
   await prisma.billiardDaySale.delete({ where: { id } });
   await writeAudit(user, {
     action: "DELETE_BILLIARD_DAY_SALE",

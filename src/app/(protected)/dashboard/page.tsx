@@ -3,7 +3,6 @@ import { BrandLogo } from "@/components/brand-logo";
 import { BilliardSalesForm } from "@/components/billiard-sales-form";
 import { LiveRefresh } from "@/components/live-refresh";
 import { requireUser } from "@/lib/authorization";
-import { canViewLifetimeSales } from "@/lib/business-day";
 import { businessRoles } from "@/lib/roles";
 import { sumBilliardAmounts, billiardReceiptNumber } from "@/lib/billiard";
 import { formatDateTime, formatMoney, kigaliDateString, paymentLabel, todayKigaliRange } from "@/lib/datetime";
@@ -19,7 +18,7 @@ export default async function DashboardPage() {
     createdAt: { gte: start, lt: end },
   };
 
-  const showLifetime = canViewLifetimeSales(user.role);
+  const showLifetime = user.role === "ADMIN" || user.role === "OWNER" || user.role === "MANAGER";
 
   const [sales, expenses, billiardRows, recent, recentBilliard, lowStock, settings, lifetimePos, lifetimeBilliard] = await Promise.all([
     prisma.sale.findMany({
@@ -154,7 +153,7 @@ export default async function DashboardPage() {
         </div>
         <h1 className="text-3xl font-black">Today&apos;s business</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Live Kigali day only. Closed days stay archived and can be opened from Sales → Closed days.
+          Live Kigali day totals, billiard take, and stock alerts.
         </p>
       </div>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
