@@ -55,7 +55,8 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
       if (!response.ok) {
         const result = (await response.json()) as { error?: string };
         setPending(false);
-        setMessage(result.error ?? `Could not save ${row.product.name}.`);
+        const raw = result.error ?? `Could not save ${row.product.name}.`;
+        setMessage(raw.includes("Prisma") ? "We couldn't update the stock. Please try again." : raw);
         return;
       }
       saved += 1;
@@ -70,9 +71,9 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
     <div className="space-y-4 rounded-lg border bg-white p-4">
       <div className="grid gap-3 md:grid-cols-2">
         <label className="text-sm font-bold">
-          Location
+          Where
           <select value={locationCode} onChange={(event) => setLocationCode(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">
-            <option value="MAIN_STOCK">Main Stock</option>
+            <option value="MAIN_STOCK">Main Store</option>
             <option value="BAR">Bar</option>
             <option value="KITCHEN">Kitchen</option>
           </select>
@@ -83,7 +84,7 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
         </label>
       </div>
       <p className="text-sm text-stone-500">
-        Enter the physical quantity after counting {locationLabel(locationCode)}. Empty rows are skipped. Each save writes a STOCK_TAKE movement.
+        Enter the number you physically counted at {locationLabel(locationCode)}. Empty rows are skipped.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left text-sm">
@@ -91,15 +92,14 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
             <tr>
               <th className="p-3">Product</th>
               <th className="p-3">Category</th>
-              <th className="p-3">System</th>
-              <th className="p-3">Physical count</th>
-              <th className="p-3">Difference</th>
+              <th className="p-3">System says</th>
+              <th className="p-3">You counted</th>
               <th className="p-3">Unit cost</th>
               <th className="p-3">Stock value</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map(({ product, system, physical, difference }) => (
+            {rows.map(({ product, system, physical }) => (
               <tr key={product.id}>
                 <td className="p-3 font-bold">{product.name}</td>
                 <td className="p-3">{product.categoryName}</td>
@@ -114,9 +114,6 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
                     className="min-h-10 w-28 rounded-md border px-2"
                     placeholder={String(system)}
                   />
-                </td>
-                <td className={`p-3 font-bold ${difference === null || difference === 0 ? "" : difference > 0 ? "text-green-700" : "text-red-700"}`}>
-                  {difference === null ? "—" : `${difference > 0 ? "+" : ""}${difference}`}
                 </td>
                 <td className="p-3">{formatMoney(product.costPrice, currency)}</td>
                 <td className="p-3">{formatMoney((physical ?? system) * product.costPrice, currency)}</td>

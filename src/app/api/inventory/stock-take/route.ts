@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/authorization";
-import { catalogRoles } from "@/lib/roles";
+import { stockMutateRoles } from "@/lib/roles";
 import { applyStockTake, StockTakeError } from "@/lib/stock-take";
 
 const schema = z.object({
@@ -14,7 +14,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const auth = await requireApiUser(catalogRoles);
+  const auth = await requireApiUser(stockMutateRoles);
   if (!auth.ok) return auth.response;
 
   const parsed = schema.safeParse(await request.json().catch(() => null));

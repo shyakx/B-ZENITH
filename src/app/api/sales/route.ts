@@ -18,6 +18,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { deductsPhysicalStock } from "@/lib/stock";
 import { applyLocationDelta, sellingLocationId, StockError } from "@/lib/location-stock";
+import { legacySaleAllowsNegativeStock } from "@/lib/inventory-auth";
 
 const checkoutSchema = z.object({
   idempotencyKey: z.string().regex(IDEMPOTENCY_KEY_SCHEMA, "Invalid checkout key."),
@@ -162,7 +163,7 @@ export async function POST(request: Request) {
                   performedById: user.id,
                   referenceId: created.id,
                   note: created.receiptNumber,
-                  allowNegative: true,
+                  allowNegative: legacySaleAllowsNegativeStock(),
                 });
               } catch (error) {
                 if (error instanceof StockError) throw new CheckoutError(error.message);

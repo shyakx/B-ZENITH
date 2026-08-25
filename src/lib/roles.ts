@@ -4,6 +4,9 @@ export const userAdminRoles = ["ADMIN", "OWNER"] as const;
 export const businessRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
 export const managerRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
 export const catalogRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
+/** Read-only Stock page. Mutations stay on stockMutateRoles. */
+export const stockViewRoles = ["ADMIN", "OWNER", "MANAGER", "WAITER"] as const;
+export const stockMutateRoles = catalogRoles;
 export const tillRoles = ["ADMIN", "OWNER", "MANAGER", "WAITER"] as const;
 export const billiardRoles = ["ADMIN", "OWNER", "MANAGER", "WAITER", "BILLIARD"] as const;
 

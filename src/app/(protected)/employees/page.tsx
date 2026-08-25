@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { createEmployee, updateEmployee } from "@/actions/employees";
 import { ActionForm } from "@/components/action-form";
+import { DashboardHeader } from "@/components/dashboard/ui";
 import { DeleteUserButton } from "@/components/delete-user-button";
 import { requireUser } from "@/lib/authorization";
 import { formatDateTime } from "@/lib/datetime";
@@ -28,14 +29,11 @@ export default async function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Access control</p>
-        <h1 className="text-3xl font-black">User management</h1>
-        <p className="mt-2 text-sm text-stone-500">
-          Admins can create users, promote them to owner, and delete accounts. The last active owner cannot be removed.
-          Sales history is kept if the person already recorded transactions.
-        </p>
-      </div>
+      <DashboardHeader
+        kicker="Management"
+        title="User management"
+        subtitle="Admins can create users, promote them to owner, and delete accounts. The last active owner cannot be removed. Sales history is kept if the person already recorded transactions."
+      />
       <details className="rounded-lg border bg-white">
         <summary className="min-h-14 cursor-pointer p-4 font-black">Add user</summary>
         <ActionForm action={createEmployee} className="grid gap-3 border-t p-4 md:grid-cols-2">

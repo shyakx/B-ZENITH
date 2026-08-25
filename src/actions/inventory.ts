@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/authorization";
-import { catalogRoles } from "@/lib/roles";
+import { stockMutateRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { applyStockTake } from "@/lib/stock-take";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/lib/location-stock";
 
 export async function adjustInventory(formData: FormData) {
-  const user = await requireUser(catalogRoles);
+  const user = await requireUser(stockMutateRoles);
   const input = z.object({
     productId: z.string().cuid(),
     locationCode: z.enum([LOCATION_CODES.MAIN_STOCK, LOCATION_CODES.BAR, LOCATION_CODES.KITCHEN]),
@@ -63,7 +63,7 @@ export async function adjustInventory(formData: FormData) {
 }
 
 export async function recordStockTake(formData: FormData) {
-  const user = await requireUser(catalogRoles);
+  const user = await requireUser(stockMutateRoles);
   const input = z.object({
     productId: z.string().cuid(),
     locationCode: z.enum([LOCATION_CODES.MAIN_STOCK, LOCATION_CODES.BAR, LOCATION_CODES.KITCHEN]),
@@ -94,7 +94,7 @@ export async function recordStockTake(formData: FormData) {
 }
 
 export async function transferStock(formData: FormData) {
-  const user = await requireUser(catalogRoles);
+  const user = await requireUser(stockMutateRoles);
   const toCode = String(formData.get("toCode") ?? "");
   const note = String(formData.get("note") ?? "").trim() || null;
   const productIds = formData.getAll("productId").map(String);
@@ -129,7 +129,7 @@ export async function transferStock(formData: FormData) {
 }
 
 export async function recordWaste(formData: FormData) {
-  const user = await requireUser(catalogRoles);
+  const user = await requireUser(stockMutateRoles);
   const input = z.object({
     productId: z.string().cuid(),
     locationCode: z.enum([LOCATION_CODES.MAIN_STOCK, LOCATION_CODES.BAR, LOCATION_CODES.KITCHEN]),

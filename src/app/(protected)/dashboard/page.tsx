@@ -1,26 +1,86 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { BilliardSalesForm } from "@/components/billiard-sales-form";
+import { CreditRepaymentForm } from "@/components/credit-repayment-form";
+import {
+  ActivityList,
+  AttentionList,
+  DashboardHeader,
+  KpiCard,
+  KpiGrid,
+  MetricRow,
+  Panel,
+  QuickAction,
+  SectionHeader,
+  StatusBadge,
+} from "@/components/dashboard/ui";
 import { LiveRefresh } from "@/components/live-refresh";
 import { requireUser } from "@/lib/authorization";
 import { businessRoles } from "@/lib/roles";
 import { sumBilliardAmounts, billiardReceiptNumber } from "@/lib/billiard";
 import { formatDateTime, formatMoney, kigaliDateString, paymentLabel, todayKigaliRange } from "@/lib/datetime";
+import { loadHospitalityReport } from "@/lib/hospitality-reporting";
 import { prisma } from "@/lib/prisma";
-import { applyBilliardTotals, summarizeSales } from "@/lib/reporting";
+import { summarizeSales } from "@/lib/reporting";
+import { CreditStatus, FulfillmentStatus, ItemStatus, SessionStatus } from "@prisma/client";
+
+export const dynamic = "force-dynamic";
+
+const AUDIT_ACTIONS = [
+  "SALE_COMPLETED",
+  "CREATE_RETURN",
+  "CREATE_PURCHASE",
+  "INVENTORY_ADJUSTMENT",
+  "INVENTORY_WASTE",
+  "CLOSE_BUSINESS_DAY",
+  "SAVE_BILLIARD_DAY_SALE",
+  "HANDOVER",
+  "VOID",
+  "RETURN",
+  "EXCHANGE",
+  "CREATE_EXPENSE",
+];
+
+function countBy<T extends string>(rows: Array<{ key: T; count: number }>, key: T) {
+  return rows.find((row) => row.key === key)?.count ?? 0;
+}
 
 export default async function DashboardPage() {
   const user = await requireUser(businessRoles);
   const { start, end } = todayKigaliRange();
   const today = kigaliDateString();
+  const yesterdayStart = new Date(start.getTime() - 86_400_000);
   const todaySales = {
     status: { not: "VOIDED" as const },
     createdAt: { gte: start, lt: end },
   };
+  const openCredit = { status: { in: [CreditStatus.OUTSTANDING, CreditStatus.PARTIALLY_PAID] } };
+  const staleCutoff = new Date(Date.now() - 15 * 60 * 1000);
 
-  const showLifetime = user.role === "ADMIN" || user.role === "OWNER" || user.role === "MANAGER";
-
-  const [sales, expenses, billiardRows, recent, recentBilliard, lowStock, settings, lifetimePos, lifetimeBilliard] = await Promise.all([
+  const [
+    sales,
+    yesterdaySales,
+    expenses,
+    billiardRows,
+    recent,
+    recentBilliard,
+    lowStock,
+    settings,
+    hospitality,
+    tableCounts,
+    sessionCounts,
+    fulfillmentCounts,
+    staleOrders,
+    creditOutstanding,
+    creditTop,
+    creditPaidToday,
+    creditPaymentsToday,
+    lastClose,
+    movements,
+    auditRows,
+    lifetimePos,
+    lifetimeBilliard,
+  ] = await Promise.all([
     prisma.sale.findMany({
       where: todaySales,
       select: {
@@ -31,12 +91,21 @@ export default async function DashboardPage() {
         discount: true,
         total: true,
         items: {
-          select: {
-            productName: true,
-            quantity: true,
-            returnedQuantity: true,
-            lineSubtotal: true,
-          },
+          select: { productName: true, quantity: true, returnedQuantity: true, lineSubtotal: true },
+        },
+      },
+    }),
+    prisma.sale.findMany({
+      where: { status: { not: "VOIDED" }, createdAt: { gte: yesterdayStart, lt: start } },
+      select: {
+        createdAt: true,
+        paymentMethod: true,
+        subtotal: true,
+        tax: true,
+        discount: true,
+        total: true,
+        items: {
+          select: { productName: true, quantity: true, returnedQuantity: true, lineSubtotal: true },
         },
       },
     }),
@@ -63,23 +132,90 @@ export default async function DashboardPage() {
     prisma.product.findMany({
       where: { active: true, trackInventory: true },
       orderBy: { stockQuantity: "asc" },
-      take: 50,
+      take: 80,
       select: { id: true, name: true, stockQuantity: true, reorderLevel: true },
     }),
     prisma.businessSettings.findUnique({ where: { id: "default" } }),
-    showLifetime
-      ? prisma.sale.aggregate({
-          where: { status: { not: "VOIDED" } },
-          _sum: { total: true },
-          _count: true,
-        })
-      : Promise.resolve(null),
-    showLifetime ? prisma.billiardDaySale.aggregate({ _sum: { amount: true } }) : Promise.resolve(null),
+    loadHospitalityReport(start, end),
+    prisma.table.groupBy({ by: ["status"], where: { active: true }, _count: true }),
+    prisma.serviceSession.groupBy({
+      by: ["status", "channel"],
+      where: { status: { in: [SessionStatus.ACTIVE, SessionStatus.SETTLING] } },
+      _count: true,
+    }),
+    prisma.sessionItem.groupBy({
+      by: ["fulfillmentStatus"],
+      where: {
+        status: ItemStatus.ACTIVE,
+        fulfillmentStatus: { in: [FulfillmentStatus.POSTED, FulfillmentStatus.PREPARING, FulfillmentStatus.READY] },
+        round: { session: { status: { in: [SessionStatus.ACTIVE, SessionStatus.SETTLING] } } },
+      },
+      _count: true,
+    }),
+    prisma.sessionItem.count({
+      where: {
+        status: ItemStatus.ACTIVE,
+        fulfillmentStatus: FulfillmentStatus.POSTED,
+        createdAt: { lt: staleCutoff },
+        round: { session: { status: { in: [SessionStatus.ACTIVE, SessionStatus.SETTLING] } } },
+      },
+    }),
+    prisma.creditBill.aggregate({
+      where: openCredit,
+      _sum: { balance: true },
+      _count: true,
+    }),
+    prisma.creditBill.findMany({
+      where: openCredit,
+      orderBy: { balance: "desc" },
+      take: 8,
+      select: { id: true, saleId: true, customerName: true, balance: true, status: true },
+    }),
+    prisma.creditBill.findMany({
+      where: { status: CreditStatus.PAID, updatedAt: { gte: start, lt: end } },
+      take: 6,
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, customerName: true, total: true, updatedAt: true },
+    }),
+    prisma.creditPayment.aggregate({
+      where: { timestamp: { gte: start, lt: end } },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.businessDayClose.findFirst({
+      orderBy: { closedAt: "desc" },
+      include: { closedBy: { select: { name: true } } },
+    }),
+    prisma.inventoryMovement.findMany({
+      where: { createdAt: { gte: start, lt: end } },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        type: true,
+        quantity: true,
+        createdAt: true,
+        product: { select: { name: true } },
+        location: { select: { code: true } },
+      },
+    }),
+    prisma.auditLog.findMany({
+      where: { createdAt: { gte: start, lt: end }, action: { in: AUDIT_ACTIONS } },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: { id: true, action: true, entity: true, actorName: true, createdAt: true },
+    }),
+    prisma.sale.aggregate({
+      where: { status: { not: "VOIDED" } },
+      _sum: { total: true },
+      _count: true,
+    }),
+    prisma.billiardDaySale.aggregate({ _sum: { amount: true } }),
   ]);
 
   const currency = settings?.currency ?? "RWF";
-  const posSummary = summarizeSales(
-    sales.map((sale) => ({
+  const toReport = (rows: typeof sales) =>
+    rows.map((sale) => ({
       createdAt: sale.createdAt,
       paymentMethod: sale.paymentMethod,
       subtotal: sale.subtotal.toNumber(),
@@ -92,167 +228,272 @@ export default async function DashboardPage() {
         returnedQuantity: item.returnedQuantity,
         lineSubtotal: item.lineSubtotal.toNumber(),
       })),
-    })),
-  );
+    }));
+  const posSummary = summarizeSales(toReport(sales));
+  const yesterdaySummary = summarizeSales(toReport(yesterdaySales));
   const billiardToday = sumBilliardAmounts(billiardRows);
-  const summary = applyBilliardTotals(
-    posSummary,
-    billiardRows.map((row) => ({ businessDay: today, amount: row.amount.toNumber() })),
-  );
-  const topItems = [...summary.products.entries()]
-    .sort((a, b) => b[1].quantity - a[1].quantity || b[1].revenue - a[1].revenue)
-    .slice(0, 5);
-  const myBilliard = billiardRows.find((row) => row.operatorId === user.id);
-  const recentFeed = [
-    ...recent.map((sale) => ({
-      id: sale.id,
-      href: `/sales/${sale.id}`,
-      title: sale.receiptNumber,
-      staff: sale.cashier.name,
-      at: sale.createdAt,
-      method: paymentLabel(sale.paymentMethod),
-      total: sale.total.toNumber(),
-    })),
-    ...recentBilliard.map((row) => ({
-      id: row.id,
-      href: `/sales/${row.id}`,
-      title: billiardReceiptNumber(row.businessDay),
-      staff: row.operator.name,
-      at: row.updatedAt,
-      method: "Billiard day total",
-      total: row.amount.toNumber(),
-    })),
-  ]
-    .sort((a, b) => b.at.getTime() - a.at.getTime())
-    .slice(0, 8);
+  const salesChange =
+    yesterdaySummary.netTotal > 0
+      ? Math.round(((posSummary.netTotal - yesterdaySummary.netTotal) / yesterdaySummary.netTotal) * 100)
+      : null;
+  const salesChangeLabel =
+    salesChange === null ? "No yesterday baseline" : `${salesChange > 0 ? "+" : ""}${salesChange}% vs yesterday`;
+  const paymentAmount = (method: string) => hospitality.paymentTotals.get(method)?.amount ?? 0;
+  const settledTotal = [...hospitality.paymentTotals.values()].reduce((sum, row) => sum + row.amount, 0);
+  const occupied = countBy(tableCounts.map((row) => ({ key: row.status, count: row._count })), "OCCUPIED");
+  const available = countBy(tableCounts.map((row) => ({ key: row.status, count: row._count })), "AVAILABLE");
+  const outOfService = countBy(tableCounts.map((row) => ({ key: row.status, count: row._count })), "OUT_OF_SERVICE");
+  const tableTotal = occupied + available + outOfService;
+  const activeSessions = sessionCounts.filter((row) => row.status === SessionStatus.ACTIVE).reduce((sum, row) => sum + row._count, 0);
+  const settlingSessions = sessionCounts.filter((row) => row.status === SessionStatus.SETTLING).reduce((sum, row) => sum + row._count, 0);
+  const openSessions = activeSessions + settlingSessions;
+  const channelCount = (channel: string, status?: SessionStatus) =>
+    sessionCounts
+      .filter((row) => row.channel === channel && (!status || row.status === status))
+      .reduce((sum, row) => sum + row._count, 0);
+  const tableSessions = channelCount("TABLE");
+  const otherSessions = Math.max(0, openSessions - tableSessions);
+  const fulfill = (status: FulfillmentStatus) =>
+    fulfillmentCounts.find((row) => row.fulfillmentStatus === status)?._count ?? 0;
+  const pendingOrders = fulfill(FulfillmentStatus.POSTED);
+  const preparingOrders = fulfill(FulfillmentStatus.PREPARING);
+  const readyOrders = fulfill(FulfillmentStatus.READY);
+  const queueOrders = pendingOrders + preparingOrders + readyOrders;
   const threshold = settings?.defaultReorderLevel ?? 5;
   const lowStockItems =
     settings?.lowStockEnabled === false
       ? []
-      : lowStock.filter((product) => product.stockQuantity <= (product.reorderLevel || threshold)).slice(0, 8);
-  const cards = [
-    ["Gross sales", formatMoney(summary.grossTotal, currency)],
-    ["Returns", formatMoney(summary.returnedTotal, currency)],
-    ["Net sales", formatMoney(summary.netTotal, currency)],
-    ["Transactions", String(summary.count)],
-    ["Average net sale", formatMoney(summary.averageNet, currency)],
-    ["Today's expenses", formatMoney(expenses._sum.amount?.toNumber() ?? 0, currency)],
-    ["Billiard today", formatMoney(billiardToday, currency)],
-    ["Cash (net)", formatMoney(summary.payments.get("CASH")?.net ?? 0, currency)],
-    ["Mobile money (net)", formatMoney(summary.payments.get("MOBILE_MONEY")?.net ?? 0, currency)],
-    ["Card (net)", formatMoney(summary.payments.get("CARD")?.net ?? 0, currency)],
+      : lowStock.filter((product) => product.stockQuantity > 0 && product.stockQuantity <= (product.reorderLevel || threshold));
+  const outOfStockItems = lowStock.filter((product) => product.stockQuantity <= 0);
+  const creditBalance = creditOutstanding._sum.balance?.toNumber() ?? 0;
+  const myBilliard = billiardRows.find((row) => row.operatorId === user.id);
+  const dayClosed = lastClose?.businessDay === today;
+  const movementCount = hospitality.inventory.movements.reduce((sum, row) => sum + row.count, 0);
+  const stockUnits = hospitality.inventory.locationStockSum;
+
+  const attention = [
+    ...(outOfStockItems.length
+      ? [{ href: "/inventory", label: `${outOfStockItems.length} out of stock`, detail: outOfStockItems.slice(0, 3).map((p) => p.name).join(", "), tone: "stop" as const }]
+      : []),
+    ...(lowStockItems.length
+      ? [{ href: "/inventory", label: `${lowStockItems.length} products low in stock`, detail: "View stock", tone: "warn" as const }]
+      : []),
+    ...(pendingOrders
+      ? [{ href: "/fulfillment/kitchen", label: `${pendingOrders} pending fulfillment`, detail: "Open fulfillment", tone: "warn" as const }]
+      : []),
+    ...(staleOrders
+      ? [{ href: "/fulfillment/bar", label: `${staleOrders} orders waiting over 15 minutes`, detail: "Open fulfillment", tone: "warn" as const }]
+      : []),
+    ...(settlingSessions
+      ? [{ href: "/pos", label: `${settlingSessions} awaiting settlement`, detail: "Open POS", tone: "warn" as const }]
+      : []),
+    ...(creditOutstanding._count
+      ? [{ href: "/reports", label: `${creditOutstanding._count} outstanding credit`, detail: `${formatMoney(creditBalance, currency)} to review`, tone: "warn" as const }]
+      : []),
   ];
 
+  const activitySorted = [
+    ...recent.map((sale) => ({
+      at: sale.createdAt.getTime(),
+      id: sale.id,
+      href: `/sales/${sale.id}`,
+      title: sale.receiptNumber,
+      badge: "Sale",
+      meta: `${sale.cashier.name} · ${formatDateTime(sale.createdAt)} · ${paymentLabel(sale.paymentMethod)}`,
+      amount: formatMoney(sale.total.toNumber(), currency),
+    })),
+    ...recentBilliard.map((row) => ({
+      at: row.updatedAt.getTime(),
+      id: row.id,
+      href: "/billiard",
+      title: billiardReceiptNumber(row.businessDay),
+      badge: "Billiard",
+      meta: `${row.operator.name} · ${formatDateTime(row.updatedAt)}`,
+      amount: formatMoney(row.amount.toNumber(), currency),
+    })),
+    ...movements.map((row) => ({
+      at: row.createdAt.getTime(),
+      id: row.id,
+      href: "/inventory",
+      title: row.product.name,
+      badge: row.type.replaceAll("_", " "),
+      meta: `${row.location?.code ?? "MAIN"} · ${formatDateTime(row.createdAt)}`,
+      amount: `${row.quantity > 0 ? "+" : ""}${row.quantity}`,
+    })),
+    ...auditRows.map((row) => ({
+      at: row.createdAt.getTime(),
+      id: row.id,
+      href: row.action === "HANDOVER" ? "/pos" : undefined,
+      title: row.action.replaceAll("_", " "),
+      badge: row.entity,
+      meta: `${row.actorName ?? "Staff"} · ${formatDateTime(row.createdAt)}`,
+      amount: undefined as string | undefined,
+    })),
+  ]
+    .sort((a, b) => b.at - a.at)
+    .slice(0, 8)
+    .map(({ id, href, title, badge, meta, amount }) => ({ id, href, title, badge, meta, amount }));
+
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       <LiveRefresh />
-      <div>
-        <div className="mb-2 flex items-center gap-3">
-          <BrandLogo size={48} className="rounded-md" />
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#947313]">B-ZENITH</p>
-        </div>
-        <h1 className="text-3xl font-black">Today&apos;s business</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Live Kigali day totals, billiard take, and stock alerts.
-        </p>
-      </div>
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map(([label, value]) => (
-          <article key={label} className="rounded-lg border border-stone-200 bg-white p-5">
-            <p className="text-sm font-semibold text-stone-500">{label}</p>
-            <p className="mt-2 text-2xl font-black">{value}</p>
-          </article>
-        ))}
-      </section>
-      {showLifetime && lifetimePos ? (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <article className="rounded-lg border border-stone-200 bg-white p-5">
-            <p className="text-sm font-semibold text-stone-500">All POS since start</p>
-            <p className="mt-2 text-2xl font-black">{formatMoney(lifetimePos._sum.total?.toNumber() ?? 0, currency)}</p>
-          </article>
-          <article className="rounded-lg border border-stone-200 bg-white p-5">
-            <p className="text-sm font-semibold text-stone-500">All POS tickets</p>
-            <p className="mt-2 text-2xl font-black">{lifetimePos._count}</p>
-          </article>
-          <article className="rounded-lg border border-stone-200 bg-white p-5">
-            <p className="text-sm font-semibold text-stone-500">All billiard since start</p>
-            <p className="mt-2 text-2xl font-black">{formatMoney(lifetimeBilliard?._sum.amount?.toNumber() ?? 0, currency)}</p>
-          </article>
-        </section>
-      ) : null}
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-black">Billiard sales</h2>
-            <p className="text-sm text-stone-500">Save today’s total take. Games are not entered one by one.</p>
+      <DashboardHeader
+        kicker="B-ZENITH"
+        title="Operations Dashboard"
+        subtitle="Real-time overview of today's restaurant operations."
+        meta={
+          <div className="flex flex-wrap items-center gap-2">
+            <BrandLogo size={28} className="rounded-md" />
+            <span>Business date {today}</span>
+            <StatusBadge tone={dayClosed ? "info" : "ok"}>{dayClosed ? "Day closed" : "Open"}</StatusBadge>
           </div>
-          <Link href="/billiard" className="font-bold text-[#947313]">Open billiard</Link>
-        </div>
-        <BilliardSalesForm defaultAmount={myBilliard?.amount.toNumber()} defaultNote={myBilliard?.note ?? undefined} />
-      </section>
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className="rounded-lg border border-stone-200 bg-white">
-          <h2 className="border-b p-5 text-xl font-black">Top-selling products today</h2>
-          {topItems.length === 0 ? (
-            <p className="p-8 text-center text-stone-500">No sales recorded today.</p>
-          ) : (
-            <div className="divide-y">
-              {topItems.map(([name, item]) => (
-                <div key={name} className="flex justify-between gap-3 p-4">
-                  <div>
-                    <b>{name}</b>
-                    <p className="text-sm text-stone-500">× {item.quantity}</p>
-                  </div>
-                  <b>{formatMoney(item.revenue, currency)}</b>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-        <section className="rounded-lg border border-stone-200 bg-white">
-          <div className="flex items-center justify-between border-b p-5">
-            <h2 className="text-xl font-black">Low stock</h2>
-            <Link href="/inventory" className="font-bold text-[#947313]">Inventory</Link>
-          </div>
-          {lowStockItems.length === 0 ? (
-            <p className="p-8 text-center text-stone-500">No low-stock products.</p>
-          ) : (
-            <div className="divide-y">
-              {lowStockItems.map((product) => (
-                <div key={product.id} className="flex justify-between p-4">
-                  <b>{product.name}</b>
-                  <span className="font-bold text-amber-700">{product.stockQuantity} left</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-      <section className="rounded-lg border border-stone-200 bg-white">
-        <div className="flex items-center justify-between border-b p-5">
-          <h2 className="text-xl font-black">Today’s transactions</h2>
-          <Link href="/sales" className="font-bold text-[#947313]">View all</Link>
-        </div>
-        {recentFeed.length === 0 ? (
-          <p className="p-8 text-center text-stone-500">No sales recorded yet.</p>
-        ) : (
+        }
+        actions={
+          <>
+            <QuickAction href="/pos" primary>
+              Open POS
+            </QuickAction>
+            <QuickAction href="/inventory">Stock</QuickAction>
+            <QuickAction href="/fulfillment/kitchen">Kitchen</QuickAction>
+            <QuickAction href="/reports">Reports</QuickAction>
+          </>
+        }
+      />
+
+      <KpiGrid>
+        <KpiCard
+          label="Today's sales"
+          value={formatMoney(posSummary.netTotal, currency)}
+          hint={salesChangeLabel}
+        />
+        <KpiCard
+          label="Transactions"
+          value={String(posSummary.count)}
+          hint={yesterdaySummary.count ? `${yesterdaySummary.count} yesterday` : "transactions today"}
+        />
+        <KpiCard
+          label="Active operations"
+          value={String(openSessions)}
+          hint={`${tableSessions} tables · ${otherSessions} other`}
+        />
+        <KpiCard
+          label="Attention required"
+          value={attention.length === 0 ? "All clear" : String(attention.length)}
+          hint={attention.length === 0 ? "Nothing waiting" : "need attention"}
+          emphasis={attention.length === 0 ? "ok" : "attention"}
+        />
+      </KpiGrid>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Panel>
+          <SectionHeader title="Today's performance" action={<Link href="/sales" className="text-xs font-black text-[#947313]">View sales</Link>} />
           <div className="divide-y">
-            {recentFeed.map((sale) => (
-              <Link key={sale.id} href={sale.href} className="grid gap-2 p-4 hover:bg-stone-50 sm:grid-cols-[1fr_1fr_auto]">
-                <div>
-                  <b>{sale.title}</b>
-                  <p className="text-sm text-stone-500">{sale.staff}</p>
-                </div>
-                <div className="text-sm">
-                  <p>{formatDateTime(sale.at)}</p>
-                  <p className="text-stone-500">{sale.method}</p>
-                </div>
-                <b>{formatMoney(sale.total, currency)}</b>
-              </Link>
-            ))}
+            <MetricRow label="Today" value={formatMoney(posSummary.netTotal, currency)} />
+            <MetricRow label="Yesterday" value={formatMoney(yesterdaySummary.netTotal, currency)} hint={`${yesterdaySummary.count} transactions`} />
+            <MetricRow label="Change" value={salesChange === null ? "n/a" : `${salesChange > 0 ? "+" : ""}${salesChange}%`} />
+            <MetricRow label="Transactions" value={String(posSummary.count)} />
+            <MetricRow label="Average sale" value={formatMoney(posSummary.averageNet, currency)} />
+            <MetricRow
+              label="Payment mix"
+              value={`${formatMoney(paymentAmount("CASH"), currency)} cash`}
+              hint={`Card ${formatMoney(paymentAmount("CARD"), currency)} · Mobile ${formatMoney(paymentAmount("MOBILE_MONEY"), currency)} · Other ${formatMoney(paymentAmount("OTHER"), currency)}`}
+            />
           </div>
-        )}
-      </section>
+        </Panel>
+        <Panel>
+          <SectionHeader title="Live operations" action={<Link href="/pos" className="text-xs font-black text-[#947313]">Open POS</Link>} />
+          <div className="divide-y">
+            <MetricRow label="Tables" value={`${occupied} occupied / ${tableTotal} total`} hint={outOfService ? `${outOfService} out of service` : `${available} available`} />
+            <MetricRow label="Orders" value={`${pendingOrders} pending · ${preparingOrders} preparing · ${readyOrders} ready`} />
+            <MetricRow label="Sessions" value={`${openSessions} active`} hint={settlingSessions ? `${settlingSessions} awaiting payment` : undefined} />
+            <MetricRow label="Fulfillment" value={`${pendingOrders} waiting`} hint={queueOrders ? `${queueOrders} in queue` : "All clear"} />
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Panel>
+          <SectionHeader title="Attention required" />
+          <div id="attention">
+            <AttentionList items={attention} />
+          </div>
+        </Panel>
+        <Panel>
+          <SectionHeader title="Recent activity" action={<Link href="/sales" className="text-xs font-black text-[#947313]">View all</Link>} />
+          <ActivityList items={activitySorted} />
+        </Panel>
+      </div>
+
+      <div className="grid min-w-0 gap-4 xl:grid-cols-3">
+        <Panel>
+          <SectionHeader title="Stock" action={<Link href="/inventory" className="text-xs font-black text-[#947313]">Open stock</Link>} />
+          <div className="divide-y">
+            <MetricRow label="Low stock" value={String(lowStockItems.length)} />
+            <MetricRow label="Out of stock" value={String(outOfStockItems.length)} />
+            <MetricRow label="Stock units" value={String(stockUnits)} />
+            <MetricRow label="Movements today" value={String(movementCount)} />
+          </div>
+        </Panel>
+        <Panel>
+          <SectionHeader
+            title="Financial"
+            action={
+              <span className="flex gap-3">
+                <Link href="/reports" className="text-xs font-black text-[#947313]">View credit</Link>
+                <Link href="/sales" className="text-xs font-black text-[#947313]">Sales / close day</Link>
+              </span>
+            }
+          />
+          <div className="divide-y">
+            <MetricRow label="Sales" value={formatMoney(posSummary.netTotal, currency)} />
+            <MetricRow label="Cash" value={formatMoney(paymentAmount("CASH"), currency)} />
+            <MetricRow label="Mobile money" value={formatMoney(paymentAmount("MOBILE_MONEY"), currency)} />
+            <MetricRow label="Card" value={formatMoney(paymentAmount("CARD"), currency)} />
+            <MetricRow label="Other" value={formatMoney(paymentAmount("OTHER"), currency)} />
+            <MetricRow label="Payments settled" value={formatMoney(settledTotal, currency)} />
+            <MetricRow label="Outstanding credit" value={formatMoney(creditBalance, currency)} hint={`${creditOutstanding._count} open bills`} />
+            <MetricRow
+              label="Credit repayments"
+              value={formatMoney(creditPaymentsToday._sum.amount?.toNumber() ?? 0, currency)}
+              hint={`${creditPaymentsToday._count} today · ${creditPaidToday.length} settled`}
+            />
+            <MetricRow
+              label="Settlement"
+              value={dayClosed ? "Closed" : "Open"}
+              hint={lastClose ? `Last close ${lastClose.businessDay} by ${lastClose.closedBy.name}` : "No close recorded yet"}
+            />
+            <MetricRow label="Expenses today" value={formatMoney(expenses._sum.amount?.toNumber() ?? 0, currency)} />
+            <MetricRow label="Since start" value={formatMoney(lifetimePos._sum.total?.toNumber() ?? 0, currency)} hint={`${lifetimePos._count} tickets`} />
+          </div>
+          {creditTop.length > 0 ? (
+            <ul className="divide-y border-t">
+              {creditTop.slice(0, 3).map((bill) => (
+                <li key={bill.id}>
+                  <Link href={`/sales/${bill.saleId}`} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2">
+                    <span className="font-bold">{bill.customerName}</span>
+                    <span className="font-black">{formatMoney(bill.balance.toNumber(), currency)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="border-t p-4">
+            <CreditRepaymentForm bills={creditTop.map((bill) => ({ id: bill.id, label: `${bill.customerName} · ${formatMoney(bill.balance.toNumber(), currency)}` }))} />
+          </div>
+        </Panel>
+        <Panel>
+          <SectionHeader title="Billiard today" action={<Link href="/billiard" className="text-xs font-black text-[#947313]">View billiard</Link>} />
+          <MetricRow label="Today" value={formatMoney(billiardToday, currency)} hint={`${formatMoney(lifetimeBilliard._sum.amount?.toNumber() ?? 0, currency)} since start`} />
+          <div className="min-w-0 border-t p-4">
+            <p className="mb-3 text-sm text-stone-600">Save today’s total take. Games are not entered one by one.</p>
+            <BilliardSalesForm
+              compact
+              defaultAmount={myBilliard?.amount.toNumber()}
+              defaultNote={myBilliard?.note ?? undefined}
+            />
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }

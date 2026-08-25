@@ -244,7 +244,7 @@ export async function recordStockTransfer(
 
   for (const line of input.lines) {
     const product = await tx.product.findUnique({ where: { id: line.productId } });
-    if (!product?.trackInventory) throw new StockError("Only tracked products can be transferred.");
+    if (!product) throw new StockError("Product was not found.");
   }
 
   const transfer = await tx.stockTransfer.create({

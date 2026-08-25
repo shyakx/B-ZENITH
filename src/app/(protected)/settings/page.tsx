@@ -1,4 +1,5 @@
 import { updateSettings } from "@/actions/settings";
+import { DashboardHeader } from "@/components/dashboard/ui";
 import { requireUser } from "@/lib/authorization";
 import { userAdminRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
@@ -9,10 +10,7 @@ export default async function SettingsPage() {
   const inputClass = "mt-1 min-h-11 w-full rounded-md border border-stone-300 px-3 font-normal outline-none focus:border-[#b38f20]";
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Configuration</p>
-        <h1 className="text-3xl font-black">Business settings</h1>
-      </div>
+      <DashboardHeader kicker="Management" title="Business settings" />
       <form action={updateSettings} className="space-y-4 rounded-lg border bg-white p-5">
         <label className="block text-sm font-bold">Business name<input required name="businessName" defaultValue={settings.businessName} className={inputClass} /></label>
         <label className="block text-sm font-bold">Phone<input name="phone" defaultValue={settings.phone ?? ""} className={inputClass} /></label>

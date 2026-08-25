@@ -1,4 +1,5 @@
 import { BilliardSalesForm } from "@/components/billiard-sales-form";
+import { DashboardHeader } from "@/components/dashboard/ui";
 import { LiveRefresh } from "@/components/live-refresh";
 import { StatCards } from "@/components/stat-cards";
 import { requireUser } from "@/lib/authorization";
@@ -23,13 +24,11 @@ export default async function BilliardPage() {
   return (
     <div className="space-y-6">
       <LiveRefresh />
-      <div>
-        <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Billiard</p>
-        <h1 className="text-3xl font-black">Today’s billiard sales</h1>
-        <p className="mt-2 text-sm text-stone-500">
-          Enter the day’s total take in RWF. Do not add each game. Each operator can save their own total; the day is the sum of those amounts.
-        </p>
-      </div>
+      <DashboardHeader
+        kicker="Billiard"
+        title="Today’s billiard sales"
+        subtitle="Enter the day’s total take in RWF. Do not add each game. Each operator can save their own total; the day is the sum of those amounts."
+      />
       <StatCards
         currency={currency}
         cards={[
@@ -39,7 +38,7 @@ export default async function BilliardPage() {
         ]}
       />
       <BilliardSalesForm defaultAmount={mine?.amount.toNumber()} defaultNote={mine?.note ?? undefined} />
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      <div className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="bg-stone-100">
             <tr>

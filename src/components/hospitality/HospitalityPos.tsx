@@ -63,17 +63,18 @@ export function HospitalityPos({
 
   const refreshDashboard = async () => {
     try {
-        const [sRes, tRes] = await Promise.all([
+        const [activeRes, settlingRes, tRes] = await Promise.all([
             fetch("/api/sessions?status=ACTIVE"),
+            fetch("/api/sessions?status=SETTLING"),
             fetch("/api/tables")
         ]);
-        if (!sRes.ok || !tRes.ok) throw new Error("Dashboard refresh failed");
-        const sData = await sRes.json();
+        if (!activeRes.ok || !settlingRes.ok || !tRes.ok) throw new Error("Dashboard refresh failed");
+        const activeData = await activeRes.json();
+        const settlingData = await settlingRes.json();
         const tData = await tRes.json();
-        if (!Array.isArray(sData) || !Array.isArray(tData)) throw new Error("Dashboard refresh failed");
+        if (!Array.isArray(activeData) || !Array.isArray(settlingData) || !Array.isArray(tData)) throw new Error("Dashboard refresh failed");
 
-        // Map session data to SessionInfo type
-        const mappedSessions = sData.map((s: any) => mapSession(s));
+        const mappedSessions = [...activeData, ...settlingData].map((s: any) => mapSession(s));
 
         setSessions(mappedSessions);
         setTables(tData);

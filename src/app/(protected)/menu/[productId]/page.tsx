@@ -37,12 +37,12 @@ export default async function EditProductPage({
           <p className="text-sm text-amber-800 md:col-span-2">Only a manager can change cost or selling prices.</p>
         ) : null}
         <div className="text-sm">
-          <p className="font-bold">Stock quantity</p>
+          <p className="font-bold">Available</p>
           <p className="mt-1 min-h-11 rounded-md border bg-stone-50 px-3 py-3 font-normal">
             {product.stockQuantity} {product.unit.toLowerCase()}
           </p>
           <Link href="/inventory#stock-take" className="mt-1 inline-block font-bold text-[#947313]">
-            Change stock in Inventory
+            Change stock on the Stock page
           </Link>
         </div>
         <label className="text-sm font-bold">Image URL<input name="imageUrl" type="url" defaultValue={product.imageUrl ?? ""} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>

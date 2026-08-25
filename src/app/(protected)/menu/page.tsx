@@ -53,7 +53,7 @@ export default async function MenuPage({
           <label className="text-sm font-bold">Cost price<input required name="costPrice" type="number" min="0" step="0.01" defaultValue="0" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
           <label className="text-sm font-bold">Selling price<input required name="sellingPrice" type="number" min="0.01" step="0.01" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
           <p className="text-sm text-stone-500 md:col-span-2">
-            New items start at stock 0. Enter opening quantities in Inventory with a physical stock take — do not type stock on this form.
+            New items start at 0. Enter opening quantities on the Stock page using Count stock — do not type stock on this form.
           </p>
           <label className="text-sm font-bold">Image URL<input name="imageUrl" type="url" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
           <label className="text-sm font-bold md:col-span-2">Description<textarea name="description" rows={3} className="mt-1 w-full rounded-md border p-3 font-normal" /></label>

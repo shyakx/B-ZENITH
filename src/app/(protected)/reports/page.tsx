@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
+import { DashboardHeader, StatCard, StatGrid } from "@/components/dashboard/ui";
 import { LiveRefresh } from "@/components/live-refresh";
 import { StockTakeHistoryTable } from "@/components/stock-take-history";
 import { requireUser } from "@/lib/authorization";
 import { businessRoles } from "@/lib/roles";
 import { sumBilliardAmounts } from "@/lib/billiard";
 import { formatMoney, kigaliRange, paymentLabel } from "@/lib/datetime";
+import { locationLabel, movementTypeLabel } from "@/lib/inventory-totals";
 import { LOCATION_CODES, stockByLocation } from "@/lib/location-stock";
 import { prisma } from "@/lib/prisma";
 import { applyBilliardTotals, summarizeSales, type ReportSale } from "@/lib/reporting";
@@ -13,8 +15,8 @@ import { STOCK_TAKE_ACTION } from "@/lib/stock-take";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="overflow-x-auto rounded-lg border bg-white">
-      <h2 className="border-b p-4 text-xl font-black">{title}</h2>
+    <section className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
+      <h2 className="border-b border-stone-200 px-4 py-3 text-sm font-black uppercase tracking-widest text-stone-700">{title}</h2>
       {children}
     </section>
   );
@@ -151,33 +153,28 @@ export default async function ReportsPage({
   return (
     <div className="space-y-6">
       <LiveRefresh />
-      <div>
-        <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Performance</p>
-        <h1 className="text-3xl font-black">Reports</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Financial totals come from finalized sales. Payment methods are summed from Payment records, not Sale.paymentMethod.
-          Waiter performance uses round posters, not the current session waiter.
-        </p>
-      </div>
-      <form className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4 print:hidden">
+      <DashboardHeader
+        kicker="Analytics"
+        title="Reports"
+        subtitle="Financial totals come from finalized sales. Payment methods are summed from Payment records, not Sale.paymentMethod. Waiter performance uses round posters, not the current session waiter."
+      />
+      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-stone-300 bg-white p-4 print:hidden">
         <label className="text-sm font-bold">From<input name="from" type="date" defaultValue={fromDay} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" /></label>
         <label className="text-sm font-bold">To<input name="to" type="date" defaultValue={toDay} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" /></label>
         <button className="min-h-11 rounded-md bg-black px-5 font-bold text-[#d4af37]">Apply</button>
       </form>
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Gross sales</p><p className="mt-1 text-2xl font-black">{formatMoney(summary.grossTotal, currency)}</p></article>
-        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Returns</p><p className="mt-1 text-2xl font-black">{formatMoney(summary.returnedTotal, currency)}</p></article>
-        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Net sales</p><p className="mt-1 text-2xl font-black">{formatMoney(summary.netTotal, currency)}</p></article>
-        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Billiard</p><p className="mt-1 text-2xl font-black">{formatMoney(billiardTotal, currency)}</p></article>
-        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Tracked stock value</p><p className="mt-1 text-2xl font-black">{formatMoney(valuation, currency)}</p></article>
-        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Financial sales</p><p className="mt-1 text-2xl font-black">{formatMoney(hospitality.financialTotal, currency)}</p></article>
-        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Posted rounds (ops)</p><p className="mt-1 text-2xl font-black">{formatMoney(hospitality.operationalTotal, currency)}</p></article>
-        <article className="rounded-lg border bg-white p-5">
-          <p className="text-sm text-stone-500">Location vs product stock</p>
-          <p className="mt-1 text-2xl font-black">{hospitality.inventory.locationStockSum} / {hospitality.inventory.productStockSum}</p>
-        </article>
-      </section>
-      <div className="grid gap-6 xl:grid-cols-2">
+      <StatGrid columns={4}>
+        <StatCard label="Gross sales" value={formatMoney(summary.grossTotal, currency)} />
+        <StatCard label="Returns" value={formatMoney(summary.returnedTotal, currency)} />
+        <StatCard label="Net sales" value={formatMoney(summary.netTotal, currency)} />
+        <StatCard label="Billiard" value={formatMoney(billiardTotal, currency)} />
+        <StatCard label="Tracked stock value" value={formatMoney(valuation, currency)} />
+        <StatCard label="Financial sales" value={formatMoney(hospitality.financialTotal, currency)} />
+        <StatCard label="Posted rounds (ops)" value={formatMoney(hospitality.operationalTotal, currency)} />
+        <StatCard label="Location vs product stock" value={`${hospitality.inventory.locationStockSum} / ${hospitality.inventory.productStockSum}`} />
+      </StatGrid>
+      <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">Sales</h2>
+      <div className="grid gap-4 xl:grid-cols-2">
         <Section title="Daily net sales">
           <div className="divide-y">
             {[...summary.daily.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([day, value]) => (
@@ -276,6 +273,9 @@ export default async function ReportsPage({
             {creditList.length === 0 && empty("No credit bills in this period.")}
           </div>
         </Section>
+      </div>
+      <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">Products</h2>
+      <div className="grid gap-4 xl:grid-cols-2">
         <Section title="Product performance (net)">
           <div className="max-h-[500px] divide-y overflow-y-auto">
             {productList.map(([name, value]) => (
@@ -298,24 +298,27 @@ export default async function ReportsPage({
             {categoryList.length === 0 && empty("No category sales in this period.")}
           </div>
         </Section>
-        <Section title="Inventory movements by type">
+      </div>
+      <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">Stock</h2>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Section title="Stock activity by type">
           <div className="divide-y">
             {hospitality.inventory.movements.map((row) => (
               <div key={row.type} className="flex justify-between p-4">
-                <span>{row.type}<small className="ml-2 text-stone-500">({row.count})</small></span>
+                <span>{movementTypeLabel(row.type)}<small className="ml-2 text-stone-500">({row.count})</small></span>
                 <b>{row.quantity > 0 ? "+" : ""}{row.quantity}</b>
               </div>
             ))}
-            {hospitality.inventory.movements.length === 0 && empty("No inventory movements in this period.")}
+            {hospitality.inventory.movements.length === 0 && empty("No stock activity in this period.")}
           </div>
         </Section>
-        <Section title="Inventory — stock by location">
+        <Section title="Stock by location">
           <div className="max-h-[500px] divide-y overflow-y-auto">
             {stockRows.map((product) => (
               <div key={product.name} className="flex justify-between gap-3 p-4">
                 <span>{product.name}</span>
                 <span className="text-right text-sm">
-                  Main {product.qty.MAIN_STOCK} · Bar {product.qty.BAR} · Kitchen {product.qty.KITCHEN} · <b>Total {product.total}</b>
+                  Main Store {product.qty.MAIN_STOCK} · Bar {product.qty.BAR} · Kitchen {product.qty.KITCHEN} · <b>Total {product.total}</b>
                 </span>
               </div>
             ))}
@@ -339,7 +342,7 @@ export default async function ReportsPage({
               <div key={movement.id} className="flex justify-between p-4">
                 <span>
                   {movement.product.name}
-                  <small className="ml-2 text-stone-500">{movement.type} · {movement.location?.code ?? "MAIN_STOCK"}</small>
+                  <small className="ml-2 text-stone-500">{movementTypeLabel(movement.type)} · {locationLabel(movement.location?.code ?? "MAIN_STOCK")}</small>
                 </span>
                 <b className={movement.quantity < 0 ? "text-red-700" : "text-green-700"}>
                   {movement.quantity > 0 ? "+" : ""}{movement.quantity}
@@ -349,17 +352,17 @@ export default async function ReportsPage({
             {movements.length === 0 && empty("No stock movements in this period.")}
           </div>
         </Section>
-        <Section title="Transfer history">
+        <Section title="Move stock history">
           <div className="max-h-[500px] divide-y overflow-y-auto">
             {transfers.map((transfer) => (
               <div key={transfer.id} className="p-4">
-                <p className="font-bold">{transfer.fromLocation.code} → {transfer.toLocation.code}</p>
+                <p className="font-bold">{locationLabel(transfer.fromLocation.code)} → {locationLabel(transfer.toLocation.code)}</p>
                 <p className="text-sm text-stone-500">
                   {transfer.lines.map((line) => `${line.quantity} × ${line.product.name}`).join(", ")}
                 </p>
               </div>
             ))}
-            {transfers.length === 0 && empty("No transfers in this period.")}
+            {transfers.length === 0 && empty("No stock moves in this period.")}
           </div>
         </Section>
         <Section title="Billiard day totals">
@@ -388,7 +391,7 @@ export default async function ReportsPage({
           </div>
         </Section>
       </div>
-      <Section title="Stock-take history">
+      <Section title="Count stock history">
         <div className="overflow-x-auto">
           <StockTakeHistoryTable logs={stockTakes} />
         </div>

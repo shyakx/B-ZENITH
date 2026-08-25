@@ -13,11 +13,11 @@ describe("role navigation", () => {
     assert.ok(ids.includes("pos"));
     assert.ok(ids.includes("sales"));
     assert.ok(ids.includes("inventory-overview"));
-    assert.ok(ids.includes("stock-operations"));
-    assert.ok(ids.includes("suppliers"));
+    assert.equal(ids.includes("stock-operations"), false);
+    assert.equal(ids.includes("suppliers"), false);
     assert.ok(ids.includes("menu"));
     assert.ok(ids.includes("categories"));
-    assert.ok(ids.includes("expenses"));
+    assert.equal(ids.includes("expenses"), false);
     assert.ok(ids.includes("billiard"));
     assert.ok(ids.includes("reports"));
     assert.ok(ids.includes("staff"));
@@ -34,20 +34,20 @@ describe("role navigation", () => {
     const ids = idsFor("MANAGER");
     assert.ok(ids.includes("dashboard"));
     assert.ok(ids.includes("inventory-overview"));
-    assert.ok(ids.includes("stock-operations"));
-    assert.ok(ids.includes("suppliers"));
+    assert.equal(ids.includes("stock-operations"), false);
+    assert.equal(ids.includes("suppliers"), false);
     assert.ok(ids.includes("menu"));
     assert.ok(ids.includes("reports"));
-    assert.ok(ids.includes("expenses"));
+    assert.equal(ids.includes("expenses"), false);
     assert.equal(ids.includes("staff"), false);
     assert.equal(ids.includes("settings"), false);
     assert.equal(ids.includes("audit"), false);
   });
 
-  it("keeps WAITER to POS, sales, and fulfillment queues", () => {
+  it("keeps WAITER to POS, sales, fulfillment, and a read-only Stock page", () => {
     const ids = idsFor("WAITER");
-    assert.deepEqual(ids, ["pos", "sales", "fulfillment-bar", "fulfillment-kitchen"]);
-    assert.equal(hasNavItem("WAITER", "inventory-overview"), false);
+    assert.deepEqual(ids, ["pos", "sales", "fulfillment-bar", "fulfillment-kitchen", "inventory-overview"]);
+    assert.equal(hasNavItem("WAITER", "inventory-overview"), true);
     assert.equal(hasNavItem("WAITER", "stock-operations"), false);
     assert.equal(hasNavItem("WAITER", "suppliers"), false);
     assert.equal(hasNavItem("WAITER", "menu"), false);
@@ -68,35 +68,35 @@ describe("role navigation", () => {
 
 describe("active navigation states", () => {
   const overview = { id: "inventory-overview" as const, href: "/inventory", label: "Inventory Overview", roles: [] };
-  const operations = { id: "stock-operations" as const, href: "/inventory/operations", label: "Stock Operations", roles: [] };
   const sales = { id: "sales" as const, href: "/sales", label: "Sales", roles: [] };
   const menu = { id: "menu" as const, href: "/menu", label: "Menu / Products", roles: [] };
   const pos = { id: "pos" as const, href: "/pos", label: "POS", roles: [] };
   const dashboard = { id: "dashboard" as const, href: "/dashboard", label: "Dashboard", roles: [] };
-  const suppliers = { id: "suppliers" as const, href: "/suppliers", label: "Suppliers", roles: [] };
   const reports = { id: "reports" as const, href: "/reports", label: "Reports", roles: [] };
   const settings = { id: "settings" as const, href: "/settings", label: "Settings", roles: [] };
 
-  it("activates Inventory Overview only on /inventory", () => {
+  it("activates Stock for inventory, operations, and purchase routes", () => {
     assert.equal(isNavItemActive("/inventory", overview), true);
-    assert.equal(isNavItemActive("/inventory/operations", overview), false);
-    assert.equal(isNavItemActive("/inventory/operations?tab=receive", overview), false);
+    assert.equal(isNavItemActive("/inventory/operations", overview), true);
+    assert.equal(isNavItemActive("/inventory/operations?tab=receive", overview), true);
+    assert.equal(isNavItemActive("/purchases", overview), true);
+    assert.equal(isNavItemActive("/purchases/abc", overview), true);
   });
 
-  it("activates Stock Operations for operations tabs and purchase routes", () => {
-    assert.equal(isNavItemActive("/inventory/operations", operations), true);
-    assert.equal(isNavItemActive("/inventory/operations", overview), false);
-    assert.equal(isNavItemActive("/purchases", operations), true);
-    assert.equal(isNavItemActive("/purchases/abc", operations), true);
-    assert.equal(isNavItemActive("/inventory", operations), false);
+  it("does not keep Stock tools, suppliers, or expenses in the menu", () => {
+    for (const role of ["OWNER", "ADMIN", "MANAGER"] as const) {
+      const hrefs = navigationForRole(role).flatMap((section) => section.items.map((item) => item.href));
+      assert.equal(hrefs.includes("/inventory/operations"), false);
+      assert.equal(hrefs.includes("/suppliers"), false);
+      assert.equal(hrefs.includes("/expenses"), false);
+    }
   });
 
-  it("activates dashboard, POS, sales, menu, suppliers, reports, and settings independently", () => {
+  it("activates dashboard, POS, sales, menu, reports, and settings independently", () => {
     assert.equal(isNavItemActive("/dashboard", dashboard), true);
     assert.equal(isNavItemActive("/pos", pos), true);
     assert.equal(isNavItemActive("/sales/xyz", sales), true);
     assert.equal(isNavItemActive("/menu/prod", menu), true);
-    assert.equal(isNavItemActive("/suppliers", suppliers), true);
     assert.equal(isNavItemActive("/reports", reports), true);
     assert.equal(isNavItemActive("/settings", settings), true);
     assert.equal(isNavItemActive("/inventory", dashboard), false);
@@ -110,14 +110,16 @@ describe("server-side path authorization", () => {
     assert.equal(canAccessPath("MANAGER", "/suppliers"), true);
   });
 
-  it("blocks WAITER from inventory even if they type the URL", () => {
-    assert.equal(canAccessPath("WAITER", "/inventory"), false);
-    assert.equal(canAccessPath("WAITER", "/inventory/operations"), false);
+  it("lets WAITER view Stock but not catalog write routes", () => {
+    assert.equal(canAccessPath("WAITER", "/inventory"), true);
+    assert.equal(canAccessPath("WAITER", "/inventory/operations"), true);
+    assert.equal(canAccessPath("WAITER", "/purchases"), false);
     assert.equal(canAccessPath("WAITER", "/suppliers"), false);
     assert.equal(canAccessPath("WAITER", "/pos"), true);
     assert.equal(canAccessPath("WAITER", "/sales"), true);
     assert.equal(canAccessPath("WAITER", "/fulfillment/bar"), true);
     assert.equal(canAccessPath("WAITER", "/fulfillment/kitchen"), true);
+    assert.equal(canAccessPath("BILLIARD", "/inventory"), false);
     assert.equal(canAccessPath("BILLIARD", "/pos"), false);
     assert.equal(canAccessPath("BILLIARD", "/fulfillment/bar"), false);
   });

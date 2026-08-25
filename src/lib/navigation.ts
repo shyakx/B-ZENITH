@@ -1,6 +1,6 @@
 import type { Role } from "@prisma/client";
 import { routeRoles } from "@/lib/permissions";
-import { billiardRoles, businessRoles, catalogRoles, tillRoles, userAdminRoles } from "@/lib/roles";
+import { billiardRoles, businessRoles, catalogRoles, stockViewRoles, tillRoles, userAdminRoles } from "@/lib/roles";
 
 export type NavItemId =
   | "dashboard"
@@ -40,12 +40,9 @@ const allNavItems: NavItem[] = [
   { id: "sales", href: "/sales", label: "Sales", roles: tillRoles },
   { id: "fulfillment-bar", href: "/fulfillment/bar", label: "Bar Queue", roles: tillRoles },
   { id: "fulfillment-kitchen", href: "/fulfillment/kitchen", label: "Kitchen Queue", roles: tillRoles },
-  { id: "inventory-overview", href: "/inventory", label: "Inventory Overview", roles: catalogRoles },
-  { id: "stock-operations", href: "/inventory/operations", label: "Stock Operations", roles: catalogRoles },
-  { id: "suppliers", href: "/suppliers", label: "Suppliers", roles: catalogRoles },
+  { id: "inventory-overview", href: "/inventory", label: "Stock", roles: stockViewRoles },
   { id: "menu", href: "/menu", label: "Menu / Products", roles: catalogRoles },
   { id: "categories", href: "/categories", label: "Categories", roles: catalogRoles },
-  { id: "expenses", href: "/expenses", label: "Expenses", roles: businessRoles },
   { id: "returns", href: "/returns", label: "Returns", roles: businessRoles },
   { id: "billiard", href: "/billiard", label: "Billiard", roles: billiardRoles },
   { id: "reports", href: "/reports", label: "Reports", roles: businessRoles },
@@ -55,11 +52,11 @@ const allNavItems: NavItem[] = [
 ];
 
 const sectionOrder: Array<{ id: string; title: string; itemIds: NavItemId[] }> = [
-  { id: "main", title: "Main", itemIds: ["dashboard", "pos"] },
-  { id: "operations", title: "Operations", itemIds: ["sales", "fulfillment-bar", "fulfillment-kitchen", "expenses", "returns", "billiard"] },
-  { id: "inventory", title: "Inventory", itemIds: ["inventory-overview", "stock-operations", "suppliers"] },
+  { id: "operations", title: "Operations", itemIds: ["dashboard", "pos", "sales", "fulfillment-bar", "fulfillment-kitchen"] },
+  { id: "inventory", title: "Stock", itemIds: ["inventory-overview"] },
   { id: "catalog", title: "Catalog", itemIds: ["menu", "categories"] },
-  { id: "management", title: "Management", itemIds: ["staff", "reports", "audit", "settings"] },
+  { id: "finance", title: "Finance", itemIds: ["returns", "billiard", "reports"] },
+  { id: "management", title: "Management", itemIds: ["staff", "audit", "settings"] },
 ];
 
 export function canAccessPath(role: Role | string, pathname: string) {
@@ -75,12 +72,9 @@ export function navLabelForRole(item: NavItem, role: Role | string) {
 
 export function isNavItemActive(pathname: string, item: NavItem) {
   if (item.id === "inventory-overview") {
-    return pathname === "/inventory";
-  }
-  if (item.id === "stock-operations") {
     return (
-      pathname === "/inventory/operations" ||
-      pathname.startsWith("/inventory/operations/") ||
+      pathname === "/inventory" ||
+      pathname.startsWith("/inventory/") ||
       pathname === "/purchases" ||
       pathname.startsWith("/purchases/")
     );
@@ -94,6 +88,8 @@ export function isNavItemActive(pathname: string, item: NavItem) {
   if (item.id === "expenses") return pathname === "/expenses" || pathname.startsWith("/expenses/");
   if (item.id === "returns") return pathname === "/returns" || pathname.startsWith("/returns/");
   if (item.id === "billiard") return pathname === "/billiard" || pathname.startsWith("/billiard/");
+  if (item.id === "fulfillment-bar") return pathname === "/fulfillment/bar" || pathname.startsWith("/fulfillment/bar/");
+  if (item.id === "fulfillment-kitchen") return pathname === "/fulfillment/kitchen" || pathname.startsWith("/fulfillment/kitchen/");
   if (item.id === "reports") return pathname === "/reports" || pathname.startsWith("/reports/");
   if (item.id === "staff") return pathname === "/employees" || pathname.startsWith("/employees/");
   if (item.id === "audit") return pathname === "/audit" || pathname.startsWith("/audit/");
@@ -106,8 +102,8 @@ export function navigationForRole(role: Role | string): NavSection[] {
   if (role === "WAITER") {
     return [
       {
-        id: "main",
-        title: "Main",
+        id: "operations",
+        title: "Operations",
         items: allowed.filter(
           (item) =>
             item.id === "pos" ||
@@ -115,6 +111,11 @@ export function navigationForRole(role: Role | string): NavSection[] {
             item.id === "fulfillment-bar" ||
             item.id === "fulfillment-kitchen",
         ),
+      },
+      {
+        id: "inventory",
+        title: "Stock",
+        items: allowed.filter((item) => item.id === "inventory-overview"),
       },
     ].filter((section) => section.items.length > 0);
   }

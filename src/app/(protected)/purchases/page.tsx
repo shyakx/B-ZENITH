@@ -4,5 +4,5 @@ import { catalogRoles } from "@/lib/roles";
 
 export default async function PurchasesPage() {
   await requireUser(catalogRoles);
-  redirect("/inventory/operations?tab=receive");
+  redirect("/inventory");
 }

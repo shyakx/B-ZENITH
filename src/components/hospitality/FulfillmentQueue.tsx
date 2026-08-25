@@ -1,8 +1,9 @@
 "use client";
 
-import { Clock, CheckCircle2, ChefHat, Wine, Timer } from "lucide-react";
+import { ChefHat, Wine } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { FulfillmentStatus, ServiceChannel } from "@prisma/client";
+import { EmptyState, StatusBadge } from "@/components/dashboard/ui";
 
 interface FulfillmentItem {
   id: string;
@@ -19,6 +20,12 @@ interface FulfillmentItem {
   fulfillmentStaffName: string | null;
   elapsedMinutes: number;
 }
+
+const COLUMNS: Array<{ status: FulfillmentStatus; title: string; tone: "warn" | "info" | "ok" }> = [
+  { status: FulfillmentStatus.POSTED, title: "Pending", tone: "warn" },
+  { status: FulfillmentStatus.PREPARING, title: "Preparing", tone: "info" },
+  { status: FulfillmentStatus.READY, title: "Ready", tone: "ok" },
+];
 
 export function FulfillmentQueue({ locationCode }: { locationCode: "BAR" | "KITCHEN" }) {
   const [items, setItems] = useState<FulfillmentItem[]>([]);
@@ -65,128 +72,96 @@ export function FulfillmentQueue({ locationCode }: { locationCode: "BAR" | "KITC
     await fetchItems();
   };
 
-  const getStatusColor = (status: FulfillmentStatus) => {
-    switch (status) {
-      case FulfillmentStatus.POSTED:
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case FulfillmentStatus.PREPARING:
-        return "bg-amber-100 text-amber-700 border-amber-200";
-      case FulfillmentStatus.READY:
-        return "bg-green-100 text-green-700 border-green-200";
-      default:
-        return "bg-stone-100 text-stone-700 border-stone-200";
-    }
+  const actionLabel = (status: FulfillmentStatus) => {
+    if (status === FulfillmentStatus.POSTED) return "Start preparing";
+    if (status === FulfillmentStatus.PREPARING) return "Mark ready";
+    if (status === FulfillmentStatus.READY) return "Hand over";
+    return "Done";
   };
 
-  const getActionLabel = (status: FulfillmentStatus) => {
-    switch (status) {
-      case FulfillmentStatus.POSTED:
-        return "START PREPARING";
-      case FulfillmentStatus.PREPARING:
-        return "MARK AS READY";
-      case FulfillmentStatus.READY:
-        return "MARK AS SERVED";
-      default:
-        return "COMPLETED";
-    }
+  const card = (item: FulfillmentItem) => {
+    const stale = item.elapsedMinutes >= 15;
+    return (
+      <article
+        key={item.id}
+        className={`flex flex-col rounded-lg border bg-white p-4 ${stale ? "border-amber-500" : "border-stone-300"}`}
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <StatusBadge tone={item.fulfillmentStatus === "READY" ? "ok" : item.fulfillmentStatus === "PREPARING" ? "info" : "warn"}>
+            {item.fulfillmentStatus === "POSTED" ? "Pending" : item.fulfillmentStatus === "READY" ? "Ready" : "Preparing"}
+          </StatusBadge>
+          <span className={`text-sm font-black ${stale ? "text-amber-700" : "text-stone-500"}`}>{item.elapsedMinutes}m</span>
+        </div>
+        <div className="flex items-start gap-3">
+          <span className="grid size-12 shrink-0 place-items-center rounded-md bg-black text-xl font-black text-[#d4af37]">
+            {item.qty}
+          </span>
+          <div>
+            <h3 className="text-xl font-black leading-tight">{item.productName}</h3>
+            {item.variantName ? <p className="text-sm font-bold text-[#947313]">{item.variantName}</p> : null}
+            <p className="mt-1 text-sm font-medium text-stone-600">
+              {item.tableName ? `Table ${item.tableName}` : item.destination || item.channel.replaceAll("_", " ")}
+            </p>
+            <p className="text-xs text-stone-500">Waiter {item.currentWaiterName}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => handleStatusChange(item.id, item.fulfillmentStatus)}
+          className={`mt-4 min-h-14 w-full rounded-md text-base font-black ${
+            item.fulfillmentStatus === FulfillmentStatus.READY ? "bg-emerald-700 text-white" : "bg-black text-[#d4af37]"
+          }`}
+        >
+          {actionLabel(item.fulfillmentStatus)}
+        </button>
+      </article>
+    );
   };
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] flex-col overflow-x-hidden bg-stone-50 p-4 sm:p-6">
-      <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-4">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-3 text-3xl font-black">
-            {locationCode === "BAR" ? <Wine className="text-purple-600" size={32} /> : <ChefHat className="text-amber-600" size={32} />}
-            {locationCode} QUEUE
+          <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Fulfillment</p>
+          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight md:text-4xl">
+            {locationCode === "BAR" ? <Wine size={28} /> : <ChefHat size={28} />}
+            {locationCode === "BAR" ? "Bar queue" : "Kitchen queue"}
           </h1>
-          <p className="text-stone-500">Live order queue for {locationCode.toLowerCase()} fulfillment.</p>
+          <p className="mt-1 text-sm font-medium text-stone-600">What needs to be prepared now.</p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border bg-white px-4 py-2 shadow-sm">
-          <Timer size={18} className="text-stone-400" />
-          <span className="text-sm font-bold">Auto-refreshing</span>
-        </div>
+        <StatusBadge tone="neutral">Live · 10s refresh</StatusBadge>
       </header>
-      {error && <p className="mb-4 font-bold text-red-600">{error}</p>}
+      {error ? <p className="font-bold text-red-700">{error}</p> : null}
 
       {loading && items.length === 0 ? (
-        <div className="grid flex-1 place-items-center">
-          <div className="text-center">
-            <div className="mx-auto size-12 animate-spin rounded-full border-4 border-stone-200 border-t-black" />
-            <p className="mt-4 font-bold text-stone-500">Loading orders...</p>
-          </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {[0, 1, 2].map((key) => (
+            <div key={key} className="h-40 animate-pulse rounded-lg border border-stone-300 bg-stone-100" />
+          ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="grid flex-1 place-items-center rounded-2xl border-2 border-dashed border-stone-200 bg-white shadow-inner">
-          <div className="text-center">
-            <CheckCircle2 size={64} className="mx-auto text-green-200" />
-            <h3 className="mt-6 text-xl font-black text-stone-400">All clear!</h3>
-            <p className="mt-2 text-stone-500">No pending orders for {locationCode}.</p>
-          </div>
+        <div className="rounded-lg border border-stone-300 bg-white">
+          <EmptyState title="All clear." body={`No pending ${locationCode.toLowerCase()} orders.`} />
         </div>
       ) : (
-        <div className="grid gap-4 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {items.map((item) => (
-            <div key={item.id} className="flex flex-col rounded-xl border bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <span className={`rounded border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${getStatusColor(item.fulfillmentStatus)}`}>
-                  {item.fulfillmentStatus}
-                </span>
-                <div className="flex items-center gap-1 text-[10px] font-bold text-stone-400">
-                  <Clock size={12} /> {item.elapsedMinutes}m ago
+        <div className="grid gap-3 md:grid-cols-3">
+          {COLUMNS.map((column) => {
+            const columnItems = items.filter((item) => item.fulfillmentStatus === column.status);
+            return (
+              <section key={column.status} className="rounded-lg border border-stone-300 bg-stone-50">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">{column.title}</h2>
+                  <StatusBadge tone={column.tone}>{columnItems.length}</StatusBadge>
                 </div>
-              </div>
-
-              <div className="flex-1">
-                <div className="mb-2 flex items-start gap-2">
-                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-stone-900 text-lg font-black text-white">
-                    {item.qty}
-                  </span>
-                  <div>
-                    <h4 className="text-lg font-black leading-tight">{item.productName}</h4>
-                    {item.variantName && <p className="text-xs font-bold text-[#947313]">{item.variantName}</p>}
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-1 rounded-lg bg-stone-50 p-3">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-stone-400">Channel</span>
-                    <span className="text-stone-700">{item.channel.replaceAll("_", " ")}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-stone-400">Session</span>
-                    <span className="text-right text-stone-700">
-                      {item.tableName ? `Table ${item.tableName}` : item.destination || "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-stone-400">Posted by</span>
-                    <span className="text-stone-700">{item.postedByName || "Staff"}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-stone-400">Current waiter</span>
-                    <span className="text-stone-700">{item.currentWaiterName}</span>
-                  </div>
-                  {item.fulfillmentStaffName && (
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-stone-400">Fulfillment</span>
-                      <span className="text-stone-700">{item.fulfillmentStaffName}</span>
-                    </div>
+                <div className="space-y-3 p-3">
+                  {columnItems.length === 0 ? (
+                    <p className="py-8 text-center text-sm font-medium text-stone-500">None</p>
+                  ) : (
+                    columnItems.map(card)
                   )}
                 </div>
-              </div>
-
-              <button
-                onClick={() => handleStatusChange(item.id, item.fulfillmentStatus)}
-                className={`mt-6 min-h-12 w-full rounded-lg py-3 text-sm font-black ${
-                  item.fulfillmentStatus === FulfillmentStatus.READY
-                    ? "bg-green-600 text-white hover:bg-green-700"
-                    : "bg-black text-[#d4af37] hover:bg-stone-900"
-                }`}
-              >
-                {getActionLabel(item.fulfillmentStatus)}
-              </button>
-            </div>
-          ))}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

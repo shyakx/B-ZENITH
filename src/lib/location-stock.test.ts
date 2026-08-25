@@ -107,8 +107,8 @@ describe("location stock rules", () => {
     assert.equal(main, 76);
   });
 
-  it("lets POS oversell at the selling location while transfers and waste cannot go negative", () => {
-    assert.equal(posOversellAllowed("SALE"), true);
+  it("blocks POS sales, transfers, and waste from going negative", () => {
+    assert.equal(posOversellAllowed("SALE"), false);
     assert.equal(validateWasteQuantity(0, 1).ok, false);
     const main = 10;
     assert.equal(main >= 24, false);

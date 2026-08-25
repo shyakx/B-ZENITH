@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DashboardHeader, StatCard, StatGrid } from "@/components/dashboard/ui";
 import { requireUser } from "@/lib/authorization";
 import { dayCloseRoles } from "@/lib/business-day";
 import { formatDateTime, formatMoney } from "@/lib/datetime";
@@ -20,36 +21,32 @@ export default async function SalesArchivePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/sales" className="text-sm font-bold text-[#947313]">
-          ← Today’s sales
-        </Link>
-        <h1 className="mt-2 text-3xl font-black">Closed days</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          Each close stores that day’s totals. Open a day to see the original receipts again.
-        </p>
-      </div>
+      <DashboardHeader
+        kicker="Finance"
+        title="Closed days"
+        subtitle="Each close stores that day’s totals. Open a day to see the original receipts again."
+        actions={
+          <Link href="/sales" className="grid min-h-11 place-items-center rounded-md border border-stone-400 px-4 font-bold">
+            Today’s sales
+          </Link>
+        }
+      />
       {closes.length > 0 ? (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-lg border bg-white p-5">
-            <p className="text-sm text-stone-500">Closed days</p>
-            <p className="mt-2 text-2xl font-black">{closes.length}</p>
-          </article>
-          <article className="rounded-lg border bg-white p-5">
-            <p className="text-sm text-stone-500">Archived net sales</p>
-            <p className="mt-2 text-2xl font-black">
-              {formatMoney(
-                closes.reduce((sum, row) => sum + row.posNet.toNumber(), 0),
-                currency,
-              )}
-            </p>
-          </article>
-        </section>
+        <StatGrid columns={3}>
+          <StatCard label="Closed days" value={String(closes.length)} />
+          <StatCard
+            label="Archived net sales"
+            value={formatMoney(
+              closes.reduce((sum, row) => sum + row.posNet.toNumber(), 0),
+              currency,
+            )}
+          />
+        </StatGrid>
       ) : null}
       {closes.length === 0 ? (
-        <p className="rounded-lg border border-dashed bg-white p-10 text-center text-stone-500">No days have been closed yet.</p>
+        <p className="rounded-lg border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">No days have been closed yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border bg-white">
+        <div className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-stone-100">
               <tr>

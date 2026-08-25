@@ -2,35 +2,35 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/authorization";
-import { catalogRoles } from "@/lib/roles";
+import { stockMutateRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { applyLocationDelta, getLocationByCode, LOCATION_CODES, StockError } from "@/lib/location-stock";
 
 const schema = z.object({
-  supplierId: z.string().cuid().nullable(),
+  supplierId: z.string().cuid().nullable().optional(),
   referenceNumber: z.string().trim().min(2).max(80),
   items: z.array(z.object({
     productId: z.string().cuid(),
     quantity: z.number().int().positive().max(1_000_000),
-    unitCost: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/),
+    unitCost: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/).optional(),
   })).min(1).max(100),
 });
 
 class PurchaseError extends Error {}
 
 export async function POST(request: Request) {
-  const auth = await requireApiUser(catalogRoles);
+  const auth = await requireApiUser(stockMutateRoles);
   if (!auth.ok) return auth.response;
   const user = auth.user;
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Check the purchase details." }, { status: 400 });
 
-  const combined = new Map<string, { quantity: number; unitCost: string }>();
+  const combined = new Map<string, { quantity: number; unitCost?: string }>();
   for (const item of parsed.data.items) {
     const existing = combined.get(item.productId);
     combined.set(item.productId, {
       quantity: (existing?.quantity ?? 0) + item.quantity,
-      unitCost: item.unitCost,
+      unitCost: item.unitCost ?? existing?.unitCost,
     });
   }
 
@@ -46,13 +46,14 @@ export async function POST(request: Request) {
       const productMap = new Map(products.map((product) => [product.id, product]));
       const lines = productIds.map((productId) => {
         const item = combined.get(productId)!;
-        const unitCost = new Prisma.Decimal(item.unitCost);
-        return { productId, quantity: item.quantity, unitCost, subtotal: unitCost.mul(item.quantity), product: productMap.get(productId)! };
+        const product = productMap.get(productId)!;
+        const unitCost = item.unitCost ? new Prisma.Decimal(item.unitCost) : product.costPrice;
+        return { productId, quantity: item.quantity, unitCost, updateCost: Boolean(item.unitCost), subtotal: unitCost.mul(item.quantity), product };
       });
       const total = lines.reduce((sum, item) => sum.add(item.subtotal), new Prisma.Decimal(0));
       const created = await tx.purchase.create({
         data: {
-          supplierId: parsed.data.supplierId,
+          supplierId: parsed.data.supplierId ?? null,
           referenceNumber: parsed.data.referenceNumber,
           status: "RECEIVED",
           subtotal: total,
@@ -63,11 +64,12 @@ export async function POST(request: Request) {
         },
       });
       for (const line of lines) {
-        await tx.product.update({
-          where: { id: line.productId },
-          data: { costPrice: line.unitCost },
-        });
-        if (!line.product.trackInventory) continue;
+        if (line.updateCost) {
+          await tx.product.update({
+            where: { id: line.productId },
+            data: { costPrice: line.unitCost },
+          });
+        }
         const main = await getLocationByCode(tx, LOCATION_CODES.MAIN_STOCK);
         try {
           await applyLocationDelta(tx, {

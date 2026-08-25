@@ -37,7 +37,7 @@ export default async function PosPage() {
       create: { id: "default" },
     }),
     prisma.serviceSession.findMany({
-        where: { status: "ACTIVE" },
+        where: { status: { in: ["ACTIVE", "SETTLING"] } },
         include: {
             waiter: { select: { name: true } },
             table: true,

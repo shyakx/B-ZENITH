@@ -1,15 +1,16 @@
-import Link from "next/link";
-import { InventoryOverview, type OverviewItem } from "@/components/inventory-overview";
+import { InventoryOverview, type OverviewItem, type InventoryActivity } from "@/components/inventory-overview";
 import { requireUser } from "@/lib/authorization";
 import { DELETED_PRODUCT_SKU_PREFIX } from "@/lib/catalog-fields";
+import { canEditInventory } from "@/lib/inventory-auth";
 import { availableTotal, totalsByProduct } from "@/lib/inventory-totals";
 import { LOCATION_CODES, stockByLocation } from "@/lib/location-stock";
 import { prisma } from "@/lib/prisma";
-import { catalogRoles } from "@/lib/roles";
+import { stockViewRoles } from "@/lib/roles";
 
 export default async function InventoryPage() {
-  await requireUser(catalogRoles);
-  const [products, movements] = await Promise.all([
+  const user = await requireUser(stockViewRoles);
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+  const [products, movements, recentMovementCount] = await Promise.all([
     prisma.product.findMany({
       where: { NOT: { sku: { startsWith: DELETED_PRODUCT_SKU_PREFIX } } },
       orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
@@ -18,11 +19,13 @@ export default async function InventoryPage() {
     prisma.inventoryMovement.findMany({
       orderBy: { createdAt: "desc" },
       include: {
+        product: { select: { name: true } },
         performedBy: { select: { name: true } },
         location: { select: { code: true } },
         counterpartLocation: { select: { code: true } },
       },
     }),
+    prisma.inventoryMovement.count({ where: { createdAt: { gte: weekAgo } } }),
   ]);
 
   const byProduct = new Map<string, typeof movements>();
@@ -74,7 +77,10 @@ export default async function InventoryPage() {
       name: product.name,
       sku: product.sku,
       categoryName: product.category.name,
+      seedKey: product.seedKey,
       unit: product.unit,
+      costPrice: product.costPrice.toNumber(),
+      trackInventory: product.trackInventory,
       reorderLevel: product.reorderLevel,
       main: qty.MAIN_STOCK,
       bar: qty.BAR,
@@ -94,21 +100,24 @@ export default async function InventoryPage() {
     };
   });
 
+  const activity: InventoryActivity[] = movements.slice(0, 25).map((movement) => ({
+    id: movement.id,
+    createdAt: movement.createdAt.toISOString(),
+    productName: movement.product.name,
+    type: movement.type,
+    quantity: movement.quantity,
+    balanceAfter: movement.balanceAfter,
+    locationCode: movement.location?.code ?? null,
+    performedBy: movement.performedBy.name,
+    referenceId: movement.referenceId,
+  }));
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Inventory</p>
-          <h1 className="text-3xl font-black">Inventory overview</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            Locations are MAIN STOCK, BAR, and KITCHEN. Categories such as Drinks stay on the product and are not warehouses.
-          </p>
-        </div>
-        <Link href="/inventory/operations" className="grid min-h-11 place-items-center rounded-md bg-black px-4 font-bold text-[#d4af37]">
-          Stock operations
-        </Link>
-      </div>
-      <InventoryOverview items={items} />
-    </div>
+    <InventoryOverview
+      items={items}
+      activity={activity}
+      recentMovementCount={recentMovementCount}
+      canManage={canEditInventory(user.role)}
+    />
   );
 }

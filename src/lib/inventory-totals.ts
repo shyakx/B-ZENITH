@@ -26,15 +26,46 @@ export const WASTE_REASONS = [
 
 export type WasteReason = (typeof WASTE_REASONS)[number];
 
+/** Simple reasons shown to staff. Stored values stay on the existing enum. */
+export const SIMPLE_WASTE_REASONS = [
+  "DAMAGED",
+  "EXPIRED",
+  "SPOILAGE",
+  "INTERNAL_USE",
+  "OTHER",
+] as const satisfies ReadonlyArray<WasteReason>;
+
 export function isWasteReason(value: string): value is WasteReason {
   return (WASTE_REASONS as readonly string[]).includes(value);
 }
 
 export function locationLabel(code: string) {
-  if (code === "MAIN_STOCK") return "MAIN STOCK";
-  if (code === "BAR") return "BAR";
-  if (code === "KITCHEN") return "KITCHEN";
-  return code;
+  if (code === "MAIN_STOCK") return "Main Store";
+  if (code === "BAR") return "Bar";
+  if (code === "KITCHEN") return "Kitchen";
+  return code.replaceAll("_", " ");
+}
+
+export function movementTypeLabel(type: string) {
+  if (type === "PURCHASE") return "Added stock";
+  if (type === "TRANSFER_IN") return "Moved in";
+  if (type === "TRANSFER_OUT") return "Moved out";
+  if (type === "STOCK_TAKE") return "Count stock";
+  if (type === "WASTE") return "Waste";
+  if (type === "ADJUSTMENT") return "Fix stock count";
+  if (type === "SALE" || type === "SESSION_POST") return "Sold";
+  if (type === "RETURN" || type === "ORDER_VOID") return "Returned";
+  return type.replaceAll("_", " ").toLowerCase();
+}
+
+export function wasteReasonLabel(reason: string) {
+  if (reason === "BREAKAGE") return "Damaged";
+  if (reason === "SPOILAGE") return "Spilled";
+  if (reason === "EXPIRED") return "Expired";
+  if (reason === "DAMAGED") return "Damaged";
+  if (reason === "INTERNAL_USE") return "Used incorrectly";
+  if (reason === "OTHER") return "Other";
+  return reason.replaceAll("_", " ");
 }
 
 export function stockStatus(total: number, reorderLevel: number) {

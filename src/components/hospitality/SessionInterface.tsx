@@ -161,9 +161,9 @@ export function SessionInterface({
     <div className="flex h-[calc(100vh-5rem)] flex-col overflow-hidden overflow-x-hidden lg:flex-row">
       {/* LEFT: Product Browser */}
       <section className="flex min-h-0 flex-1 flex-col border-r bg-stone-50 p-4 lg:p-6">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-            <button onClick={onBack} className="min-h-11 text-sm font-bold text-[#947313]">← Back to Dashboard</button>
-            <button onClick={onHandover} className="flex min-h-11 items-center gap-2 rounded-md border bg-white px-3 text-sm font-bold hover:bg-stone-50">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <button onClick={onBack} className="min-h-11 rounded-md border border-stone-400 bg-white px-4 text-sm font-bold">← Floor</button>
+            <button onClick={onHandover} className="flex min-h-11 items-center gap-2 rounded-md border border-stone-400 bg-white px-4 text-sm font-bold">
                 <UserPlus size={16} /> Handover
             </button>
         </div>
@@ -216,23 +216,21 @@ export function SessionInterface({
       {/* RIGHT: Session Panel */}
       <aside className="flex max-h-[48vh] w-full shrink-0 flex-col border-t bg-white shadow-2xl lg:max-h-none lg:w-[420px] lg:border-t-0 xl:w-[450px]">
         {/* Session Header */}
-        <div className="border-b p-5">
-          <div className="flex items-center justify-between">
+        <div className="border-b border-stone-300 p-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
-                {session.channel}
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#947313]">
+                {session.channel.replaceAll("_", " ")}
               </span>
               <h2 className="text-xl font-black">
-                {session.table ? session.table.name : session.destinationLabel || "Service Session"}
+                {session.table ? session.table.name : session.destinationLabel || session.customerName || "Session"}
               </h2>
             </div>
-            <div className="text-right">
-                <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
-                    session.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                    {session.status}
-                </span>
-            </div>
+            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
+                session.status === "SETTLING" ? "bg-amber-500 text-black" : "bg-black text-[#d4af37]"
+            }`}>
+                {session.status === "SETTLING" ? "Awaiting payment" : "Open"}
+            </span>
           </div>
           <div className="mt-3 space-y-1 text-xs text-stone-500">
             <div className="flex items-center justify-between">

@@ -1,5 +1,5 @@
 import type { Role } from "@prisma/client";
-import { billiardRoles, businessRoles, catalogRoles, tillRoles, userAdminRoles } from "@/lib/roles";
+import { billiardRoles, businessRoles, catalogRoles, stockViewRoles, tillRoles, userAdminRoles } from "@/lib/roles";
 
 export const routeRoles: Record<string, readonly Role[]> = {
   "/dashboard": businessRoles,
@@ -9,7 +9,7 @@ export const routeRoles: Record<string, readonly Role[]> = {
   "/print": tillRoles,
   "/menu": catalogRoles,
   "/categories": catalogRoles,
-  "/inventory": catalogRoles,
+  "/inventory": stockViewRoles,
   "/purchases": catalogRoles,
   "/suppliers": catalogRoles,
   "/expenses": businessRoles,

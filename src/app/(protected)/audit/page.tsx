@@ -1,3 +1,4 @@
+import { DashboardHeader } from "@/components/dashboard/ui";
 import { requireUser } from "@/lib/authorization";
 import { formatDateTime } from "@/lib/datetime";
 import { userAdminRoles } from "@/lib/roles";
@@ -13,10 +14,7 @@ export default async function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Security</p>
-        <h1 className="text-3xl font-black">Audit logs</h1>
-      </div>
+      <DashboardHeader kicker="Management" title="Audit logs" subtitle="Operational and security events. Sensitive payload details are not shown here." />
       {logs.length === 0 ? (
         <p className="rounded-lg border border-dashed bg-white p-10 text-center text-stone-500">No audit events recorded yet.</p>
       ) : (

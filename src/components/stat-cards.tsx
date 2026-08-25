@@ -1,3 +1,4 @@
+import { StatCard, StatGrid } from "@/components/dashboard/ui";
 import { formatMoney } from "@/lib/datetime";
 
 export function StatCards({
@@ -8,15 +9,14 @@ export function StatCards({
   currency: string;
 }) {
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <StatGrid columns={cards.length >= 5 ? 5 : 4}>
       {cards.map((card) => (
-        <article key={card.label} className="rounded-lg border border-stone-200 bg-white p-5">
-          <p className="text-sm font-semibold text-stone-500">{card.label}</p>
-          <p className="mt-2 text-2xl font-black">
-            {card.money && typeof card.value === "number" ? formatMoney(card.value, currency) : card.value}
-          </p>
-        </article>
+        <StatCard
+          key={card.label}
+          label={card.label}
+          value={card.money && typeof card.value === "number" ? formatMoney(card.value, currency) : String(card.value)}
+        />
       ))}
-    </section>
+    </StatGrid>
   );
 }

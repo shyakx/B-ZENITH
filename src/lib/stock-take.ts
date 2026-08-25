@@ -49,9 +49,6 @@ export async function applyStockTake(input: {
   return prisma.$transaction(async (tx) => {
     const product = await tx.product.findUnique({ where: { id: input.productId } });
     if (!product) throw new StockTakeError("Product was not found.");
-    if (!product.trackInventory) {
-      throw new StockTakeError("Inventory tracking is disabled for this product.");
-    }
 
     const location = await getLocationByCode(tx, input.locationCode || LOCATION_CODES.MAIN_STOCK);
     const current = await tx.productLocationStock.findUnique({

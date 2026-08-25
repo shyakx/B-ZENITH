@@ -1,6 +1,7 @@
 import { Printer } from "lucide-react";
 import Link from "next/link";
 import { CloseDayForm } from "@/components/close-day-form";
+import { DashboardHeader } from "@/components/dashboard/ui";
 import { DeleteSaleButton } from "@/components/delete-sale-button";
 import { LiveRefresh } from "@/components/live-refresh";
 import { StatCards } from "@/components/stat-cards";
@@ -156,28 +157,26 @@ export default async function SalesPage({
   return (
     <div className="space-y-6">
       <LiveRefresh />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Transactions</p>
-          <h1 className="text-3xl font-black">{heading}</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            Figures refresh live for the current day. Closed days are kept and can be opened again from the archive.
-          </p>
-        </div>
-        {lifetime ? (
-          <div className="flex flex-wrap gap-2">
-            <Link href="/sales" className={`min-h-11 rounded-md px-4 font-bold ${viewAll || ranged ? "border" : "bg-black text-[#d4af37]"}`}>
-              Today
-            </Link>
-            <Link href="/sales?view=all" className={`min-h-11 rounded-md px-4 font-bold ${viewAll ? "bg-black text-[#d4af37]" : "border"}`}>
-              Since start
-            </Link>
-            <Link href="/sales/archive" className="grid min-h-11 place-items-center rounded-md border px-4 font-bold">
-              Closed days
-            </Link>
-          </div>
-        ) : null}
-      </div>
+      <DashboardHeader
+        kicker="Transactions"
+        title={heading}
+        subtitle="Figures refresh live for the current day. Closed days are kept and can be opened again from the archive."
+        actions={
+          lifetime ? (
+            <>
+              <Link href="/sales" className={`grid min-h-11 place-items-center rounded-md px-4 font-bold ${viewAll || ranged ? "border border-stone-400" : "bg-black text-[#d4af37]"}`}>
+                Today
+              </Link>
+              <Link href="/sales?view=all" className={`grid min-h-11 place-items-center rounded-md px-4 font-bold ${viewAll ? "bg-black text-[#d4af37]" : "border border-stone-400"}`}>
+                Since start
+              </Link>
+              <Link href="/sales/archive" className="grid min-h-11 place-items-center rounded-md border border-stone-400 px-4 font-bold">
+                Closed days
+              </Link>
+            </>
+          ) : undefined
+        }
+      />
       <StatCards
         currency={currency}
         cards={[
@@ -188,8 +187,8 @@ export default async function SalesPage({
         ]}
       />
       {canCloseBusinessDay(user.role) && !viewAll && !ranged ? (
-        <section className="rounded-lg border bg-white p-4">
-          <h2 className="mb-3 text-lg font-black">Close today</h2>
+        <section className="rounded-lg border border-stone-300 bg-white p-4">
+          <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-stone-700">Close today</h2>
           <p className="mb-3 text-sm text-stone-500">
             Archive today’s totals so the team can come back to them later. The dashboard still follows the live Kigali day.
           </p>
@@ -197,7 +196,7 @@ export default async function SalesPage({
         </section>
       ) : null}
       {lifetime ? (
-        <form className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4">
+        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-stone-300 bg-white p-4">
           <label className="text-sm font-bold">
             Search
             <input name="q" defaultValue={filters.q} placeholder="Receipt, waiter, or billiard" className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
@@ -225,7 +224,7 @@ export default async function SalesPage({
           </Link>
         </form>
       ) : (
-        <form className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4">
+        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-stone-300 bg-white p-4">
           <label className="text-sm font-bold">
             Search
             <input name="q" defaultValue={filters.q} placeholder="Receipt" className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
@@ -234,9 +233,34 @@ export default async function SalesPage({
         </form>
       )}
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed bg-white p-10 text-center text-stone-500">No transactions in this view.</p>
+        <p className="rounded-lg border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">No transactions in this view.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border bg-white">
+        <>
+        <div className="space-y-2 md:hidden">
+          {rows.map((row) => (
+            <article key={`${row.kind}-${row.id}`} className="rounded-lg border border-stone-300 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <Link href={`/sales/${row.id}`} className="font-black">{row.receiptNumber}</Link>
+                <span className="font-black">{formatMoney(row.total, currency)}</span>
+              </div>
+              <p className="mt-1 text-sm text-stone-600">{row.staffName} · {row.payment}</p>
+              <p className="text-xs text-stone-500">{formatDateTime(row.createdAt)} · {row.status}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {row.kind === "pos" ? (
+                  <Link href={`/print/receipt/${row.id}?autoprint=1`} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-stone-400 px-3 font-bold">
+                    <Printer size={16} /> Receipt
+                  </Link>
+                ) : (
+                  <Link href={`/sales/${row.id}`} className="inline-flex min-h-11 items-center rounded-md border border-stone-400 px-3 font-bold">
+                    View
+                  </Link>
+                )}
+                {row.canDelete ? <DeleteSaleButton id={row.id} kind={row.kind} label={row.receiptNumber} /> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto rounded-lg border border-stone-300 bg-white md:block">
           <table className="w-full min-w-[800px] text-left text-sm">
             <thead className="bg-stone-100">
               <tr>
@@ -281,6 +305,7 @@ export default async function SalesPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
