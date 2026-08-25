@@ -44,9 +44,9 @@ describe("role navigation", () => {
     assert.equal(ids.includes("audit"), false);
   });
 
-  it("keeps WAITER to POS and sales only", () => {
+  it("keeps WAITER to POS, sales, and fulfillment queues", () => {
     const ids = idsFor("WAITER");
-    assert.deepEqual(ids, ["pos", "sales"]);
+    assert.deepEqual(ids, ["pos", "sales", "fulfillment-bar", "fulfillment-kitchen"]);
     assert.equal(hasNavItem("WAITER", "inventory-overview"), false);
     assert.equal(hasNavItem("WAITER", "stock-operations"), false);
     assert.equal(hasNavItem("WAITER", "suppliers"), false);
@@ -116,5 +116,9 @@ describe("server-side path authorization", () => {
     assert.equal(canAccessPath("WAITER", "/suppliers"), false);
     assert.equal(canAccessPath("WAITER", "/pos"), true);
     assert.equal(canAccessPath("WAITER", "/sales"), true);
+    assert.equal(canAccessPath("WAITER", "/fulfillment/bar"), true);
+    assert.equal(canAccessPath("WAITER", "/fulfillment/kitchen"), true);
+    assert.equal(canAccessPath("BILLIARD", "/pos"), false);
+    assert.equal(canAccessPath("BILLIARD", "/fulfillment/bar"), false);
   });
 });

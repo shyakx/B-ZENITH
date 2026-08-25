@@ -1,4 +1,6 @@
 import { BilliardSalesForm } from "@/components/billiard-sales-form";
+import { LiveRefresh } from "@/components/live-refresh";
+import { StatCards } from "@/components/stat-cards";
 import { requireUser } from "@/lib/authorization";
 import { sumBilliardAmounts } from "@/lib/billiard";
 import { formatDateTime, formatMoney, kigaliDateString } from "@/lib/datetime";
@@ -15,9 +17,12 @@ export default async function BilliardPage() {
   });
   const mine = entries.find((entry) => entry.operatorId === user.id);
   const total = sumBilliardAmounts(entries);
+  const settings = await prisma.businessSettings.findUnique({ where: { id: "default" } });
+  const currency = settings?.currency ?? "RWF";
 
   return (
     <div className="space-y-6">
+      <LiveRefresh />
       <div>
         <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Billiard</p>
         <h1 className="text-3xl font-black">Today’s billiard sales</h1>
@@ -25,16 +30,14 @@ export default async function BilliardPage() {
           Enter the day’s total take in RWF. Do not add each game. Each operator can save their own total; the day is the sum of those amounts.
         </p>
       </div>
-      <section className="grid gap-4 sm:grid-cols-2">
-        <article className="rounded-lg border bg-white p-5">
-          <p className="text-sm text-stone-500">Business day</p>
-          <p className="mt-1 text-2xl font-black">{today}</p>
-        </article>
-        <article className="rounded-lg border bg-white p-5">
-          <p className="text-sm text-stone-500">All operators today</p>
-          <p className="mt-1 text-2xl font-black">{formatMoney(total)}</p>
-        </article>
-      </section>
+      <StatCards
+        currency={currency}
+        cards={[
+          { label: "Business day", value: today },
+          { label: "All operators today", value: total, money: true },
+          { label: "Your total", value: mine?.amount.toNumber() ?? 0, money: true },
+        ]}
+      />
       <BilliardSalesForm defaultAmount={mine?.amount.toNumber()} defaultNote={mine?.note ?? undefined} />
       <div className="overflow-x-auto rounded-lg border bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">

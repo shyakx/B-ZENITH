@@ -5,6 +5,7 @@ export const routeRoles: Record<string, readonly Role[]> = {
   "/dashboard": businessRoles,
   "/pos": tillRoles,
   "/sales": tillRoles,
+  "/fulfillment": tillRoles,
   "/print": tillRoles,
   "/menu": catalogRoles,
   "/categories": catalogRoles,

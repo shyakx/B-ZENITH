@@ -1,8 +1,15 @@
+/**
+ * LOCAL DEVELOPMENT SCRIPT.
+ * Direct Product.stockQuantity writes here are obsolete after location inventory.
+ * This file is not a production operation and is excluded from the inventory commit.
+ */
 import "dotenv/config";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
+import { assertLocalDatabase } from "./assert-local-database";
 
 async function main() {
+  assertLocalDatabase();
   const [users, categories, products, variants] = await Promise.all([
     prisma.user.findMany({ select: { email: true, role: true, active: true } }),
     prisma.category.count(),
@@ -55,7 +62,7 @@ async function main() {
             lineSubtotal: unitPrice,
           },
         },
-        payment: { create: { method: "CASH", amount: unitPrice, cashReceived: unitPrice, change: new Prisma.Decimal(0) } },
+        payments: { create: { method: "CASH", amount: unitPrice, cashReceived: unitPrice, change: new Prisma.Decimal(0), receivedById: owner.id } },
       },
     });
     if (variant.product.trackInventory) {

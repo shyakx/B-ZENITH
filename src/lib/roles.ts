@@ -2,6 +2,7 @@ import type { Role } from "@prisma/client";
 
 export const userAdminRoles = ["ADMIN", "OWNER"] as const;
 export const businessRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
+export const managerRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
 export const catalogRoles = ["ADMIN", "OWNER", "MANAGER"] as const;
 export const tillRoles = ["ADMIN", "OWNER", "MANAGER", "WAITER"] as const;
 export const billiardRoles = ["ADMIN", "OWNER", "MANAGER", "WAITER", "BILLIARD"] as const;

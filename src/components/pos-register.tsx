@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * LEGACY register. Not mounted on /pos.
+ * Hospitality POS is src/components/hospitality/HospitalityPos.tsx.
+ * Kept in-tree for reference until a later removal phase is authorized.
+ */
+
 import { CheckCircle2, Minus, Plus, Printer, Search, ShoppingCart, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";

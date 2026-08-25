@@ -4,6 +4,7 @@ import type { Role } from "@prisma/client";
 import {
   BarChart3,
   Boxes,
+  ChefHat,
   CircleDollarSign,
   ClipboardList,
   FolderTree,
@@ -19,6 +20,7 @@ import {
   Tags,
   Target,
   Users,
+  Wine,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
@@ -35,6 +37,8 @@ const icons: Record<NavItemId, typeof ClipboardList> = {
   dashboard: LayoutDashboard,
   pos: ShoppingCart,
   sales: History,
+  "fulfillment-bar": Wine,
+  "fulfillment-kitchen": ChefHat,
   "inventory-overview": Boxes,
   "stock-operations": ClipboardList,
   suppliers: PackagePlus,

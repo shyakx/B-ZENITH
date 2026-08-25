@@ -8,6 +8,7 @@ import { formatMoney, kigaliRange, paymentLabel } from "@/lib/datetime";
 import { LOCATION_CODES, stockByLocation } from "@/lib/location-stock";
 import { prisma } from "@/lib/prisma";
 import { applyBilliardTotals, summarizeSales, type ReportSale } from "@/lib/reporting";
+import { loadHospitalityReport } from "@/lib/hospitality-reporting";
 import { STOCK_TAKE_ACTION } from "@/lib/stock-take";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -67,7 +68,7 @@ export default async function ReportsPage({
   const { fromDay, toDay, start, end } = kigaliRange(filters.from, filters.to, 0);
   const saleWhere = { status: { not: "VOIDED" as const }, createdAt: { gte: start, lt: end } };
 
-  const [sales, expenses, billiardRows, movements, trackedProducts, transfers, stockTakes, settings] = await Promise.all([
+  const [sales, expenses, billiardRows, movements, trackedProducts, transfers, stockTakes, settings, hospitality] = await Promise.all([
     prisma.sale.findMany({
       where: saleWhere,
       select: {
@@ -122,6 +123,7 @@ export default async function ReportsPage({
       include: { user: { select: { name: true } } },
     }),
     prisma.businessSettings.findUnique({ where: { id: "default" } }),
+    loadHospitalityReport(start, end),
   ]);
 
   const billiardTotal = sumBilliardAmounts(billiardRows);
@@ -132,7 +134,11 @@ export default async function ReportsPage({
   );
   const productList = [...summary.products.entries()].sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 50);
   const categoryList = [...summary.categories.entries()].sort((a, b) => b[1].revenue - a[1].revenue);
-  const paymentList = [...summary.payments.entries()];
+  const paymentList = [...hospitality.paymentTotals.entries()];
+  const channelList = [...hospitality.channelTotals.entries()].sort((a, b) => b[1].total - a[1].total);
+  const postedByList = [...hospitality.postedBy.entries()].sort((a, b) => b[1].items - a[1].items);
+  const creditList = [...hospitality.credit.entries()];
+  const adjustmentList = [...hospitality.adjustments.entries()];
   const locationCodes = [LOCATION_CODES.MAIN_STOCK, LOCATION_CODES.BAR, LOCATION_CODES.KITCHEN];
   const stockRows = trackedProducts.map((product) => {
     const qty = stockByLocation(product.locationStocks, locationCodes);
@@ -149,7 +155,8 @@ export default async function ReportsPage({
         <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Performance</p>
         <h1 className="text-3xl font-black">Reports</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Defaults to today. Pick dates to look back. Net sales include billiard day totals.
+          Financial totals come from finalized sales. Payment methods are summed from Payment records, not Sale.paymentMethod.
+          Waiter performance uses round posters, not the current session waiter.
         </p>
       </div>
       <form className="flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4 print:hidden">
@@ -163,6 +170,12 @@ export default async function ReportsPage({
         <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Net sales</p><p className="mt-1 text-2xl font-black">{formatMoney(summary.netTotal, currency)}</p></article>
         <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Billiard</p><p className="mt-1 text-2xl font-black">{formatMoney(billiardTotal, currency)}</p></article>
         <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Tracked stock value</p><p className="mt-1 text-2xl font-black">{formatMoney(valuation, currency)}</p></article>
+        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Financial sales</p><p className="mt-1 text-2xl font-black">{formatMoney(hospitality.financialTotal, currency)}</p></article>
+        <article className="rounded-lg border bg-white p-5"><p className="text-sm text-stone-500">Posted rounds (ops)</p><p className="mt-1 text-2xl font-black">{formatMoney(hospitality.operationalTotal, currency)}</p></article>
+        <article className="rounded-lg border bg-white p-5">
+          <p className="text-sm text-stone-500">Location vs product stock</p>
+          <p className="mt-1 text-2xl font-black">{hospitality.inventory.locationStockSum} / {hospitality.inventory.productStockSum}</p>
+        </article>
       </section>
       <div className="grid gap-6 xl:grid-cols-2">
         <Section title="Daily net sales">
@@ -176,15 +189,91 @@ export default async function ReportsPage({
             {summary.daily.size === 0 && empty("No sales in this period.")}
           </div>
         </Section>
-        <Section title="Payment report (net)">
+        <Section title="Payment records (all methods)">
           <div className="divide-y">
             {paymentList.map(([method, row]) => (
               <div key={method} className="flex justify-between p-4">
                 <span>{paymentLabel(method)} <small className="text-stone-500">({row.count})</small></span>
-                <b>{formatMoney(row.net, currency)}</b>
+                <b>{formatMoney(row.amount, currency)}</b>
               </div>
             ))}
-            {paymentList.length === 0 && empty("No payments in this period.")}
+            {paymentList.length === 0 && empty("No payment records in this period.")}
+          </div>
+        </Section>
+        <Section title="Sales by channel">
+          <div className="divide-y">
+            {channelList.map(([channel, row]) => (
+              <div key={channel} className="flex justify-between p-4">
+                <span>{channel.replaceAll("_", " ")} <small className="text-stone-500">({row.count})</small></span>
+                <b>{formatMoney(row.total, currency)}</b>
+              </div>
+            ))}
+            {channelList.length === 0 && empty("No settled hospitality sales in this period.")}
+          </div>
+        </Section>
+        <Section title="Round posters (not current waiter)">
+          <div className="divide-y">
+            {postedByList.map(([id, row]) => (
+              <div key={id} className="flex justify-between p-4">
+                <span>{row.name}<small className="ml-2 text-stone-500">{row.rounds} rounds · {row.items} items</small></span>
+              </div>
+            ))}
+            {postedByList.length === 0 && empty("No posted rounds in this period.")}
+          </div>
+        </Section>
+        <Section title="Settlement staff">
+          <div className="divide-y">
+            {[...hospitality.settlementStaff.entries()].map(([id, row]) => (
+              <div key={id} className="flex justify-between p-4">
+                <span>{row.name}</span>
+                <b>{row.count}</b>
+              </div>
+            ))}
+            {hospitality.settlementStaff.size === 0 && empty("No settlements in this period.")}
+          </div>
+        </Section>
+        <Section title="Session openers">
+          <div className="divide-y">
+            {[...hospitality.sessionOpeners.entries()].map(([id, row]) => (
+              <div key={id} className="flex justify-between p-4">
+                <span>{row.name}</span>
+                <b>{row.count}</b>
+              </div>
+            ))}
+            {hospitality.sessionOpeners.size === 0 && empty("No sessions opened in this period.")}
+          </div>
+        </Section>
+        <Section title="Fulfillment staff">
+          <div className="divide-y">
+            {[...hospitality.fulfillmentStaff.entries()].map(([id, row]) => (
+              <div key={id} className="flex justify-between p-4">
+                <span>{row.name}</span>
+                <b>{row.count}</b>
+              </div>
+            ))}
+            {hospitality.fulfillmentStaff.size === 0 && empty("No fulfillment transitions in this period.")}
+          </div>
+        </Section>
+        <Section title="Adjustments">
+          <div className="divide-y">
+            {adjustmentList.map(([type, row]) => (
+              <div key={type} className="flex justify-between p-4">
+                <span>{type}<small className="ml-2 text-stone-500">({row.count})</small></span>
+                <b>× {row.quantity}</b>
+              </div>
+            ))}
+            {adjustmentList.length === 0 && empty("No adjustments in this period.")}
+          </div>
+        </Section>
+        <Section title="Credit bills">
+          <div className="divide-y">
+            {creditList.map(([status, row]) => (
+              <div key={status} className="flex justify-between p-4">
+                <span>{status.replaceAll("_", " ")} <small className="text-stone-500">({row.count})</small></span>
+                <b>{formatMoney(row.balance, currency)} due / {formatMoney(row.total, currency)}</b>
+              </div>
+            ))}
+            {creditList.length === 0 && empty("No credit bills in this period.")}
           </div>
         </Section>
         <Section title="Product performance (net)">
@@ -207,6 +296,17 @@ export default async function ReportsPage({
               </div>
             ))}
             {categoryList.length === 0 && empty("No category sales in this period.")}
+          </div>
+        </Section>
+        <Section title="Inventory movements by type">
+          <div className="divide-y">
+            {hospitality.inventory.movements.map((row) => (
+              <div key={row.type} className="flex justify-between p-4">
+                <span>{row.type}<small className="ml-2 text-stone-500">({row.count})</small></span>
+                <b>{row.quantity > 0 ? "+" : ""}{row.quantity}</b>
+              </div>
+            ))}
+            {hospitality.inventory.movements.length === 0 && empty("No inventory movements in this period.")}
           </div>
         </Section>
         <Section title="Inventory — stock by location">

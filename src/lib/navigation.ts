@@ -6,6 +6,8 @@ export type NavItemId =
   | "dashboard"
   | "pos"
   | "sales"
+  | "fulfillment-bar"
+  | "fulfillment-kitchen"
   | "inventory-overview"
   | "stock-operations"
   | "suppliers"
@@ -36,6 +38,8 @@ const allNavItems: NavItem[] = [
   { id: "dashboard", href: "/dashboard", label: "Dashboard", roles: businessRoles },
   { id: "pos", href: "/pos", label: "POS", roles: tillRoles },
   { id: "sales", href: "/sales", label: "Sales", roles: tillRoles },
+  { id: "fulfillment-bar", href: "/fulfillment/bar", label: "Bar Queue", roles: tillRoles },
+  { id: "fulfillment-kitchen", href: "/fulfillment/kitchen", label: "Kitchen Queue", roles: tillRoles },
   { id: "inventory-overview", href: "/inventory", label: "Inventory Overview", roles: catalogRoles },
   { id: "stock-operations", href: "/inventory/operations", label: "Stock Operations", roles: catalogRoles },
   { id: "suppliers", href: "/suppliers", label: "Suppliers", roles: catalogRoles },
@@ -52,7 +56,7 @@ const allNavItems: NavItem[] = [
 
 const sectionOrder: Array<{ id: string; title: string; itemIds: NavItemId[] }> = [
   { id: "main", title: "Main", itemIds: ["dashboard", "pos"] },
-  { id: "operations", title: "Operations", itemIds: ["sales", "expenses", "returns", "billiard"] },
+  { id: "operations", title: "Operations", itemIds: ["sales", "fulfillment-bar", "fulfillment-kitchen", "expenses", "returns", "billiard"] },
   { id: "inventory", title: "Inventory", itemIds: ["inventory-overview", "stock-operations", "suppliers"] },
   { id: "catalog", title: "Catalog", itemIds: ["menu", "categories"] },
   { id: "management", title: "Management", itemIds: ["staff", "reports", "audit", "settings"] },
@@ -104,7 +108,13 @@ export function navigationForRole(role: Role | string): NavSection[] {
       {
         id: "main",
         title: "Main",
-        items: allowed.filter((item) => item.id === "pos" || item.id === "sales"),
+        items: allowed.filter(
+          (item) =>
+            item.id === "pos" ||
+            item.id === "sales" ||
+            item.id === "fulfillment-bar" ||
+            item.id === "fulfillment-kitchen",
+        ),
       },
     ].filter((section) => section.items.length > 0);
   }

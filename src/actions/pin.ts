@@ -4,7 +4,7 @@ import { compare, hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { writeAudit } from "@/lib/audit";
 import { requireUser } from "@/lib/authorization";
-import { pinSchema } from "@/lib/pin";
+import { pinSchema, verifyAndRecordPinAttempt } from "@/lib/pin";
 import { prisma } from "@/lib/prisma";
 
 export async function changeOwnPin(formData: FormData) {
@@ -22,9 +22,8 @@ export async function changeOwnPin(formData: FormData) {
   if (!current.mustChangePin) {
     const currentPin = pinSchema.safeParse(formData.get("currentPin"));
     if (!currentPin.success) return { error: "Enter your current PIN." };
-    if (!current.pinHash || !(await compare(currentPin.data, current.pinHash))) {
-      return { error: "Current PIN is incorrect." };
-    }
+    const verified = await verifyAndRecordPinAttempt(actor.id, currentPin.data);
+    if (!verified.ok) return { error: "Current PIN is incorrect." };
     if (currentPin.data === pin.data) return { error: "Choose a different PIN from your current one." };
   } else if (current.pinHash && (await compare(pin.data, current.pinHash))) {
     return { error: "Choose a new PIN. Do not reuse the temporary PIN." };

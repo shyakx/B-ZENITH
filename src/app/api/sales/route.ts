@@ -1,3 +1,9 @@
+/**
+ * LEGACY counter checkout.
+ * Hospitality POS uses /api/sessions/post (inventory) and /api/sessions/settle (finance).
+ * Kept only for scripts/http-e2e.ts and scripts/business-scenario.ts.
+ * Do not call this from /pos.
+ */
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -37,7 +43,11 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.response;
   const user = auth.user;
 
-  const parsed = checkoutSchema.safeParse(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
+  if (body && typeof body === "object" && "sessionId" in body) {
+    return NextResponse.json({ error: "Hospitality checkout must use /api/sessions." }, { status: 400 });
+  }
+  const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Check the sale details and try again." }, { status: 400 });
   }
@@ -113,12 +123,13 @@ export async function POST(request: Request) {
                 change: amountPaid.sub(total),
                 paymentMethod: parsed.data.paymentMethod,
                 note: parsed.data.note || null,
-                payment: {
+                payments: {
                   create: {
                     method: parsed.data.paymentMethod,
                     amount: total,
                     cashReceived: parsed.data.paymentMethod === "CASH" ? amountPaid : null,
                     change: parsed.data.paymentMethod === "CASH" ? amountPaid.sub(total) : null,
+                    receivedById: user.id,
                   },
                 },
                 items: {

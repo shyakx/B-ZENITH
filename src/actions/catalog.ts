@@ -62,7 +62,6 @@ export async function createProduct(formData: FormData) {
         ...catalogProductWriteData(input),
         sku,
         seedKey,
-        stockQuantity: newProductStockQuantity(),
         variants: {
           create: {
             name: "Portion",

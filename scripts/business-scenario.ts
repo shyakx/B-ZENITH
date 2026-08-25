@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
+import { setLocationQuantity } from "../src/lib/location-stock";
 
 const base = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 const password = process.env.SEED_USER_PASSWORD ?? "BZenith@2026";
@@ -62,11 +63,23 @@ async function main() {
     where: { active: true, trackInventory: true, category: { name: "Drinks" }, variants: { some: { active: true } } },
     include: { variants: { where: { active: true }, take: 1 }, category: true },
   });
+
   if (!food?.variants[0] || !drink?.variants[0]) throw new Error("Need a food item and a tracked drink.");
+
+  const invUser = await prisma.user.findFirst({ where: { role: "MANAGER" } });
+  if (!invUser) throw new Error("Need a manager user for inventory operations.");
 
   const originalDrinkStock = drink.stockQuantity;
   if (drink.stockQuantity < 5) {
-    await prisma.product.update({ where: { id: drink.id }, data: { stockQuantity: 5 } });
+    const bar = await prisma.inventoryLocation.findUniqueOrThrow({ where: { code: "BAR" } });
+    await prisma.$transaction(tx => setLocationQuantity(tx, {
+      productId: drink.id,
+      locationId: bar.id,
+      quantity: 5,
+      type: "STOCK_TAKE",
+      performedById: invUser.id,
+      reason: "test fixture"
+    }));
     results.push(`test fixture: set ${drink.name} stock to 5`);
   }
   const opening = (await prisma.product.findUniqueOrThrow({ where: { id: drink.id } })).stockQuantity;

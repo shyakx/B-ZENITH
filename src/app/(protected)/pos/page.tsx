@@ -1,11 +1,13 @@
-import { PosRegister } from "@/components/pos-register";
+import { HospitalityPos } from "@/components/hospitality/HospitalityPos";
 import { requireUser } from "@/lib/authorization";
 import { tillRoles } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { SessionInfo, TableInfo } from "@/components/hospitality/types";
 
 export default async function PosPage() {
-  await requireUser(tillRoles);
-  const [categories, products, settings] = await Promise.all([
+  const user = await requireUser(tillRoles);
+
+  const [categories, products, settings, sessions, tables] = await Promise.all([
     prisma.category.findMany({
       where: { active: true, products: { some: { active: true } } },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -34,6 +36,18 @@ export default async function PosPage() {
       update: {},
       create: { id: "default" },
     }),
+    prisma.serviceSession.findMany({
+        where: { status: "ACTIVE" },
+        include: {
+            waiter: { select: { name: true } },
+            table: true,
+            rounds: { include: { items: true } }
+        },
+        orderBy: { openedAt: "desc" }
+    }),
+    prisma.table.findMany({
+        orderBy: { sortOrder: "asc" }
+    })
   ]);
 
   const sellable = products
@@ -55,8 +69,34 @@ export default async function PosPage() {
       })),
     }));
 
+  const mappedSessions: SessionInfo[] = sessions.map(s => {
+      const allItems = s.rounds.flatMap(r => r.items);
+      const totalAmount = allItems
+          .filter(i => i.status === 'ACTIVE')
+          .reduce((sum, i) => sum + (Number(i.unitPrice) * i.qty), 0);
+
+      return {
+          id: s.id,
+          channel: s.channel,
+          status: s.status,
+          waiterId: s.waiterId,
+          waiter: s.waiter,
+          tableId: s.tableId,
+          table: s.table as TableInfo | null,
+          destinationLabel: s.destinationLabel,
+          customerName: s.customerName,
+          customerPhone: s.customerPhone,
+          deliveryAddress: s.deliveryAddress,
+          openedAt: s.openedAt.toISOString(),
+          totalAmount,
+          roundCount: s.rounds.length
+      };
+  });
+
   return (
-    <PosRegister
+    <HospitalityPos
+      initialSessions={mappedSessions}
+      initialTables={tables as TableInfo[]}
       categories={categories}
       products={sellable}
       currency={settings.currency}

@@ -5,7 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { z } from "zod";
 import { writeAudit } from "@/lib/audit";
 import { isWeakNextAuthSecret } from "@/lib/env";
-import { PIN_LOCK_AFTER, PIN_LOCK_MS, pinSchema } from "@/lib/pin";
+import { pinSchema, verifyAndRecordPinAttempt } from "@/lib/pin";
 import { prisma } from "@/lib/prisma";
 
 const passwordLoginSchema = z.object({
@@ -80,32 +80,31 @@ export const authOptions: NextAuthOptions = {
           const user = pinByUsername.success
             ? await prisma.user.findUnique({ where: { username: pinByUsername.data.username } })
             : await prisma.user.findUnique({ where: { id: pinByUserId.data!.userId } });
-          if (!user?.active || !user.pinHash) return null;
-          if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
-            await writeAudit(user, { action: "LOGIN_LOCKED", entity: "User", entityId: user.id });
-            return null;
-          }
-
-          const ok = await compare(pin, user.pinHash);
-          if (!ok) {
-            const attempts = user.pinFailedAttempts + 1;
-            const lockedUntil = attempts >= PIN_LOCK_AFTER ? new Date(Date.now() + PIN_LOCK_MS) : null;
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { pinFailedAttempts: attempts, pinLockedUntil: lockedUntil },
-            });
-            await writeAudit(user, {
-              action: "LOGIN_FAILED",
-              entity: "User",
-              entityId: user.id,
-              details: { attempts },
-            });
+          if (!user?.active) return null;
+          const pinResult = await verifyAndRecordPinAttempt(user.id, pin);
+          if (!pinResult.ok) {
+            if (pinResult.reason === "locked") {
+              await writeAudit(user, { action: "LOGIN_LOCKED", entity: "User", entityId: user.id });
+            } else if (pinResult.reason === "invalid") {
+              const attempts = (
+                await prisma.user.findUnique({
+                  where: { id: user.id },
+                  select: { pinFailedAttempts: true },
+                })
+              )?.pinFailedAttempts;
+              await writeAudit(user, {
+                action: "LOGIN_FAILED",
+                entity: "User",
+                entityId: user.id,
+                details: { attempts: attempts ?? 0 },
+              });
+            }
             return null;
           }
 
           await prisma.user.update({
             where: { id: user.id },
-            data: { pinFailedAttempts: 0, pinLockedUntil: null, lastLoginAt: new Date() },
+            data: { lastLoginAt: new Date() },
           });
           return sessionUser(user);
         }
