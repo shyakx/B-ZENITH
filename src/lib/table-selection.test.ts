@@ -5,6 +5,7 @@ import {
   presentTableFloor,
   resolveTableSelection,
   tableChannelAction,
+  sessionListedForOperator,
   tableOpenFailureMessage,
   TABLE_CHANNEL_ACTION,
   TABLE_UX,
@@ -140,11 +141,35 @@ describe("resolveTableSelection", () => {
   });
 });
 
+describe("sessionListedForOperator", () => {
+  it("hides another waiter's session from a waiter", () => {
+    assert.equal(
+      sessionListedForOperator({ waiterId: "waiter-2" }, { id: "waiter-1", role: "WAITER" }),
+      false,
+    );
+    assert.equal(
+      sessionListedForOperator({ waiterId: "waiter-1" }, { id: "waiter-1", role: "WAITER" }),
+      true,
+    );
+    assert.equal(
+      sessionListedForOperator({ waiterId: "waiter-2" }, { id: "manager-1", role: "MANAGER" }),
+      true,
+    );
+  });
+});
+
 describe("tableOpenFailureMessage", () => {
   it("maps 403 to the other-staff message", () => {
     assert.equal(
-      tableOpenFailureMessage(403, "You can only work on your assigned sessions."),
+      tableOpenFailureMessage(403, "This service belongs to another waiter."),
       TABLE_UX.otherWaiter,
+    );
+  });
+
+  it("maps 409 to the server table-unavailable message", () => {
+    assert.equal(
+      tableOpenFailureMessage(409, "Table is not available."),
+      "Table is not available.",
     );
   });
 });

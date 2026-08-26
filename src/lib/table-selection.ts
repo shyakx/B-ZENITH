@@ -47,6 +47,13 @@ export function tableChannelAction() {
   return TABLE_CHANNEL_ACTION;
 }
 
+export function sessionListedForOperator(
+  session: { waiterId: string },
+  operator: { id: string; role: string },
+) {
+  return operator.role !== "WAITER" || session.waiterId === operator.id;
+}
+
 export function resolveTableSelection(input: {
   table: TableSelectionTable | undefined;
   session: TableSelectionSession | undefined;

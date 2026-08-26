@@ -39,7 +39,7 @@ export class HospitalityError extends Error {
 
 export function assertWaiterOwnsSession(operatorRole: string, operatorId: string, sessionWaiterId: string) {
   if (operatorRole === "WAITER" && operatorId !== sessionWaiterId) {
-    throw new HospitalityError("You can only work on your assigned sessions.", "FORBIDDEN");
+    throw new HospitalityError("This service belongs to another waiter.", "FORBIDDEN");
   }
 }
 
@@ -48,7 +48,7 @@ export async function requireOperableSession(sessionId: string, operator: { id: 
     where: { id: sessionId },
     select: { id: true, waiterId: true, status: true },
   });
-  if (!session) throw new HospitalityError("Session not found.");
+  if (!session) throw new HospitalityError("Session not found.", "NOT_FOUND");
   assertWaiterOwnsSession(operator.role, operator.id, session.waiterId);
   return session;
 }
@@ -90,7 +90,7 @@ export async function postOrder(
     const session = await tx.serviceSession.findUnique({
       where: { id: sessionId },
     });
-    if (!session) throw new HospitalityError("Session not found.");
+    if (!session) throw new HospitalityError("Session not found.", "NOT_FOUND");
     if (session.status !== SessionStatus.ACTIVE) {
       throw new HospitalityError(`Cannot post to a ${session.status} session.`, "CONFLICT");
     }
@@ -656,7 +656,7 @@ export async function finalizeSettlement(
         where: { id: sessionId },
         include: { sale: { include: saleInclude } },
       });
-      if (!current) throw new HospitalityError("Session not found.");
+      if (!current) throw new HospitalityError("Session not found.", "NOT_FOUND");
       if (current.sale?.idempotencyKey === input.idempotencyKey) return current.sale;
       if (current.sale || current.status === SessionStatus.CLOSED) {
         throw new HospitalityError("This session is already settled.", "CONFLICT");

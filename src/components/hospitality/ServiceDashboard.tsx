@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/dashboard/ui";
 import {
   groupTableFloor,
   presentTableFloor,
+  sessionListedForOperator,
   TABLE_UX,
   type TableFloorCard,
 } from "@/lib/table-selection";
@@ -44,8 +45,9 @@ export function ServiceDashboard({
   const occupiedTables = tables.filter((t) => t.status === "OCCUPIED");
   const availableTables = tables.filter((t) => t.status === "AVAILABLE");
   const outOfService = tables.filter((t) => t.status === "OUT_OF_SERVICE");
-  const settling = activeSessions.filter((s) => s.status === SessionStatus.SETTLING);
-  const live = activeSessions.filter((s) => s.status === SessionStatus.ACTIVE);
+  const mySessions = activeSessions.filter((session) => sessionListedForOperator(session, operator));
+  const settling = mySessions.filter((s) => s.status === SessionStatus.SETTLING);
+  const live = mySessions.filter((s) => s.status === SessionStatus.ACTIVE);
 
   if (floor === "TABLES") {
     return (
@@ -79,7 +81,7 @@ export function ServiceDashboard({
       <section className="grid grid-cols-2 gap-2 xl:grid-cols-5">
         <article className="rounded-lg border border-black bg-white px-3 py-3">
           <p className="bz-label">Open sessions</p>
-          <p className="bz-kpi">{activeSessions.length}</p>
+          <p className="bz-kpi">{mySessions.length}</p>
         </article>
         <article className="rounded-lg border border-black bg-white px-3 py-3">
           <p className="bz-label">Active</p>
@@ -127,13 +129,13 @@ export function ServiceDashboard({
 
       <section className="overflow-hidden rounded-lg border border-black bg-white">
         <div className="border-b border-black px-4 py-3">
-          <h2 className="bz-section-title">Open sessions ({activeSessions.length})</h2>
+          <h2 className="bz-section-title">Open sessions ({mySessions.length})</h2>
         </div>
-        {activeSessions.length === 0 ? (
+        {mySessions.length === 0 ? (
           <p className="p-8 text-center text-sm text-black">No active sessions.</p>
         ) : (
           <ul className="divide-y divide-black">
-            {activeSessions.map((session) => (
+            {mySessions.map((session) => (
               <li key={session.id}>
                 <button
                   type="button"
@@ -237,7 +239,13 @@ function TableGroup({
             key={card.id}
             type="button"
             aria-disabled={!card.selectable}
-            onClick={() => onSelectTable(card.id)}
+            onClick={() => {
+              if (!card.selectable) {
+                if (card.blockMessage) alert(card.blockMessage);
+                return;
+              }
+              onSelectTable(card.id);
+            }}
             className={`flex min-h-28 flex-col items-start justify-between rounded-md border px-3 py-3 text-left ${
               card.group === "available"
                 ? "border-black bg-white"

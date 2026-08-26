@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ServiceDashboard } from "./ServiceDashboard";
 import { SessionInterface } from "./SessionInterface";
 import { SettlementModal, type SettlementSubmit } from "./SettlementModal";
@@ -45,6 +45,7 @@ export function HospitalityPos({
   const [exchangeItem, setExchangeItem] = useState<any | null>(null);
   const [handoverOpen, setHandoverOpen] = useState(false);
   const [channelCapture, setChannelCapture] = useState<Exclude<ServiceChannel,"TABLE"> | null>(null);
+  const startingTableRef = useRef(false);
 
   const mapSession = (s: any): SessionInfo => ({
             id: s.id,
@@ -113,6 +114,11 @@ export function HospitalityPos({
   };
 
   const handleOpenSession = async (sessionId: string, fromTable = false) => {
+    const listed = sessions.find((session) => session.id === sessionId);
+    if (listed && operator.role === "WAITER" && listed.waiterId !== operator.id) {
+      alert(tableOpenFailureMessage(403));
+      return;
+    }
     try {
         const res = await fetch(`/api/sessions/${sessionId}`);
         const session = await res.json();
@@ -152,6 +158,8 @@ export function HospitalityPos({
     }
 
     try {
+      if (startingTableRef.current) return;
+      startingTableRef.current = true;
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -161,12 +169,17 @@ export function HospitalityPos({
         }),
       });
       const newSession = await res.json();
-      if (!res.ok) throw new Error(tableOpenFailureMessage(res.status, newSession.error));
+      if (!res.ok) {
+        await refreshDashboard();
+        throw new Error(tableOpenFailureMessage(res.status, newSession.error));
+      }
       if (newSession.id) {
         await handleOpenSession(newSession.id, true);
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to start table session");
+    } finally {
+      startingTableRef.current = false;
     }
   };
 
