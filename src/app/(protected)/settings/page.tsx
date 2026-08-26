@@ -13,6 +13,10 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-2xl space-y-6">
         <DashboardHeader kicker="Management" title="Business settings" />
         <p className="text-sm text-black">
+          <Link href="/settings/tables" className="font-medium text-black hover:underline">Tables</Link>
+          {" "}lets owners and admins configure the restaurant floor for POS table service.
+        </p>
+        <p className="text-sm text-black">
           <Link href="/audit" className="font-medium text-black hover:underline">Audit logs</Link>
           {""}are kept here for owners and admins.
         </p>

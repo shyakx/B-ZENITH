@@ -122,5 +122,10 @@ describe("server-side path authorization", () => {
     assert.equal(canAccessPath("BILLIARD", "/inventory"), false);
     assert.equal(canAccessPath("BILLIARD", "/pos"), false);
     assert.equal(canAccessPath("BILLIARD", "/fulfillment/bar"), false);
+    assert.equal(canAccessPath("WAITER", "/settings/tables"), false);
+    assert.equal(canAccessPath("MANAGER", "/settings/tables"), false);
+    assert.equal(canAccessPath("BILLIARD", "/settings/tables"), false);
+    assert.equal(canAccessPath("OWNER", "/settings/tables"), true);
+    assert.equal(canAccessPath("ADMIN", "/settings/tables"), true);
   });
 });

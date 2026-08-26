@@ -13,6 +13,7 @@ import {
 import { isUniqueConstraint } from "./idempotency";
 import { prisma } from "./prisma";
 import { applyLocationDelta, sellingLocationId } from "./location-stock";
+import { tableCanStartService } from "./table-admin";
 
 type Tx = Prisma.TransactionClient;
 
@@ -557,7 +558,7 @@ export async function openServiceSession(waiterId: string, input: OpenSessionInp
   return prisma.$transaction(async (tx) => {
     if (input.channel === ServiceChannel.TABLE && input.tableId) {
       const table = await tx.table.findUnique({ where: { id: input.tableId } });
-      if (!table || table.status !== "AVAILABLE") {
+      if (!table || !tableCanStartService(table)) {
         throw new HospitalityError("Table is not available.", "CONFLICT");
       }
       await tx.table.update({ where: { id: input.tableId }, data: { status: "OCCUPIED" } });
