@@ -1,6 +1,7 @@
 "use client";
 
 import { ChefHat, Wine } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { FulfillmentStatus, ServiceChannel } from "@prisma/client";
 import { EmptyState, StatusBadge } from "@/components/dashboard/ui";
@@ -21,13 +22,13 @@ interface FulfillmentItem {
   elapsedMinutes: number;
 }
 
-const COLUMNS: Array<{ status: FulfillmentStatus; title: string; tone: "warn" | "info" | "ok" }> = [
-  { status: FulfillmentStatus.POSTED, title: "Pending", tone: "warn" },
-  { status: FulfillmentStatus.PREPARING, title: "Preparing", tone: "info" },
-  { status: FulfillmentStatus.READY, title: "Ready", tone: "ok" },
+const COLUMNS: Array<{ status: FulfillmentStatus; title: string; tone:"warn" |"info" |"ok" }> = [
+  { status: FulfillmentStatus.POSTED, title:"Pending", tone:"warn" },
+  { status: FulfillmentStatus.PREPARING, title:"Preparing", tone:"info" },
+  { status: FulfillmentStatus.READY, title:"Ready", tone:"ok" },
 ];
 
-export function FulfillmentQueue({ locationCode }: { locationCode: "BAR" | "KITCHEN" }) {
+export function FulfillmentQueue({ locationCode }: { locationCode:"BAR" |"KITCHEN" }) {
   const [items, setItems] = useState<FulfillmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,23 +61,23 @@ export function FulfillmentQueue({ locationCode }: { locationCode: "BAR" | "KITC
     else return;
 
     const res = await fetch("/api/fulfillment", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      method:"PATCH",
+      headers: {"Content-Type":"application/json" },
       body: JSON.stringify({ itemId, status: nextStatus }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Failed to update status");
+      alert(data.error ||"Failed to update status");
       return;
     }
     await fetchItems();
   };
 
   const actionLabel = (status: FulfillmentStatus) => {
-    if (status === FulfillmentStatus.POSTED) return "Start preparing";
-    if (status === FulfillmentStatus.PREPARING) return "Mark ready";
-    if (status === FulfillmentStatus.READY) return "Hand over";
-    return "Done";
+    if (status === FulfillmentStatus.POSTED) return"Start preparing";
+    if (status === FulfillmentStatus.PREPARING) return"Mark ready";
+    if (status === FulfillmentStatus.READY) return"Hand over";
+    return"Done";
   };
 
   const card = (item: FulfillmentItem) => {
@@ -84,31 +85,31 @@ export function FulfillmentQueue({ locationCode }: { locationCode: "BAR" | "KITC
     return (
       <article
         key={item.id}
-        className={`flex flex-col rounded-lg border bg-white p-4 ${stale ? "border-amber-500" : "border-stone-300"}`}
+        className={`flex flex-col rounded-lg border bg-white p-4 ${stale ?"border-black" :"border-black"}`}
       >
         <div className="mb-3 flex items-center justify-between gap-2">
-          <StatusBadge tone={item.fulfillmentStatus === "READY" ? "ok" : item.fulfillmentStatus === "PREPARING" ? "info" : "warn"}>
-            {item.fulfillmentStatus === "POSTED" ? "Pending" : item.fulfillmentStatus === "READY" ? "Ready" : "Preparing"}
+          <StatusBadge tone={item.fulfillmentStatus ==="READY" ?"ok" : item.fulfillmentStatus ==="PREPARING" ?"info" :"warn"}>
+            {item.fulfillmentStatus ==="POSTED" ?"Pending" : item.fulfillmentStatus ==="READY" ?"Ready" :"Preparing"}
           </StatusBadge>
-          <span className={`text-sm font-black ${stale ? "text-amber-700" : "text-stone-500"}`}>{item.elapsedMinutes}m</span>
+          <span className={`text-sm font-semibold ${stale ?"text-black" :"text-black"}`}>{item.elapsedMinutes}m</span>
         </div>
         <div className="flex items-start gap-3">
-          <span className="grid size-12 shrink-0 place-items-center rounded-md bg-black text-xl font-black text-[#d4af37]">
+          <span className="grid size-12 shrink-0 place-items-center rounded-md bg-black text-xl font-semibold text-[#FFD758]">
             {item.qty}
           </span>
           <div>
-            <h3 className="text-xl font-black leading-tight">{item.productName}</h3>
-            {item.variantName ? <p className="text-sm font-bold text-[#947313]">{item.variantName}</p> : null}
-            <p className="mt-1 text-sm font-medium text-stone-600">
-              {item.tableName ? `Table ${item.tableName}` : item.destination || item.channel.replaceAll("_", " ")}
+            <h3 className="text-xl font-semibold leading-tight">{item.productName}</h3>
+            {item.variantName ? <p className="text-sm font-bold text-black">{item.variantName}</p> : null}
+            <p className="mt-1 text-sm font-medium text-black">
+              {item.tableName ? `Table ${item.tableName}` : item.destination || item.channel.replaceAll("_","")}
             </p>
-            <p className="text-xs text-stone-500">Waiter {item.currentWaiterName}</p>
+            <p className="text-xs text-black">Waiter {item.currentWaiterName}</p>
           </div>
         </div>
         <button
           onClick={() => handleStatusChange(item.id, item.fulfillmentStatus)}
-          className={`mt-4 min-h-14 w-full rounded-md text-base font-black ${
-            item.fulfillmentStatus === FulfillmentStatus.READY ? "bg-emerald-700 text-white" : "bg-black text-[#d4af37]"
+          className={`mt-4 min-h-14 w-full rounded-md text-base font-semibold ${
+            item.fulfillmentStatus === FulfillmentStatus.READY ?"bg-[#FFD758] text-black" :"bg-black text-white"
           }`}
         >
           {actionLabel(item.fulfillmentStatus)}
@@ -121,25 +122,39 @@ export function FulfillmentQueue({ locationCode }: { locationCode: "BAR" | "KITC
     <div className="space-y-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Fulfillment</p>
-          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight md:text-4xl">
-            {locationCode === "BAR" ? <Wine size={28} /> : <ChefHat size={28} />}
-            {locationCode === "BAR" ? "Bar queue" : "Kitchen queue"}
+          <p className="bz-kicker">Fulfillment</p>
+          <h1 className="bz-page-title flex items-center gap-2">
+            {locationCode ==="BAR" ? <Wine size={20} /> : <ChefHat size={20} />}
+            {locationCode ==="BAR" ?"Bar queue" :"Kitchen queue"}
           </h1>
-          <p className="mt-1 text-sm font-medium text-stone-600">What needs to be prepared now.</p>
+          <p className="mt-1 text-sm font-normal text-black">What needs to be prepared now.</p>
         </div>
-        <StatusBadge tone="neutral">Live · 10s refresh</StatusBadge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/fulfillment/bar"
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${locationCode === "BAR" ? "bg-[#FFD758] text-black" : "border border-black bg-white text-black"}`}
+          >
+            Bar
+          </Link>
+          <Link
+            href="/fulfillment/kitchen"
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${locationCode === "KITCHEN" ? "bg-[#FFD758] text-black" : "border border-black bg-white text-black"}`}
+          >
+            Kitchen
+          </Link>
+          <StatusBadge tone="neutral">Live · 10s refresh</StatusBadge>
+        </div>
       </header>
-      {error ? <p className="font-bold text-red-700">{error}</p> : null}
+      {error ? <p className="bz-alert">{error}</p> : null}
 
       {loading && items.length === 0 ? (
         <div className="grid gap-3 md:grid-cols-3">
           {[0, 1, 2].map((key) => (
-            <div key={key} className="h-40 animate-pulse rounded-lg border border-stone-300 bg-stone-100" />
+            <div key={key} className="h-40 rounded-lg border border-black bg-white" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-lg border border-stone-300 bg-white">
+        <div className="rounded-lg border border-black bg-white">
           <EmptyState title="All clear." body={`No pending ${locationCode.toLowerCase()} orders.`} />
         </div>
       ) : (
@@ -147,14 +162,14 @@ export function FulfillmentQueue({ locationCode }: { locationCode: "BAR" | "KITC
           {COLUMNS.map((column) => {
             const columnItems = items.filter((item) => item.fulfillmentStatus === column.status);
             return (
-              <section key={column.status} className="rounded-lg border border-stone-300 bg-stone-50">
+              <section key={column.status} className="rounded-lg border border-black bg-white">
                 <div className="flex items-center justify-between px-4 py-3">
-                  <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">{column.title}</h2>
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-black">{column.title}</h2>
                   <StatusBadge tone={column.tone}>{columnItems.length}</StatusBadge>
                 </div>
                 <div className="space-y-3 p-3">
                   {columnItems.length === 0 ? (
-                    <p className="py-8 text-center text-sm font-medium text-stone-500">None</p>
+                    <p className="py-8 text-center text-sm font-medium text-black">None</p>
                   ) : (
                     columnItems.map(card)
                   )}

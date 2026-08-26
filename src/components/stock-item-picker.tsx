@@ -26,7 +26,7 @@ export function StockItemPicker({
     const q = query.trim().toLowerCase();
     if (!q) return products;
     return products.filter((item) =>
-      `${item.name} ${item.sku ?? ""} ${item.categoryName ?? ""}`.toLowerCase().includes(q),
+      `${item.name} ${item.sku ??""} ${item.categoryName ??""}`.toLowerCase().includes(q),
     );
   }, [products, query]);
 
@@ -34,7 +34,7 @@ export function StockItemPicker({
     const groups: Array<{ category: string; items: StockPickerItem[] }> = [];
     const index = new Map<string, number>();
     for (const item of visibleProducts) {
-      const category = item.categoryName?.trim() || "Stock";
+      const category = item.categoryName?.trim() ||"Stock";
       const existing = index.get(category);
       if (existing === undefined) {
         index.set(category, groups.length);
@@ -54,16 +54,16 @@ export function StockItemPicker({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by name, SKU, or category..."
-          className="mt-1 min-h-11 w-full rounded-md border border-stone-300 px-3 font-medium"
+          className="mt-1 min-h-11 w-full rounded-md border border-black px-3 font-medium"
         />
       </label>
-      <ul className="max-h-[22rem] overflow-y-auto rounded-lg border border-stone-200">
+      <ul className="max-h-[22rem] overflow-y-auto rounded-lg border border-black">
         {groupedProducts.map((group) => (
           <li key={group.category}>
-            <p className="sticky top-0 z-10 bg-stone-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-stone-600">
+            <p className="sticky top-0 z-10 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-black">
               {group.category}
             </p>
-            <ul className="divide-y">
+            <ul className="divide-y divide-black">
               {group.items.map((item) => {
                 const selected = item.id === value;
                 const qty = item.available ?? 0;
@@ -74,11 +74,11 @@ export function StockItemPicker({
                       type="button"
                       onClick={() => onChange(item.id)}
                       className={`flex min-h-14 w-full flex-col items-start justify-center px-3 py-2 text-left ${
-                        selected ? "bg-black text-white" : "bg-white text-stone-950"
+                        selected ?"bg-black text-white" :"bg-white text-black"
                       }`}
                     >
-                      <span className="font-black">{item.name}</span>
-                      <span className={`text-sm font-medium ${selected ? "text-white/80" : "text-stone-600"}`}>
+                      <span className="font-semibold">{item.name}</span>
+                      <span className={`text-sm font-medium ${selected ?"text-white" :"text-black"}`}>
                         {qtyLabel} available
                       </span>
                     </button>
@@ -90,7 +90,7 @@ export function StockItemPicker({
         ))}
       </ul>
       {visibleProducts.length === 0 ? (
-        <p className="text-sm text-stone-500">No items match this search.</p>
+        <p className="text-sm text-black">No items match this search.</p>
       ) : null}
     </div>
   );

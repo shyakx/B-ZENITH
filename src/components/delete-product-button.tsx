@@ -26,7 +26,7 @@ export function DeleteProductButton({ productId, name }: { productId: string; na
   return (
     <div className="grid gap-2">
       {error ? (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">
+        <p role="alert" className="rounded-md bg-black p-3 text-sm font-semibold text-white">
           {error}
         </p>
       ) : null}
@@ -34,9 +34,9 @@ export function DeleteProductButton({ productId, name }: { productId: string; na
         type="button"
         onClick={onDelete}
         disabled={pending}
-        className="min-h-11 w-full rounded-md border border-red-200 font-bold text-red-700 disabled:opacity-60"
+        className="bz-btn-secondary w-full disabled:border-2 disabled:border-dashed"
       >
-        {pending ? "Deleting…" : "Delete product"}
+        {pending ?"Deleting…" :"Delete product"}
       </button>
     </div>
   );

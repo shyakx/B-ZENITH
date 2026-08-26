@@ -36,7 +36,7 @@ export function ActionForm({
   return (
     <form action={submit} className={className}>
       {error ? (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700 sm:col-span-2">
+        <p role="alert" className="rounded-md bg-black p-3 text-sm font-semibold text-white sm:col-span-2">
           {error}
         </p>
       ) : null}

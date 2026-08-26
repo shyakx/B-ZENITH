@@ -10,7 +10,7 @@ export function DeleteSaleButton({
   label,
 }: {
   id: string;
-  kind: "pos" | "billiard";
+  kind:"pos" |"billiard";
   label: string;
 }) {
   const router = useRouter();
@@ -21,7 +21,7 @@ export function DeleteSaleButton({
     if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
     setPending(true);
     setError("");
-    const result = kind === "pos" ? await voidSale(id) : await deleteBilliardDaySale(id);
+    const result = kind ==="pos" ? await voidSale(id) : await deleteBilliardDaySale(id);
     if (result?.error) {
       setError(result.error);
       setPending(false);
@@ -32,14 +32,14 @@ export function DeleteSaleButton({
 
   return (
     <div className="grid gap-1">
-      {error ? <p role="alert" className="text-sm font-semibold text-red-700">{error}</p> : null}
+      {error ? <p role="alert" className="bz-alert">{error}</p> : null}
       <button
         type="button"
         onClick={onDelete}
         disabled={pending}
-        className="inline-flex min-h-11 items-center rounded-md border border-red-200 px-3 font-bold text-red-700 disabled:opacity-60"
+        className="bz-btn-secondary inline-flex items-center disabled:border-2 disabled:border-dashed"
       >
-        {pending ? "Deleting…" : "Delete"}
+        {pending ?"Deleting…" :"Delete"}
       </button>
     </div>
   );

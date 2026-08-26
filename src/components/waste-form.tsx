@@ -24,16 +24,16 @@ export function WasteForm({
   initialLocationCode?: string;
 }) {
   const router = useRouter();
-  const [locationCode, setLocationCode] = useState(initialLocationCode || "BAR");
-  const [productId, setProductId] = useState(initialProductId || "");
+  const [locationCode, setLocationCode] = useState(initialLocationCode ||"BAR");
+  const [productId, setProductId] = useState(initialProductId ||"");
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState<(typeof SIMPLE_WASTE_REASONS)[number]>("DAMAGED");
   const [note, setNote] = useState("");
-  const [step, setStep] = useState<"edit" | "confirm">("edit");
+  const [step, setStep] = useState<"edit" |"confirm">("edit");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const product = products.find((item) => item.id === productId);
-  const unit = product?.unit ?? "PIECE";
+  const unit = product?.unit ??"PIECE";
   const available = product?.quantities[locationCode] ?? 0;
 
   async function submit() {
@@ -48,33 +48,33 @@ export function WasteForm({
     try {
       await recordWaste(formData);
       setStep("edit");
-      setMessage(`Recorded ${formatQuantity(quantity, unit)} of ${product?.name ?? "stock"} as waste.`);
+      setMessage(`Recorded ${formatQuantity(quantity, unit)} of ${product?.name ??"stock"} as waste.`);
       router.refresh();
     } catch (error) {
-      const raw = error instanceof Error ? error.message : "";
+      const raw = error instanceof Error ? error.message :"";
       setStep("edit");
-      setMessage(raw.includes("Prisma") || !raw ? "We couldn't update the stock. Please try again." : raw);
+      setMessage(raw.includes("Prisma") || !raw ?"We couldn't update the stock. Please try again." : raw);
     } finally {
       setPending(false);
     }
   }
 
   if (!products.length) {
-    return <p className="rounded-lg border bg-white p-6 text-sm text-stone-600">No products available.</p>;
+    return <p className="rounded-lg border bg-white p-6 text-sm text-black">No products available.</p>;
   }
 
-  if (step === "confirm") {
+  if (step ==="confirm") {
     return (
       <div className="space-y-4">
-        <p className="text-lg font-black">
+        <p className="text-lg font-semibold">
           Remove {formatQuantity(quantity, unit)} of {product?.name} from {locationLabel(locationCode)}?
         </p>
         <p className="text-sm">Reason: <b>{wasteReasonLabel(reason)}</b></p>
         <p className="text-sm">Left after this: <b>{formatQuantity(available - quantity, unit)}</b></p>
         <div className="grid grid-cols-2 gap-3">
           <button type="button" disabled={pending} onClick={() => setStep("edit")} className="min-h-12 rounded-md border font-bold">Cancel</button>
-          <button type="button" disabled={pending} onClick={submit} className="min-h-12 rounded-md bg-red-800 font-bold text-white disabled:opacity-40">
-            {pending ? "Saving..." : "Confirm"}
+          <button type="button" disabled={pending} onClick={submit} className="bz-btn-secondary w-full">
+            {pending ?"Saving..." :"Confirm"}
           </button>
         </div>
       </div>
@@ -106,7 +106,7 @@ export function WasteForm({
           <option value="KITCHEN">Kitchen</option>
         </select>
       </label>
-      <p className="text-sm text-stone-600">
+      <p className="text-sm text-black">
         Currently at {locationLabel(locationCode)}: <b>{formatQuantity(available, unit)}</b>
       </p>
       <label className="text-sm font-bold">
@@ -125,14 +125,14 @@ export function WasteForm({
         Notes (optional)
         <input value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" />
       </label>
-      {message ? <p className={`text-sm font-bold ${message.startsWith("Recorded ") ? "text-emerald-700" : "text-red-700"}`}>{message}</p> : null}
+      {message ? <p className={message.startsWith("Recorded") ?"bz-success" :"bz-alert"}>{message}</p> : null}
       <button
         type="button"
         disabled={!product || quantity < 1 || quantity > available}
         onClick={() => { setMessage(""); setStep("confirm"); }}
-        className="min-h-12 rounded-md bg-black px-5 font-bold text-[#d4af37] disabled:opacity-40"
+        className="bz-btn-primary disabled:border-2 disabled:border-dashed"
       >
-        Remove {product ? formatQuantity(quantity, unit) : "stock"}
+        Remove {product ? formatQuantity(quantity, unit) :"stock"}
       </button>
     </div>
   );

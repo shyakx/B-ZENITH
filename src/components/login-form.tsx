@@ -20,14 +20,14 @@ import { loginRoles, publicStaffName, roleTitle } from "@/lib/roles";
 type Staff = { username: string; firstName: string; lastName: string; name: string; role: string };
 type LoginRoleId = (typeof loginRoles)[number]["id"];
 
-const ROLE_ORDER: LoginRoleId[] = ["OWNER", "ADMIN", "MANAGER", "WAITER", "BILLIARD"];
+const ROLE_ORDER: LoginRoleId[] = ["OWNER","ADMIN","MANAGER","WAITER","BILLIARD"];
 
 const ROLE_COPY: Record<LoginRoleId, { title: string; hint: string; Icon: typeof Crown }> = {
-  OWNER: { title: "OWNER", hint: "Full business control", Icon: Crown },
-  ADMIN: { title: "ADMIN", hint: "Administration & operations", Icon: Shield },
-  MANAGER: { title: "MANAGER", hint: "Inventory & management", Icon: Briefcase },
-  WAITER: { title: "WAITER", hint: "POS & service", Icon: UtensilsCrossed },
-  BILLIARD: { title: "BILLIARD", hint: "Billiard operations", Icon: CircleDot },
+  OWNER: { title:"Owner", hint:"Full business control", Icon: Crown },
+  ADMIN: { title:"Admin", hint:"Administration & operations", Icon: Shield },
+  MANAGER: { title:"Manager", hint:"Inventory & management", Icon: Briefcase },
+  WAITER: { title:"Waiter", hint:"POS & service", Icon: UtensilsCrossed },
+  BILLIARD: { title:"Billiard", hint:"Billiard operations", Icon: CircleDot },
 };
 
 function staffInitials(person: Staff) {
@@ -36,7 +36,7 @@ function staffInitials(person: Staff) {
   if (first && last) return `${first}${last}`.toUpperCase();
   const parts = publicStaffName(person).split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
-  return publicStaffName(person).slice(0, 2).toUpperCase() || "BZ";
+  return publicStaffName(person).slice(0, 2).toUpperCase() ||"BZ";
 }
 
 function welcomeFirstName(person: Staff) {
@@ -56,7 +56,7 @@ function BackButton({ label, onClick }: { label: string; onClick: () => void }) 
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-11 items-center gap-2 text-sm font-black text-[#b8860b] hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2"
+      className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-black hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
     >
       <ArrowLeft size={16} aria-hidden />
       {label}
@@ -78,7 +78,7 @@ function PinPad({
     onChange(`${value}${digit}`);
   }
 
-  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+  const keys = ["1","2","3","4","5","6","7","8","9"] as const;
 
   return (
     <div className="grid grid-cols-3 gap-2" role="group" aria-label="PIN keypad">
@@ -88,7 +88,7 @@ function PinPad({
           type="button"
           disabled={disabled}
           onClick={() => press(key)}
-          className="min-h-12 rounded-xl border-2 border-black bg-white text-2xl font-black transition duration-150 hover:-translate-y-0.5 hover:border-[#d4af37] hover:bg-[#d4af37] active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 disabled:opacity-50 sm:min-h-16"
+          className="min-h-12 rounded-md border border-black bg-white text-xl font-medium text-black transition-transform hover:-translate-y-px active:scale-[0.98] focus-visible:outline-none disabled:border-2 disabled:border-dashed sm:min-h-14"
         >
           {key}
         </button>
@@ -97,7 +97,7 @@ function PinPad({
         type="button"
         disabled={disabled}
         onClick={() => onChange("")}
-        className="min-h-12 rounded-xl border-2 border-black text-sm font-black transition duration-150 hover:bg-black hover:text-[#d4af37] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 disabled:opacity-50 sm:min-h-16"
+        className="min-h-12 rounded-md border border-black text-sm font-medium text-black transition-transform hover:-translate-y-px active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:border-2 disabled:border-dashed sm:min-h-14"
       >
         Clear
       </button>
@@ -105,7 +105,7 @@ function PinPad({
         type="button"
         disabled={disabled}
         onClick={() => press("0")}
-        className="min-h-12 rounded-xl border-2 border-black bg-white text-2xl font-black transition duration-150 hover:-translate-y-0.5 hover:border-[#d4af37] hover:bg-[#d4af37] active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 disabled:opacity-50 sm:min-h-16"
+        className="min-h-12 rounded-md border border-black bg-white text-xl font-medium text-black transition-transform hover:-translate-y-px active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:border-2 disabled:border-dashed sm:min-h-14"
       >
         0
       </button>
@@ -113,7 +113,7 @@ function PinPad({
         type="button"
         disabled={disabled}
         onClick={() => onChange(value.slice(0, -1))}
-        className="grid min-h-12 place-items-center rounded-xl border-2 border-black font-bold transition duration-150 hover:bg-black hover:text-[#d4af37] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 disabled:opacity-50 sm:min-h-16"
+        className="grid min-h-12 place-items-center rounded-md border border-black font-medium text-black transition-transform hover:-translate-y-px active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:border-2 disabled:border-dashed sm:min-h-14"
         aria-label="Delete last digit"
       >
         <Delete size={22} />
@@ -176,7 +176,7 @@ export function LoginForm() {
     if (session?.user?.mustChangePin) {
       router.push("/change-pin");
     } else {
-      router.push(session?.user ? homePath(session.user.role) : "/");
+      router.push(session?.user ? homePath(session.user.role) :"/");
     }
     router.refresh();
   }, [selected, pin, pending, router]);
@@ -198,7 +198,7 @@ export function LoginForm() {
     if (session?.user?.mustChangePin) {
       router.push("/change-pin");
     } else {
-      router.push(session?.user ? homePath(session.user.role) : "/");
+      router.push(session?.user ? homePath(session.user.role) :"/");
     }
     router.refresh();
   }
@@ -208,18 +208,18 @@ export function LoginForm() {
     function onKeyDown(event: KeyboardEvent) {
       if (pending) return;
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
-      if (event.key >= "0" && event.key <= "9") {
+      if (target && (target.tagName ==="INPUT" || target.tagName ==="TEXTAREA")) return;
+      if (event.key >="0" && event.key <="9") {
         event.preventDefault();
         setPin((current) => (current.length >= 4 ? current : `${current}${event.key}`));
         return;
       }
-      if (event.key === "Backspace") {
+      if (event.key ==="Backspace") {
         event.preventDefault();
         setPin((current) => current.slice(0, -1));
         return;
       }
-      if (event.key === "Enter") {
+      if (event.key ==="Enter") {
         event.preventDefault();
         void submitPin();
       }
@@ -233,23 +233,21 @@ export function LoginForm() {
     [staff, staffQuery],
   );
 
-  const fieldClass =
-    "min-h-12 w-full rounded-xl border-2 border-black px-4 outline-none focus-visible:border-[#d4af37] focus-visible:ring-2 focus-visible:ring-[#d4af37]";
-  const primaryButtonClass =
-    "min-h-12 w-full rounded-xl bg-black px-5 text-base font-black text-[#d4af37] transition duration-150 hover:bg-[#111] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 disabled:bg-black disabled:text-[#d4af37] disabled:opacity-40 sm:min-h-14";
+  const fieldClass = "min-h-12 w-full rounded-md border border-black bg-white px-4 text-black outline-none focus-visible:border-[#FFD758]";
+  const primaryButtonClass = "bz-btn-primary w-full";
 
   if (emailMode) {
     return (
       <form action={submitEmail} className="login-step mt-4 space-y-5">
-        <h1 className="text-3xl font-black tracking-tight text-black">Welcome back</h1>
-        <p className="text-sm font-semibold text-black">Sign in to your restaurant workspace</p>
+        <h1 className="text-2xl font-medium tracking-tight text-black">Welcome back</h1>
+        <p className="text-sm font-normal text-black">Sign in to your restaurant workspace</p>
         <BackButton label="Sign in with PIN" onClick={() => setEmailMode(false)} />
         <label className="block">
-          <span className="mb-2 block text-sm font-black">Email</span>
+          <span className="mb-2 block text-sm font-medium text-black">Email</span>
           <input name="email" type="email" autoComplete="email" required className={fieldClass} />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-black">Password</span>
+          <span className="mb-2 block text-sm font-medium text-black">Password</span>
           <input
             name="password"
             type="password"
@@ -260,12 +258,12 @@ export function LoginForm() {
           />
         </label>
         {error ? (
-          <p className="rounded-xl border-2 border-red-700 bg-red-50 p-3 text-sm font-bold text-red-800" role="alert">
+          <p className="rounded-md border border-[#FFD758] bg-black p-3 text-sm font-medium text-white" role="alert">
             {error}
           </p>
         ) : null}
         <button type="submit" disabled={pending} className={primaryButtonClass}>
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ?"Signing in…" :"Sign in"}
         </button>
       </form>
     );
@@ -274,10 +272,10 @@ export function LoginForm() {
   if (!role) {
     return (
       <div className="login-step mt-4">
-        <h1 className="text-3xl font-black tracking-tight text-black sm:text-4xl">Welcome back</h1>
-        <p className="mt-2 text-sm font-semibold text-black">Sign in to your restaurant workspace</p>
-        <h2 className="mb-3 mt-7 text-xs font-black uppercase tracking-[0.2em] text-[#b8860b]">Select your role</h2>
-        <div className="grid gap-2.5">
+        <h1 className="text-2xl font-medium tracking-tight text-black sm:text-3xl">Welcome back</h1>
+        <p className="mt-2 text-sm font-normal text-black">Sign in to your restaurant workspace</p>
+        <h2 className="mb-3 mt-6 text-xs font-medium tracking-[0.16em] text-black">Select your role</h2>
+        <div className="grid gap-2">
           {ROLE_ORDER.map((id) => {
             const item = ROLE_COPY[id];
             const Icon = item.Icon;
@@ -286,14 +284,14 @@ export function LoginForm() {
                 key={id}
                 type="button"
                 onClick={() => void chooseRole(id)}
-                className="flex min-h-[4.5rem] items-center gap-4 rounded-xl border-2 border-black bg-white px-4 py-3 text-left transition duration-150 hover:-translate-y-0.5 hover:border-[#d4af37] hover:bg-[#d4af37] hover:shadow-md active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2"
+                className="flex min-h-[4rem] items-center gap-3 rounded-md border border-black bg-white px-4 py-3 text-left transition-transform hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
               >
-                <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-black text-[#d4af37]">
-                  <Icon size={22} aria-hidden />
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-black">
+                  <Icon size={18} aria-hidden />
                 </span>
                 <span>
-                  <span className="block text-lg font-black tracking-wide">{item.title}</span>
-                  <span className="text-sm font-semibold text-black">{item.hint}</span>
+                  <span className="block text-base font-medium tracking-wide text-black">{item.title}</span>
+                  <span className="text-sm font-normal text-black">{item.hint}</span>
                 </span>
               </button>
             );
@@ -302,7 +300,7 @@ export function LoginForm() {
         <button
           type="button"
           onClick={() => setEmailMode(true)}
-          className="mt-5 min-h-11 text-sm font-black text-[#b8860b] hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2"
+          className="mt-5 min-h-10 text-sm font-medium text-black hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
         >
           Use email and password
         </button>
@@ -322,33 +320,33 @@ export function LoginForm() {
             setStaffQuery("");
           }}
         />
-        <h1 className="text-3xl font-black tracking-tight">Select your account</h1>
-        <p className="text-sm font-semibold text-black">
+        <h1 className="text-2xl font-medium tracking-tight text-black">Select your account</h1>
+        <p className="text-sm font-normal text-black">
           {ROLE_COPY[role].title} · {ROLE_COPY[role].hint}
         </p>
 
         {staff === null ? (
           <div aria-live="polite" aria-busy="true">
-            <p className="mb-3 text-sm font-black text-black">Loading team...</p>
+            <p className="mb-3 text-sm font-medium text-black">Loading team...</p>
             <div className="grid gap-2">
-              {["a", "b", "c", "d"].map((slot) => (
-                <div key={slot} className="flex min-h-16 items-center gap-3 rounded-xl border-2 border-[#d4af37] bg-[#fff4cc] px-4">
-                  <span className="size-11 rounded-lg bg-[#d4af37]" />
-                  <span className="h-4 flex-1 rounded bg-[#d4af37]" />
+              {["a","b","c","d"].map((slot) => (
+                <div key={slot} className="flex min-h-14 items-center gap-3 rounded-md border border-black bg-white px-4">
+                  <span className="size-10 rounded-full bg-[#FFD758]" />
+                  <span className="h-3 flex-1 rounded-full bg-white" />
                 </div>
               ))}
             </div>
           </div>
         ) : loadFailed ? (
-          <div className="rounded-xl border-2 border-black p-5" role="alert">
-            <p className="text-lg font-black">We couldn&apos;t load the team</p>
-            <p className="mt-1 text-sm font-semibold">Please try again.</p>
+          <div className="rounded-md border border-black bg-white p-5" role="alert">
+            <p className="text-lg font-medium text-black">We couldn&apos;t load the team</p>
+            <p className="mt-1 text-sm text-black">Please try again.</p>
             <button type="button" onClick={() => void chooseRole(role)} className={`${primaryButtonClass} mt-4`}>
               Retry
             </button>
           </div>
         ) : staff.length === 0 ? (
-          <p className="rounded-xl border-2 border-[#d4af37] bg-[#fff4cc] p-4 text-sm font-bold text-black">
+          <p className="rounded-md border border-black bg-white p-4 text-sm text-black">
             No active {roleTitle(role).toLowerCase()} accounts with a PIN. Ask an owner or admin to create a temporary PIN.
           </p>
         ) : (
@@ -368,7 +366,7 @@ export function LoginForm() {
               </label>
             ) : null}
             {visibleStaff.length === 0 ? (
-              <p className="rounded-xl border-2 border-black p-4 text-sm font-bold">No matching staff.</p>
+              <p className="rounded-md border border-black bg-white p-4 text-sm text-black">No matching staff.</p>
             ) : (
               <div className="grid gap-2">
                 {visibleStaff.map((person) => (
@@ -380,14 +378,14 @@ export function LoginForm() {
                       setPin("");
                       setError("");
                     }}
-                    className="flex min-h-16 items-center gap-3 rounded-xl border-2 border-black bg-white px-3 text-left transition duration-150 hover:-translate-y-0.5 hover:border-[#d4af37] hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2"
+                    className="flex min-h-14 items-center gap-3 rounded-md border border-black bg-white px-3 text-left transition-transform hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
                   >
-                    <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-black text-sm font-black text-[#d4af37]">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-sm font-medium text-black">
                       {staffInitials(person)}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-black">{publicStaffName(person)}</span>
-                      <span className="mt-1 inline-flex rounded-full bg-[#d4af37] px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-black">
+                      <span className="block truncate font-medium text-black">{publicStaffName(person)}</span>
+                      <span className="mt-1 inline-flex rounded-full bg-white px-2 py-0.5 text-[10px] font-medium tracking-wide text-black">
                         {person.role}
                       </span>
                     </span>
@@ -411,21 +409,21 @@ export function LoginForm() {
           setError("");
         }}
       />
-      <div className="rounded-xl border-2 border-black p-4">
+      <div className="rounded-md border border-black bg-white p-4">
         <div className="flex items-center gap-3">
-          <span className="grid size-12 place-items-center rounded-lg bg-black text-sm font-black text-[#d4af37]">
+          <span className="grid size-11 place-items-center rounded-full bg-white text-sm font-medium text-black">
             {staffInitials(selected)}
           </span>
           <div>
-            <h1 className="text-2xl font-black tracking-tight">Welcome, {welcomeFirstName(selected)}</h1>
-            <p className="mt-1 inline-flex rounded-full bg-[#d4af37] px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-black">
+            <h1 className="text-xl font-medium tracking-tight text-black">Welcome, {welcomeFirstName(selected)}</h1>
+            <p className="mt-1 inline-flex rounded-full bg-white px-2 py-0.5 text-[10px] font-medium tracking-wide text-black">
               {selected.role}
             </p>
           </div>
         </div>
       </div>
       <div className="text-center">
-        <p className="text-sm font-black uppercase tracking-[0.18em] text-[#b8860b]">Enter your PIN</p>
+        <p className="text-sm font-medium tracking-[0.14em] text-black">Enter your PIN</p>
         <div
           className="mt-3 flex justify-center gap-3"
           role="img"
@@ -434,19 +432,19 @@ export function LoginForm() {
           {[0, 1, 2, 3].map((index) => (
             <span
               key={index}
-              className={`size-4 rounded-full ${index < pin.length ? "bg-black" : "border-2 border-black bg-white"}`}
+              className={`size-3.5 rounded-full ${index < pin.length ?"bg-[#FFD758]" :"border border-black bg-white"}`}
             />
           ))}
         </div>
       </div>
       <PinPad value={pin} onChange={setPin} disabled={pending} />
       {error ? (
-        <p className="rounded-xl border-2 border-red-700 bg-red-50 p-3 text-sm font-bold text-red-800" role="alert">
+        <p className="rounded-md border border-[#FFD758] bg-black p-3 text-sm font-medium text-white" role="alert">
           {error}
         </p>
       ) : null}
       <button type="button" disabled={pending || pin.length !== 4} onClick={() => void submitPin()} className={primaryButtonClass}>
-        {pending ? "Signing in…" : "Login"}
+        {pending ?"Signing in…" :"Login"}
       </button>
     </div>
   );

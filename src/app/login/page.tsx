@@ -14,11 +14,11 @@ export default async function LoginPage() {
   return (
     <main className="min-h-dvh overflow-x-hidden bg-black lg:grid lg:h-dvh lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:overflow-hidden">
       <LoginOperationsPanel />
-      <section className="flex min-h-0 flex-col overflow-y-auto border-t-8 border-[#d4af37] bg-white lg:border-l-8 lg:border-t-0">
+      <section className="flex min-h-0 flex-col overflow-y-auto border-t-4 border-[#FFD758] bg-white lg:border-l-4 lg:border-t-0">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-4 sm:max-w-lg sm:px-8 sm:py-6 lg:justify-center lg:py-12">
-          <p className="text-xs font-black tracking-[0.28em] text-[#b8860b]">B-ZENITH</p>
+          <p className="text-xs font-medium tracking-[0.22em] text-black">B-ZENITH</p>
           <LoginForm />
-          <PoweredBy className="mt-8 text-[#b8860b] lg:mt-10" />
+          <PoweredBy className="mt-8 text-black lg:mt-10" />
         </div>
       </section>
     </main>

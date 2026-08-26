@@ -13,11 +13,11 @@ export default async function InventoryPage() {
   const [products, movements, recentMovementCount] = await Promise.all([
     prisma.product.findMany({
       where: { NOT: { sku: { startsWith: DELETED_PRODUCT_SKU_PREFIX } } },
-      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+      orderBy: [{ category: { sortOrder:"asc" } }, { name:"asc" }],
       include: { category: true, locationStocks: { include: { location: true } } },
     }),
     prisma.inventoryMovement.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt:"desc" },
       include: {
         product: { select: { name: true } },
         performedBy: { select: { name: true } },

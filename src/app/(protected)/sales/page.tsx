@@ -11,14 +11,14 @@ import { canCloseBusinessDay, canDeleteTransactions, canViewLifetimeSales } from
 import { formatDateTime, formatMoney, kigaliDateString, kigaliRange, paymentLabel, todayKigaliRange } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 import { applyBilliardTotals, summarizeSales } from "@/lib/reporting";
-import { tillRoles } from "@/lib/roles";
+import { businessRoles, tillRoles } from "@/lib/roles";
 import type { PaymentMethod } from "@prisma/client";
 
-export const dynamic = "force-dynamic";
+export const dynamic ="force-dynamic";
 
 type HistoryRow = {
   id: string;
-  kind: "pos" | "billiard";
+  kind:"pos" |"billiard";
   receiptNumber: string;
   createdAt: Date;
   staffName: string;
@@ -36,7 +36,7 @@ export default async function SalesPage({
   const user = await requireUser(tillRoles);
   const filters = await searchParams;
   const lifetime = canViewLifetimeSales(user.role);
-  const viewAll = lifetime && filters.view === "all";
+  const viewAll = lifetime && filters.view ==="all";
   const ranged = Boolean(filters.from || filters.to);
   const today = kigaliDateString();
   const range = viewAll
@@ -45,27 +45,27 @@ export default async function SalesPage({
       ? kigaliRange(filters.from, filters.to, 0)
       : { ...todayKigaliRange(), fromDay: today, toDay: today };
   const payment = filters.payment as PaymentMethod | undefined;
-  const validPayment = payment && ["CASH", "CARD", "MOBILE_MONEY"].includes(payment) ? payment : undefined;
-  const query = filters.q?.trim().toLowerCase() ?? "";
-  const includeBilliard = user.role !== "WAITER" && user.role !== "BILLIARD" && !validPayment;
+  const validPayment = payment && ["CASH","CARD","MOBILE_MONEY"].includes(payment) ? payment : undefined;
+  const query = filters.q?.trim().toLowerCase() ??"";
+  const includeBilliard = user.role !=="WAITER" && user.role !=="BILLIARD" && !validPayment;
   const showDelete = canDeleteTransactions(user.role);
 
   const [sales, billiardRows, expenses, todayClose, settings] = await Promise.all([
     prisma.sale.findMany({
       where: {
-        ...(user.role === "WAITER" ? { cashierId: user.id } : {}),
+        ...(user.role ==="WAITER" ? { cashierId: user.id } : {}),
         ...(range ? { createdAt: { gte: range.start, lt: range.end } } : {}),
         ...(validPayment ? { paymentMethod: validPayment } : {}),
         ...(filters.q
           ? {
               OR: [
-                { receiptNumber: { contains: filters.q, mode: "insensitive" } },
-                { cashier: { name: { contains: filters.q, mode: "insensitive" } } },
+                { receiptNumber: { contains: filters.q, mode:"insensitive" } },
+                { cashier: { name: { contains: filters.q, mode:"insensitive" } } },
               ],
             }
           : {}),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt:"desc" },
       take: 250,
       include: {
         cashier: { select: { name: true } },
@@ -76,7 +76,7 @@ export default async function SalesPage({
     includeBilliard
       ? prisma.billiardDaySale.findMany({
           where: range ? { businessDay: { gte: range.fromDay, lte: range.toDay } } : {},
-          orderBy: { updatedAt: "desc" },
+          orderBy: { updatedAt:"desc" },
           take: 250,
           include: { operator: { select: { name: true } } },
         })
@@ -86,9 +86,9 @@ export default async function SalesPage({
       _sum: { amount: true },
     }),
     prisma.businessDayClose.findUnique({ where: { businessDay: today } }),
-    prisma.businessSettings.findUnique({ where: { id: "default" } }),
+    prisma.businessSettings.findUnique({ where: { id:"default" } }),
   ]);
-  const currency = settings?.currency ?? "RWF";
+  const currency = settings?.currency ??"RWF";
 
   const closedDays = new Set(
     (
@@ -99,7 +99,7 @@ export default async function SalesPage({
     ).map((row) => row.businessDay),
   );
 
-  const liveSales = sales.filter((sale) => sale.status !== "VOIDED");
+  const liveSales = sales.filter((sale) => sale.status !=="VOIDED");
   const summary = applyBilliardTotals(
     summarizeSales(
       liveSales.map((sale) => ({
@@ -123,14 +123,14 @@ export default async function SalesPage({
   const rows: HistoryRow[] = [
     ...sales.map((sale) => ({
       id: sale.id,
-      kind: "pos" as const,
+      kind:"pos" as const,
       receiptNumber: sale.receiptNumber,
       createdAt: sale.createdAt,
       staffName: sale.cashier.name,
-      payment: sale.payments.map(p => paymentLabel(p.method)).join(", ") || paymentLabel(sale.paymentMethod),
-      status: sale.status.replaceAll("_", " "),
+      payment: sale.payments.map(p => paymentLabel(p.method)).join(",") || paymentLabel(sale.paymentMethod),
+      status: sale.status.replaceAll("_",""),
       total: sale.total.toNumber(),
-      canDelete: showDelete && sale.status === "COMPLETED" && !closedDays.has(kigaliDateString(sale.createdAt)),
+      canDelete: showDelete && sale.status ==="COMPLETED" && !closedDays.has(kigaliDateString(sale.createdAt)),
     })),
     ...billiardRows
       .filter((row) => {
@@ -139,12 +139,12 @@ export default async function SalesPage({
       })
       .map((row) => ({
         id: row.id,
-        kind: "billiard" as const,
+        kind:"billiard" as const,
         receiptNumber: billiardReceiptNumber(row.businessDay),
         createdAt: row.updatedAt,
         staffName: row.operator.name,
-        payment: "Day total",
-        status: "Billiard",
+        payment:"Day total",
+        status:"Billiard",
         total: row.amount.toNumber(),
         canDelete: showDelete && !closedDays.has(row.businessDay),
       })),
@@ -152,7 +152,7 @@ export default async function SalesPage({
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 250);
 
-  const heading = viewAll ? "All sales" : ranged && lifetime && range ? `${range.fromDay} – ${range.toDay}` : "Today’s sales";
+  const heading = viewAll ?"All sales" : ranged && lifetime && range ? `${range.fromDay} – ${range.toDay}` :"Today’s sales";
 
   return (
     <div className="space-y-6">
@@ -162,96 +162,103 @@ export default async function SalesPage({
         title={heading}
         subtitle="Figures refresh live for the current day. Closed days are kept and can be opened again from the archive."
         actions={
-          lifetime ? (
+          <>
+            {(businessRoles as readonly string[]).includes(user.role) ? (
+              <Link href="/returns" className="grid min-h-11 place-items-center rounded-md border border-black px-4 font-medium">
+                Returns
+              </Link>
+            ) : null}
+            {lifetime ? (
             <>
-              <Link href="/sales" className={`grid min-h-11 place-items-center rounded-md px-4 font-bold ${viewAll || ranged ? "border border-stone-400" : "bg-black text-[#d4af37]"}`}>
+              <Link href="/sales" className={`grid min-h-11 place-items-center rounded-md px-4 font-medium ${viewAll || ranged ?"border border-black bg-white" :"bg-[#FFD758] text-black"}`}>
                 Today
               </Link>
-              <Link href="/sales?view=all" className={`grid min-h-11 place-items-center rounded-md px-4 font-bold ${viewAll ? "bg-black text-[#d4af37]" : "border border-stone-400"}`}>
+              <Link href="/sales?view=all" className={`grid min-h-11 place-items-center rounded-md px-4 font-medium ${viewAll ?"bg-[#FFD758] text-black" :"border border-black bg-white"}`}>
                 Since start
               </Link>
-              <Link href="/sales/archive" className="grid min-h-11 place-items-center rounded-md border border-stone-400 px-4 font-bold">
+              <Link href="/sales/archive" className="grid min-h-11 place-items-center rounded-md border border-black px-4 text-sm font-medium">
                 Closed days
               </Link>
             </>
-          ) : undefined
+            ) : null}
+          </>
         }
       />
       <StatCards
         currency={currency}
         cards={[
-          { label: "Net sales", value: summary.netTotal, money: true },
-          { label: "Transactions", value: String(summary.count) },
-          { label: "Billiard", value: billiardRows.reduce((sum, row) => sum + row.amount.toNumber(), 0), money: true },
-          { label: "Expenses", value: expenses._sum.amount?.toNumber() ?? 0, money: true },
+          { label:"Net sales", value: summary.netTotal, money: true },
+          { label:"Transactions", value: String(summary.count) },
+          { label:"Billiard", value: billiardRows.reduce((sum, row) => sum + row.amount.toNumber(), 0), money: true },
+          { label:"Expenses", value: expenses._sum.amount?.toNumber() ?? 0, money: true },
         ]}
       />
       {canCloseBusinessDay(user.role) && !viewAll && !ranged ? (
-        <section className="rounded-lg border border-stone-300 bg-white p-4">
-          <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-stone-700">Close today</h2>
-          <p className="mb-3 text-sm text-stone-500">
+        <section className="rounded-lg border border-black bg-white p-4">
+          <h2 className="bz-section-title mb-3">Close today</h2>
+          <p className="mb-3 text-sm text-black">
             Archive today’s totals so the team can come back to them later. The dashboard still follows the live Kigali day.
           </p>
           <CloseDayForm businessDay={today} alreadyClosed={Boolean(todayClose)} />
         </section>
       ) : null}
       {lifetime ? (
-        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-stone-300 bg-white p-4">
-          <label className="text-sm font-bold">
+        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-black bg-white p-4">
+          <label className="text-sm font-medium">
             Search
             <input name="q" defaultValue={filters.q} placeholder="Receipt, waiter, or billiard" className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
           </label>
-          <label className="text-sm font-bold">
+          <label className="text-sm font-medium">
             From
-            <input name="from" type="date" defaultValue={filters.from} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
+            <input name="from " type="date" defaultValue={filters.from} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
           </label>
-          <label className="text-sm font-bold">
+          <label className="text-sm font-medium">
             To
             <input name="to" type="date" defaultValue={filters.to} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
           </label>
-          <label className="text-sm font-bold">
+          <label className="text-sm font-medium">
             Payment
-            <select name="payment" defaultValue={filters.payment ?? ""} className="mt-1 block min-h-11 rounded-md border px-3 font-normal">
+            <select name="payment" defaultValue={filters.payment ??""} className="mt-1 block min-h-11 rounded-md border px-3 font-normal">
               <option value="">All methods</option>
               <option value="CASH">Cash</option>
               <option value="MOBILE_MONEY">Mobile money</option>
               <option value="CARD">Card</option>
             </select>
           </label>
-          <button className="min-h-11 rounded-md bg-black px-5 font-bold text-[#d4af37]">Filter</button>
-          <Link href="/sales" className="grid min-h-11 place-items-center rounded-md border px-5 font-bold">
+          <button className="bz-btn-primary">Filter</button>
+          <Link href="/sales" className="grid min-h-11 place-items-center rounded-md border px-5 text-sm font-medium">
             Reset
           </Link>
         </form>
       ) : (
-        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-stone-300 bg-white p-4">
-          <label className="text-sm font-bold">
+        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-black bg-white p-4">
+          <label className="text-sm font-medium">
             Search
             <input name="q" defaultValue={filters.q} placeholder="Receipt" className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
           </label>
-          <button className="min-h-11 rounded-md bg-black px-5 font-bold text-[#d4af37]">Search</button>
+          <button className="bz-btn-primary">Search</button>
         </form>
       )}
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">No transactions in this view.</p>
+        <p className="rounded-lg border border-dashed border-black bg-white p-10 text-center text-black">No transactions in this view.</p>
       ) : (
         <>
         <div className="space-y-2 md:hidden">
           {rows.map((row) => (
-            <article key={`${row.kind}-${row.id}`} className="rounded-lg border border-stone-300 bg-white p-4">
+            <article key={`${row.kind}-${row.id}`} className="rounded-lg border border-black bg-white p-4">
               <div className="flex items-start justify-between gap-3">
-                <Link href={`/sales/${row.id}`} className="font-black">{row.receiptNumber}</Link>
-                <span className="font-black">{formatMoney(row.total, currency)}</span>
+                <Link href={`/sales/${row.id}`} className="font-semibold">{row.receiptNumber}</Link>
+                <span className="font-semibold">{formatMoney(row.total, currency)}</span>
               </div>
-              <p className="mt-1 text-sm text-stone-600">{row.staffName} · {row.payment}</p>
-              <p className="text-xs text-stone-500">{formatDateTime(row.createdAt)} · {row.status}</p>
+              <p className="mt-1 text-sm text-black">{row.staffName} · {row.payment}</p>
+              <p className="text-xs text-black">{formatDateTime(row.createdAt)} · {row.status}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {row.kind === "pos" ? (
-                  <Link href={`/print/receipt/${row.id}?autoprint=1`} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-stone-400 px-3 font-bold">
+                {row.kind ==="pos" ? (
+                  <Link href={`/print/receipt/${row.id}?autoprint=1`} className="bz-btn-outline inline-flex items-center gap-2 px-3">
                     <Printer size={16} /> Receipt
                   </Link>
                 ) : (
-                  <Link href={`/sales/${row.id}`} className="inline-flex min-h-11 items-center rounded-md border border-stone-400 px-3 font-bold">
+                  <Link href={`/sales/${row.id}`} className="bz-btn-outline inline-flex items-center px-3">
                     View
                   </Link>
                 )}
@@ -260,9 +267,9 @@ export default async function SalesPage({
             </article>
           ))}
         </div>
-        <div className="hidden overflow-x-auto rounded-lg border border-stone-300 bg-white md:block">
+        <div className="hidden overflow-x-auto rounded-lg border border-black bg-white md:block">
           <table className="w-full min-w-[800px] text-left text-sm">
-            <thead className="bg-stone-100">
+            <thead className="bg-white">
               <tr>
                 <th className="p-4">Receipt</th>
                 <th className="p-4">Date / time</th>
@@ -273,10 +280,10 @@ export default async function SalesPage({
                 <th className="p-4">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-black">
               {rows.map((row) => (
                 <tr key={`${row.kind}-${row.id}`}>
-                  <td className="p-4 font-bold">
+                  <td className="p-4 font-medium">
                     <Link href={`/sales/${row.id}`} className="hover:underline">
                       {row.receiptNumber}
                     </Link>
@@ -285,15 +292,15 @@ export default async function SalesPage({
                   <td className="p-4">{row.staffName}</td>
                   <td className="p-4">{row.payment}</td>
                   <td className="p-4">{row.status}</td>
-                  <td className="p-4 text-right font-bold">{formatMoney(row.total, currency)}</td>
+                  <td className="p-4 text-right font-semibold">{formatMoney(row.total, currency)}</td>
                   <td className="p-4">
                     <div className="flex flex-wrap gap-2">
-                      {row.kind === "pos" ? (
-                        <Link href={`/print/receipt/${row.id}?autoprint=1`} className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 font-bold">
+                      {row.kind ==="pos" ? (
+                        <Link href={`/print/receipt/${row.id}?autoprint=1`} className="bz-btn-outline inline-flex items-center gap-2 px-3">
                           <Printer size={16} /> Receipt
                         </Link>
                       ) : (
-                        <Link href={`/sales/${row.id}`} className="inline-flex min-h-11 items-center rounded-md border px-3 font-bold">
+                        <Link href={`/sales/${row.id}`} className="bz-btn-outline inline-flex items-center px-3">
                           View
                         </Link>
                       )}

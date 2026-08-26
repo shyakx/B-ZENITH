@@ -15,15 +15,15 @@ import { STOCK_TAKE_ACTION } from "@/lib/stock-take";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
-      <h2 className="border-b border-stone-200 px-4 py-3 text-sm font-black uppercase tracking-widest text-stone-700">{title}</h2>
+    <section className="overflow-x-auto rounded-lg border border-black bg-white">
+      <h2 className="bz-section-title border-b border-black px-4 py-3">{title}</h2>
       {children}
     </section>
   );
 }
 
 function empty(text: string) {
-  return <p className="p-8 text-center text-stone-500">{text}</p>;
+  return <p className="p-8 text-center text-black">{text}</p>;
 }
 
 function toReportSales(
@@ -68,7 +68,7 @@ export default async function ReportsPage({
   await requireUser(businessRoles);
   const filters = await searchParams;
   const { fromDay, toDay, start, end } = kigaliRange(filters.from, filters.to, 0);
-  const saleWhere = { status: { not: "VOIDED" as const }, createdAt: { gte: start, lt: end } };
+  const saleWhere = { status: { not:"VOIDED" as const }, createdAt: { gte: start, lt: end } };
 
   const [sales, expenses, billiardRows, movements, trackedProducts, transfers, stockTakes, settings, hospitality] = await Promise.all([
     prisma.sale.findMany({
@@ -95,22 +95,22 @@ export default async function ReportsPage({
     prisma.billiardDaySale.findMany({
       where: { businessDay: { gte: fromDay, lte: toDay } },
       include: { operator: { select: { name: true } } },
-      orderBy: [{ businessDay: "desc" }, { updatedAt: "desc" }],
+      orderBy: [{ businessDay:"desc" }, { updatedAt:"desc" }],
     }),
     prisma.inventoryMovement.findMany({
       where: { createdAt: { gte: start, lt: end } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt:"desc" },
       take: 80,
       include: { product: { select: { name: true } }, location: { select: { code: true } } },
     }),
     prisma.product.findMany({
       where: { trackInventory: true, active: true },
-      orderBy: { name: "asc" },
+      orderBy: { name:"asc" },
       include: { locationStocks: { include: { location: { select: { code: true } } } } },
     }),
     prisma.stockTransfer.findMany({
       where: { createdAt: { gte: start, lt: end } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt:"desc" },
       take: 50,
       include: {
         fromLocation: { select: { code: true } },
@@ -120,16 +120,16 @@ export default async function ReportsPage({
     }),
     prisma.auditLog.findMany({
       where: { action: STOCK_TAKE_ACTION, createdAt: { gte: start, lt: end } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt:"desc" },
       take: 100,
       include: { user: { select: { name: true } } },
     }),
-    prisma.businessSettings.findUnique({ where: { id: "default" } }),
+    prisma.businessSettings.findUnique({ where: { id:"default" } }),
     loadHospitalityReport(start, end),
   ]);
 
   const billiardTotal = sumBilliardAmounts(billiardRows);
-  const currency = settings?.currency ?? "RWF";
+  const currency = settings?.currency ??"RWF";
   const summary = applyBilliardTotals(
     summarizeSales(toReportSales(sales)),
     billiardRows.map((row) => ({ businessDay: row.businessDay, amount: row.amount.toNumber() })),
@@ -158,10 +158,10 @@ export default async function ReportsPage({
         title="Reports"
         subtitle="Financial totals come from finalized sales. Payment methods are summed from Payment records, not Sale.paymentMethod. Waiter performance uses round posters, not the current session waiter."
       />
-      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-stone-300 bg-white p-4 print:hidden">
-        <label className="text-sm font-bold">From<input name="from" type="date" defaultValue={fromDay} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" /></label>
-        <label className="text-sm font-bold">To<input name="to" type="date" defaultValue={toDay} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" /></label>
-        <button className="min-h-11 rounded-md bg-black px-5 font-bold text-[#d4af37]">Apply</button>
+      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-black bg-white p-4 print:hidden">
+        <label className="text-sm font-medium">From<input name="from " type="date" defaultValue={fromDay} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" /></label>
+        <label className="text-sm font-medium">To<input name="to" type="date" defaultValue={toDay} className="mt-1 block min-h-11 rounded-md border px-3 font-normal" /></label>
+        <button className="bz-btn-primary">Apply</button>
       </form>
       <StatGrid columns={4}>
         <StatCard label="Gross sales" value={formatMoney(summary.grossTotal, currency)} />
@@ -173,13 +173,13 @@ export default async function ReportsPage({
         <StatCard label="Posted rounds (ops)" value={formatMoney(hospitality.operationalTotal, currency)} />
         <StatCard label="Location vs product stock" value={`${hospitality.inventory.locationStockSum} / ${hospitality.inventory.productStockSum}`} />
       </StatGrid>
-      <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">Sales</h2>
+      <h2 className="bz-section-title">Sales</h2>
       <div className="grid gap-4 xl:grid-cols-2">
         <Section title="Daily net sales">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {[...summary.daily.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([day, value]) => (
               <div key={day} className="flex justify-between p-4">
-                <span>{day}<small className="ml-2 text-stone-500">{value.count} sales</small></span>
+                <span>{day}<small className="ml-2 text-black">{value.count} sales</small></span>
                 <b>{formatMoney(value.net, currency)}</b>
               </div>
             ))}
@@ -187,10 +187,10 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Payment records (all methods)">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {paymentList.map(([method, row]) => (
               <div key={method} className="flex justify-between p-4">
-                <span>{paymentLabel(method)} <small className="text-stone-500">({row.count})</small></span>
+                <span>{paymentLabel(method)} <small className="text-black">({row.count})</small></span>
                 <b>{formatMoney(row.amount, currency)}</b>
               </div>
             ))}
@@ -198,10 +198,10 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Sales by channel">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {channelList.map(([channel, row]) => (
               <div key={channel} className="flex justify-between p-4">
-                <span>{channel.replaceAll("_", " ")} <small className="text-stone-500">({row.count})</small></span>
+                <span>{channel.replaceAll("_","")} <small className="text-black">({row.count})</small></span>
                 <b>{formatMoney(row.total, currency)}</b>
               </div>
             ))}
@@ -209,17 +209,17 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Round posters (not current waiter)">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {postedByList.map(([id, row]) => (
               <div key={id} className="flex justify-between p-4">
-                <span>{row.name}<small className="ml-2 text-stone-500">{row.rounds} rounds · {row.items} items</small></span>
+                <span>{row.name}<small className="ml-2 text-black">{row.rounds} rounds · {row.items} items</small></span>
               </div>
             ))}
             {postedByList.length === 0 && empty("No posted rounds in this period.")}
           </div>
         </Section>
         <Section title="Settlement staff">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {[...hospitality.settlementStaff.entries()].map(([id, row]) => (
               <div key={id} className="flex justify-between p-4">
                 <span>{row.name}</span>
@@ -230,7 +230,7 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Session openers">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {[...hospitality.sessionOpeners.entries()].map(([id, row]) => (
               <div key={id} className="flex justify-between p-4">
                 <span>{row.name}</span>
@@ -241,7 +241,7 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Fulfillment staff">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {[...hospitality.fulfillmentStaff.entries()].map(([id, row]) => (
               <div key={id} className="flex justify-between p-4">
                 <span>{row.name}</span>
@@ -252,10 +252,10 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Adjustments">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {adjustmentList.map(([type, row]) => (
               <div key={type} className="flex justify-between p-4">
-                <span>{type}<small className="ml-2 text-stone-500">({row.count})</small></span>
+                <span>{type}<small className="ml-2 text-black">({row.count})</small></span>
                 <b>× {row.quantity}</b>
               </div>
             ))}
@@ -263,10 +263,10 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Credit bills">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {creditList.map(([status, row]) => (
               <div key={status} className="flex justify-between p-4">
-                <span>{status.replaceAll("_", " ")} <small className="text-stone-500">({row.count})</small></span>
+                <span>{status.replaceAll("_","")} <small className="text-black">({row.count})</small></span>
                 <b>{formatMoney(row.balance, currency)} due / {formatMoney(row.total, currency)}</b>
               </div>
             ))}
@@ -274,13 +274,13 @@ export default async function ReportsPage({
           </div>
         </Section>
       </div>
-      <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">Products</h2>
+      <h2 className="bz-section-title">Products</h2>
       <div className="grid gap-4 xl:grid-cols-2">
         <Section title="Product performance (net)">
           <div className="max-h-[500px] divide-y overflow-y-auto">
             {productList.map(([name, value]) => (
               <div key={name} className="flex justify-between p-4">
-                <span>{name}<small className="ml-2 text-stone-500">× {value.quantity}</small></span>
+                <span>{name}<small className="ml-2 text-black">× {value.quantity}</small></span>
                 <b>{formatMoney(value.revenue, currency)}</b>
               </div>
             ))}
@@ -288,10 +288,10 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Category performance (net)">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {categoryList.map(([name, value]) => (
               <div key={name} className="flex justify-between p-4">
-                <span>{name}<small className="ml-2 text-stone-500">× {value.quantity}</small></span>
+                <span>{name}<small className="ml-2 text-black">× {value.quantity}</small></span>
                 <b>{formatMoney(value.revenue, currency)}</b>
               </div>
             ))}
@@ -299,14 +299,14 @@ export default async function ReportsPage({
           </div>
         </Section>
       </div>
-      <h2 className="text-sm font-black uppercase tracking-widest text-stone-700">Stock</h2>
+      <h2 className="bz-section-title">Stock</h2>
       <div className="grid gap-4 xl:grid-cols-2">
         <Section title="Stock activity by type">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {hospitality.inventory.movements.map((row) => (
               <div key={row.type} className="flex justify-between p-4">
-                <span>{movementTypeLabel(row.type)}<small className="ml-2 text-stone-500">({row.count})</small></span>
-                <b>{row.quantity > 0 ? "+" : ""}{row.quantity}</b>
+                <span>{movementTypeLabel(row.type)}<small className="ml-2 text-black">({row.count})</small></span>
+                <b>{row.quantity > 0 ?"+" :""}{row.quantity}</b>
               </div>
             ))}
             {hospitality.inventory.movements.length === 0 && empty("No stock activity in this period.")}
@@ -326,11 +326,11 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Low stock (total across locations)">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {lowStock.map((product) => (
               <div key={product.name} className="flex justify-between p-4">
                 <span>{product.name}</span>
-                <b className="text-amber-700">{product.total}</b>
+                <b className="text-black">{product.total}</b>
               </div>
             ))}
             {lowStock.length === 0 && empty("No low-stock products.")}
@@ -342,10 +342,10 @@ export default async function ReportsPage({
               <div key={movement.id} className="flex justify-between p-4">
                 <span>
                   {movement.product.name}
-                  <small className="ml-2 text-stone-500">{movementTypeLabel(movement.type)} · {locationLabel(movement.location?.code ?? "MAIN_STOCK")}</small>
+                  <small className="ml-2 text-black">{movementTypeLabel(movement.type)} · {locationLabel(movement.location?.code ??"MAIN_STOCK")}</small>
                 </span>
-                <b className={movement.quantity < 0 ? "text-red-700" : "text-green-700"}>
-                  {movement.quantity > 0 ? "+" : ""}{movement.quantity}
+                <b className={movement.quantity < 0 ?"text-black" :"text-black"}>
+                  {movement.quantity > 0 ?"+" :""}{movement.quantity}
                 </b>
               </div>
             ))}
@@ -356,9 +356,9 @@ export default async function ReportsPage({
           <div className="max-h-[500px] divide-y overflow-y-auto">
             {transfers.map((transfer) => (
               <div key={transfer.id} className="p-4">
-                <p className="font-bold">{locationLabel(transfer.fromLocation.code)} → {locationLabel(transfer.toLocation.code)}</p>
-                <p className="text-sm text-stone-500">
-                  {transfer.lines.map((line) => `${line.quantity} × ${line.product.name}`).join(", ")}
+                <p className="font-medium">{locationLabel(transfer.fromLocation.code)} → {locationLabel(transfer.toLocation.code)}</p>
+                <p className="text-sm text-black">
+                  {transfer.lines.map((line) => `${line.quantity} × ${line.product.name}`).join(",")}
                 </p>
               </div>
             ))}
@@ -366,12 +366,12 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Billiard day totals">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {billiardRows.map((row) => (
               <div key={row.id} className="flex justify-between p-4">
                 <span>
                   {row.businessDay}
-                  <small className="ml-2 text-stone-500">{row.operator.name}</small>
+                  <small className="ml-2 text-black">{row.operator.name}</small>
                 </span>
                 <b>{formatMoney(row.amount.toNumber(), currency)}</b>
               </div>
@@ -380,10 +380,10 @@ export default async function ReportsPage({
           </div>
         </Section>
         <Section title="Expenses">
-          <div className="divide-y">
+          <div className="divide-y divide-black">
             {expenses.map((row) => (
               <div key={row.category} className="flex justify-between p-4">
-                <span>{row.category}<small className="text-stone-500">({row._count})</small></span>
+                <span>{row.category}<small className="text-black">({row._count})</small></span>
                 <b>{formatMoney(row._sum.amount?.toNumber() ?? 0, currency)}</b>
               </div>
             ))}

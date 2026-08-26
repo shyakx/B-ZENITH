@@ -13,13 +13,13 @@ export default async function BilliardPage() {
   const today = kigaliDateString();
   const entries = await prisma.billiardDaySale.findMany({
     where: { businessDay: today },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { updatedAt:"desc" },
     include: { operator: { select: { name: true } } },
   });
   const mine = entries.find((entry) => entry.operatorId === user.id);
   const total = sumBilliardAmounts(entries);
-  const settings = await prisma.businessSettings.findUnique({ where: { id: "default" } });
-  const currency = settings?.currency ?? "RWF";
+  const settings = await prisma.businessSettings.findUnique({ where: { id:"default" } });
+  const currency = settings?.currency ??"RWF";
 
   return (
     <div className="space-y-6">
@@ -32,15 +32,15 @@ export default async function BilliardPage() {
       <StatCards
         currency={currency}
         cards={[
-          { label: "Business day", value: today },
-          { label: "All operators today", value: total, money: true },
-          { label: "Your total", value: mine?.amount.toNumber() ?? 0, money: true },
+          { label:"Business day", value: today },
+          { label:"All operators today", value: total, money: true },
+          { label:"Your total", value: mine?.amount.toNumber() ?? 0, money: true },
         ]}
       />
       <BilliardSalesForm defaultAmount={mine?.amount.toNumber()} defaultNote={mine?.note ?? undefined} />
-      <div className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-black bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="bg-stone-100">
+          <thead className="bg-white">
             <tr>
               <th className="p-4">Operator</th>
               <th className="p-4">Updated</th>
@@ -48,18 +48,18 @@ export default async function BilliardPage() {
               <th className="p-4 text-right">Amount</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-black">
             {entries.map((entry) => (
               <tr key={entry.id}>
                 <td className="p-4 font-bold">{entry.operator.name}</td>
                 <td className="p-4">{formatDateTime(entry.updatedAt)}</td>
-                <td className="p-4 text-stone-500">{entry.note || "—"}</td>
+                <td className="p-4 text-black">{entry.note ||"—"}</td>
                 <td className="p-4 text-right font-bold">{formatMoney(entry.amount.toNumber())}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {entries.length === 0 && <p className="p-10 text-center text-stone-500">No billiard totals recorded today.</p>}
+        {entries.length === 0 && <p className="p-10 text-center text-black">No billiard totals recorded today.</p>}
       </div>
     </div>
   );

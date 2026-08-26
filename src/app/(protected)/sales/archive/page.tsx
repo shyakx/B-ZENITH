@@ -5,19 +5,19 @@ import { dayCloseRoles } from "@/lib/business-day";
 import { formatDateTime, formatMoney } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = "force-dynamic";
+export const dynamic ="force-dynamic";
 
 export default async function SalesArchivePage() {
   await requireUser(dayCloseRoles);
   const [closes, settings] = await Promise.all([
     prisma.businessDayClose.findMany({
-      orderBy: { businessDay: "desc" },
+      orderBy: { businessDay:"desc" },
       take: 120,
       include: { closedBy: { select: { name: true } } },
     }),
-    prisma.businessSettings.findUnique({ where: { id: "default" } }),
+    prisma.businessSettings.findUnique({ where: { id:"default" } }),
   ]);
-  const currency = settings?.currency ?? "RWF";
+  const currency = settings?.currency ??"RWF";
 
   return (
     <div className="space-y-6">
@@ -26,7 +26,7 @@ export default async function SalesArchivePage() {
         title="Closed days"
         subtitle="Each close stores that day’s totals. Open a day to see the original receipts again."
         actions={
-          <Link href="/sales" className="grid min-h-11 place-items-center rounded-md border border-stone-400 px-4 font-bold">
+          <Link href="/sales" className="grid min-h-11 place-items-center rounded-md border border-black px-4 font-bold">
             Today’s sales
           </Link>
         }
@@ -44,11 +44,11 @@ export default async function SalesArchivePage() {
         </StatGrid>
       ) : null}
       {closes.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">No days have been closed yet.</p>
+        <p className="rounded-lg border border-dashed border-black bg-white p-10 text-center text-black">No days have been closed yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-stone-300 bg-white">
+        <div className="overflow-x-auto rounded-lg border border-black bg-white">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-stone-100">
+            <thead className="bg-white">
               <tr>
                 <th className="p-4">Day</th>
                 <th className="p-4">Closed</th>
@@ -59,7 +59,7 @@ export default async function SalesArchivePage() {
                 <th className="p-4">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-black">
               {closes.map((row) => (
                 <tr key={row.id}>
                   <td className="p-4 font-bold">{row.businessDay}</td>
@@ -69,7 +69,7 @@ export default async function SalesArchivePage() {
                   <td className="p-4 text-right">{formatMoney(row.billiardTotal.toNumber(), currency)}</td>
                   <td className="p-4 text-right">{formatMoney(row.expenseTotal.toNumber(), currency)}</td>
                   <td className="p-4">
-                    <Link href={`/sales?from=${row.businessDay}&to=${row.businessDay}`} className="font-bold text-[#947313]">
+                    <Link href={`/sales?from=${row.businessDay}&to=${row.businessDay}`} className="font-bold text-black">
                       Open day
                     </Link>
                   </td>

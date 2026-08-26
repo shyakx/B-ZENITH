@@ -28,10 +28,10 @@ export function ChangePinForm({
       setPending(false);
       return;
     }
-    const pin = String(formData.get("pin") ?? "");
+    const pin = String(formData.get("pin") ??"");
     await signIn("credentials", { userId, pin, redirect: false });
     const session = await getSession();
-    router.push(session?.user ? homePath(session.user.role || role) : "/");
+    router.push(session?.user ? homePath(session.user.role || role) :"/");
     router.refresh();
   }
 
@@ -75,13 +75,13 @@ export function ChangePinForm({
           className="mt-1 min-h-12 w-full rounded-md border px-3 font-normal"
         />
       </label>
-      {error && <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+      {error && <p className="rounded-md bg-black p-3 text-sm font-semibold text-white">{error}</p>}
       <button
         type="submit"
         disabled={pending}
-        className="min-h-12 w-full rounded-md bg-black font-bold text-[#d4af37] disabled:opacity-60"
+        className="bz-btn-primary w-full disabled:border-2 disabled:border-dashed"
       >
-        {pending ? "Saving…" : "Save PIN"}
+        {pending ?"Saving…" :"Save PIN"}
       </button>
     </form>
   );

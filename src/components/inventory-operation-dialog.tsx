@@ -14,18 +14,18 @@ export function InventoryOperationDialog({
   children: ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black p-0 sm:items-center sm:p-6">
       <button type="button" aria-label="Close dialog" className="absolute inset-0" onClick={onClose} />
-      <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-stone-300 bg-white shadow-2xl sm:rounded-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-stone-200 px-4 py-3">
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-md border border-black bg-white">
+        <div className="flex items-start justify-between gap-3 border-b border-black px-4 py-3">
           <div>
-            <h2 className="text-lg font-black text-stone-950">{title}</h2>
-            {description ? <p className="mt-1 text-sm font-medium text-stone-600">{description}</p> : null}
+            <h2 className="text-lg font-semibold text-black">{title}</h2>
+            {description ? <p className="mt-1 text-sm font-medium text-black">{description}</p> : null}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid size-11 shrink-0 place-items-center rounded-md border border-stone-300 text-xl font-black"
+            className="grid size-11 shrink-0 place-items-center rounded-md border border-black text-xl font-semibold"
             aria-label="Close"
           >
             ×

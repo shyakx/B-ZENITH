@@ -52,11 +52,11 @@ const allNavItems: NavItem[] = [
 ];
 
 const sectionOrder: Array<{ id: string; title: string; itemIds: NavItemId[] }> = [
-  { id: "operations", title: "Operations", itemIds: ["dashboard", "pos", "sales", "fulfillment-bar", "fulfillment-kitchen"] },
-  { id: "inventory", title: "Stock", itemIds: ["inventory-overview"] },
-  { id: "catalog", title: "Catalog", itemIds: ["menu", "categories"] },
-  { id: "finance", title: "Finance", itemIds: ["returns", "billiard", "reports"] },
-  { id: "management", title: "Management", itemIds: ["staff", "audit", "settings"] },
+  { id: "operations", title: "Main operations", itemIds: ["dashboard", "pos", "sales", "fulfillment-bar", "fulfillment-kitchen"] },
+  { id: "inventory", title: "Inventory", itemIds: ["inventory-overview"] },
+  { id: "management", title: "Management", itemIds: ["menu", "categories", "billiard"] },
+  { id: "reports", title: "Reports", itemIds: ["returns", "reports"] },
+  { id: "administration", title: "Administration", itemIds: ["staff", "audit", "settings"] },
 ];
 
 export function canAccessPath(role: Role | string, pathname: string) {
@@ -103,7 +103,7 @@ export function navigationForRole(role: Role | string): NavSection[] {
     return [
       {
         id: "operations",
-        title: "Operations",
+        title: "Main operations",
         items: allowed.filter(
           (item) =>
             item.id === "pos" ||
@@ -114,7 +114,7 @@ export function navigationForRole(role: Role | string): NavSection[] {
       },
       {
         id: "inventory",
-        title: "Stock",
+        title: "Inventory",
         items: allowed.filter((item) => item.id === "inventory-overview"),
       },
     ].filter((section) => section.items.length > 0);

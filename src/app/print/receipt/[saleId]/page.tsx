@@ -8,7 +8,7 @@ import { formatDateTime, formatMoney, paymentLabel, VENUE_LINE } from "@/lib/dat
 import { loadHospitalityReceipt } from "@/lib/hospitality-receipt";
 
 function money(value: number, currency: string) {
-  return formatMoney(value, currency, 0).replace(/\u00a0|\u202f/g, " ");
+  return formatMoney(value, currency, 0).replace(/\u00a0|\u202f/g,"");
 }
 
 export default async function ReceiptPage({
@@ -23,7 +23,7 @@ export default async function ReceiptPage({
   const { autoprint } = await searchParams;
   const receipt = await loadHospitalityReceipt(saleId);
   if (!receipt) notFound();
-  if (user.role === "WAITER" && user.id !== receipt.cashierId && user.id !== receipt.waiterId) {
+  if (user.role ==="WAITER" && user.id !== receipt.cashierId && user.id !== receipt.waiterId) {
     notFound();
   }
 
@@ -31,11 +31,11 @@ export default async function ReceiptPage({
 
   return (
     <main className="receipt-page mx-auto bg-white p-3 text-black">
-      <ReceiptPrintControls autoprint={autoprint === "1"} />
+      <ReceiptPrintControls autoprint={autoprint ==="1"} />
       <article className="receipt mx-auto w-full max-w-[58mm] bg-white text-[12px] leading-5">
         <header className="border-b border-dashed border-black pb-3 text-center">
           <BrandLogo variant="receipt" size={48} className="receipt-logo mx-auto mb-1" />
-          <h1 className="text-base font-black tracking-widest">{receipt.businessName}</h1>
+          <h1 className="text-base font-semibold tracking-widest">{receipt.businessName}</h1>
           <p>{VENUE_LINE}</p>
           {receipt.address && <p>{receipt.address}</p>}
           {receipt.phone && <p>Tel: {receipt.phone}</p>}
@@ -44,15 +44,15 @@ export default async function ReceiptPage({
         <section className="border-b border-dashed border-black py-3">
           <div className="flex justify-between gap-2"><span>Receipt</span><b>{receipt.receiptNumber}</b></div>
           <div className="flex justify-between gap-2"><span>Date</span><span className="text-right">{formatDateTime(receipt.createdAt)}</span></div>
-          {receipt.channel && <div className="flex justify-between gap-2"><span>Channel</span><span className="text-right">{receipt.channel.replaceAll("_", " ")}</span></div>}
+          {receipt.channel && <div className="flex justify-between gap-2"><span>Channel</span><span className="text-right">{receipt.channel.replaceAll("_","")}</span></div>}
           {receipt.tableName && <div className="flex justify-between gap-2"><span>Table</span><span className="text-right">{receipt.tableName}</span></div>}
-          {receipt.destinationLabel && <div className="flex justify-between gap-2"><span>{receipt.channel === "ACCOMMODATION" ? "Room" : "Destination"}</span><span className="text-right">{receipt.destinationLabel}</span></div>}
+          {receipt.destinationLabel && <div className="flex justify-between gap-2"><span>{receipt.channel ==="ACCOMMODATION" ?"Room" :"Destination"}</span><span className="text-right">{receipt.destinationLabel}</span></div>}
           {receipt.customerName && <div className="flex justify-between gap-2"><span>Guest</span><span className="text-right">{receipt.customerName}</span></div>}
           {receipt.customerPhone && <div className="flex justify-between gap-2"><span>Phone</span><span className="text-right">{receipt.customerPhone}</span></div>}
           {receipt.deliveryAddress && <p className="mt-1 break-words">Deliver: {receipt.deliveryAddress}</p>}
           {receipt.waiterName && <div className="flex justify-between gap-2"><span>Waiter</span><span className="text-right">{receipt.waiterName}</span></div>}
           {receipt.posters.length > 0 && (
-            <div className="flex justify-between gap-2"><span>Posted by</span><span className="text-right">{receipt.posters.join(", ")}</span></div>
+            <div className="flex justify-between gap-2"><span>Posted by</span><span className="text-right">{receipt.posters.join(",")}</span></div>
           )}
           <div className="flex justify-between gap-2"><span>Settled by</span><span className="text-right">{receipt.cashierName}</span></div>
         </section>
@@ -69,7 +69,7 @@ export default async function ReceiptPage({
             </div>
           ))}
           {receipt.adjustments.map((adjustment, index) => (
-            <div key={`${adjustment.type}-${index}`} className="flex justify-between text-[10px] text-stone-600">
+            <div key={`${adjustment.type}-${index}`} className="flex justify-between text-[10px] text-black">
               <span>{adjustment.type} × {adjustment.quantity}</span>
               <span>{adjustment.reason}</span>
             </div>
@@ -78,7 +78,7 @@ export default async function ReceiptPage({
         <section className="space-y-1 border-b border-dashed border-black py-3">
           <div className="flex justify-between"><span>Subtotal</span><b>{money(receipt.subtotal, currency)}</b></div>
           {receipt.tax > 0 && <div className="flex justify-between"><span>Tax</span><b>{money(receipt.tax, currency)}</b></div>}
-          <div className="flex justify-between text-[13px]"><span className="font-black">TOTAL</span><b>{money(receipt.total, currency)}</b></div>
+          <div className="flex justify-between text-[13px]"><span className="font-semibold">TOTAL</span><b>{money(receipt.total, currency)}</b></div>
           <div className="pt-1">
             <div className="font-bold">Payments</div>
             {receipt.payments.length === 0 && receipt.creditTotal ? (
@@ -105,7 +105,7 @@ export default async function ReceiptPage({
           )}
           {receipt.creditTotal != null && (
             <>
-              <div className="flex justify-between"><span>{receipt.chargeToRoom ? "Charged to room" : "Credit"}</span><b>{money(receipt.creditTotal, currency)}</b></div>
+              <div className="flex justify-between"><span>{receipt.chargeToRoom ?"Charged to room" :"Credit"}</span><b>{money(receipt.creditTotal, currency)}</b></div>
               {receipt.creditBalance != null && (
                 <div className="flex justify-between"><span>Balance due</span><b>{money(receipt.creditBalance, currency)}</b></div>
               )}

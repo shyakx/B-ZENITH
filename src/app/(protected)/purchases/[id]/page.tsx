@@ -17,27 +17,27 @@ export default async function PurchaseDetailPage({ params }: { params: Promise<{
         items: { include: { product: { select: { name: true, sku: true } } } },
       },
     }),
-    prisma.businessSettings.findUnique({ where: { id: "default" } }),
+    prisma.businessSettings.findUnique({ where: { id:"default" } }),
   ]);
   if (!purchase) notFound();
-  const currency = settings?.currency ?? "RWF";
+  const currency = settings?.currency ??"RWF";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <Link href="/inventory" className="text-sm font-bold text-[#947313]">← Stock</Link>
-        <h1 className="mt-2 text-3xl font-black">{purchase.referenceNumber}</h1>
-        <p className="text-sm text-stone-500">
+        <Link href="/inventory" className="text-sm font-bold text-black">← Stock</Link>
+        <h1 className="mt-2 text-3xl font-semibold">{purchase.referenceNumber}</h1>
+        <p className="text-sm text-black">
           {formatDateTime(purchase.createdAt)} · {purchase.createdBy.name} · {purchase.status}
         </p>
       </div>
       <section className="grid gap-4 rounded-lg border bg-white p-5 sm:grid-cols-2">
-        <div><p className="text-sm text-stone-500">Supplier</p><b>{purchase.supplier?.name ?? "No supplier"}</b></div>
-        <div><p className="text-sm text-stone-500">Total</p><b>{formatMoney(purchase.total.toNumber(), currency)}</b></div>
+        <div><p className="text-sm text-black">Supplier</p><b>{purchase.supplier?.name ??"No supplier"}</b></div>
+        <div><p className="text-sm text-black">Total</p><b>{formatMoney(purchase.total.toNumber(), currency)}</b></div>
       </section>
       <section className="overflow-x-auto rounded-lg border bg-white">
         <table className="w-full min-w-[600px] text-left text-sm">
-          <thead className="bg-stone-100">
+          <thead className="bg-white">
             <tr>
               <th className="p-4">Product</th>
               <th className="p-4">Qty</th>
@@ -45,7 +45,7 @@ export default async function PurchaseDetailPage({ params }: { params: Promise<{
               <th className="p-4 text-right">Total</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-black">
             {purchase.items.map((item) => (
               <tr key={item.id}>
                 <td className="p-4 font-bold">{item.product.name}</td>

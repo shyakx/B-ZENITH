@@ -29,7 +29,7 @@ export function CloseDayForm({ businessDay, alreadyClosed }: { businessDay: stri
   }
 
   if (alreadyClosed) {
-    return <p className="text-sm font-semibold text-stone-500">{businessDay} is already closed and archived.</p>;
+    return <p className="text-sm font-semibold text-black">{businessDay} is already closed and archived.</p>;
   }
 
   return (
@@ -39,11 +39,11 @@ export function CloseDayForm({ businessDay, alreadyClosed }: { businessDay: stri
         Note (optional)
         <input name="note" maxLength={200} placeholder="End of day" className="mt-1 block min-h-11 rounded-md border px-3 font-normal" />
       </label>
-      <button disabled={pending} className="min-h-11 rounded-md bg-black px-5 font-bold text-[#d4af37] disabled:opacity-60">
-        {pending ? "Closing…" : "Close this day"}
+      <button disabled={pending} className="bz-btn-primary disabled:border-2 disabled:border-dashed">
+        {pending ?"Closing…" :"Close this day"}
       </button>
       {error ? (
-        <p role="alert" className="w-full text-sm font-semibold text-red-700">
+        <p role="alert" className="bz-alert w-full">
           {error}
         </p>
       ) : null}

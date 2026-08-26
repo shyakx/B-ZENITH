@@ -29,14 +29,14 @@ export function ManagerApprovalFields({
   }, []);
 
   return (
-    <div className="space-y-3 rounded-xl border-2 border-red-100 bg-red-50 p-3">
-      <p className="text-xs font-black uppercase tracking-widest text-red-700">Manager approval required</p>
-      <label className="block text-xs font-black uppercase tracking-widest text-stone-500">
+    <div className="space-y-3 rounded-md border border-black bg-white p-3">
+      <p className="text-xs font-medium tracking-[0.16em] text-black">Manager approval required</p>
+      <label className="block text-xs font-medium tracking-[0.16em] text-black">
         Approving manager
         <select
           value={managerUserId}
           onChange={(event) => onChange({ managerUserId: event.target.value, managerPin })}
-          className="mt-2 h-12 w-full rounded-xl border-2 border-stone-200 bg-white px-4 font-bold outline-none focus:border-red-500"
+          className="bz-input mt-2 font-medium"
         >
           <option value="">Select manager…</option>
           {approvers.map((person) => (
@@ -46,7 +46,7 @@ export function ManagerApprovalFields({
           ))}
         </select>
       </label>
-      <label className="block text-xs font-black uppercase tracking-widest text-stone-500">
+      <label className="block text-xs font-medium tracking-[0.16em] text-black">
         Manager PIN
         <input
           type="password"
@@ -54,8 +54,8 @@ export function ManagerApprovalFields({
           autoComplete="off"
           value={managerPin}
           maxLength={4}
-          onChange={(event) => onChange({ managerUserId, managerPin: event.target.value.replace(/\D/g, "").slice(0, 4) })}
-          className="mt-2 min-h-14 w-full rounded-xl border-2 border-red-100 bg-white px-4 text-center text-2xl font-black tracking-[0.5em] outline-none focus:border-red-500"
+          onChange={(event) => onChange({ managerUserId, managerPin: event.target.value.replace(/\D/g,"").slice(0, 4) })}
+          className="bz-input mt-2 min-h-14 text-center text-2xl font-semibold tracking-[0.5em]"
           placeholder="••••"
         />
       </label>
@@ -71,7 +71,7 @@ interface VoidModalProps {
 
 export function VoidModal({ itemId, onClose, onConfirm }: VoidModalProps) {
     const [reason, setReason] = useState("");
-    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId: "", managerPin: "" });
+    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId:"", managerPin:"" });
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState("");
 
@@ -86,48 +86,48 @@ export function VoidModal({ itemId, onClose, onConfirm }: VoidModalProps) {
             await onConfirm(reason, approval);
             onClose();
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Void failed.");
+            setError(err instanceof Error ? err.message :"Void failed.");
         } finally {
             setIsProcessing(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black p-4">
+            <div className="w-full max-w-md rounded-md bg-white p-6 border border-black">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="flex items-center gap-2 text-xl font-black text-red-600">
+                    <h3 className="flex items-center gap-2 text-xl font-semibold text-black">
                         <Trash2 size={20} /> VOID ITEM
                     </h3>
-                    <button onClick={onClose}><X size={20} className="text-stone-400" /></button>
+                    <button onClick={onClose}><X size={20} className="text-black" /></button>
                 </div>
 
-                <div className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-700 flex gap-3">
+                <div className="mb-6 rounded-lg bg-black p-4 text-sm text-white flex gap-3">
                     <AlertTriangle className="shrink-0" size={20} />
                     <p>Voiding will restore stock to the original location. <b>Manager approval is required.</b></p>
                 </div>
 
                 <div className="space-y-4">
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Reason for Void</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Reason for Void</label>
                         <textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            className="mt-2 w-full rounded-xl border-2 border-stone-200 p-3 outline-none focus:border-red-500 h-24 resize-none"
+                            className="mt-2 w-full rounded-md border-2 border-black p-3 outline-none focus:border-[#FFD758] h-24 resize-none"
                             placeholder="e.g., Customer changed mind, Kitchen mistake..."
                         />
                     </div>
 
                     <ManagerApprovalFields managerUserId={approval.managerUserId} managerPin={approval.managerPin} onChange={setApproval} />
 
-                    {error && <p className="text-sm font-bold text-red-600">{error}</p>}
+                    {error && <p className="bz-alert">{error}</p>}
 
                     <button
                         disabled={isProcessing}
                         onClick={handleConfirm}
-                        className="flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-red-600 font-black text-white hover:bg-red-700 shadow-md"
+                        className="bz-btn-primary flex w-full items-center justify-center gap-2"
                     >
-                        {isProcessing ? "PROCESSING..." : "CONFIRM VOID"}
+                        {isProcessing ?"PROCESSING..." :"CONFIRM VOID"}
                     </button>
                 </div>
             </div>
@@ -144,7 +144,7 @@ interface ReturnModalProps {
 export function ReturnModal({ itemId, onClose, onConfirm }: ReturnModalProps) {
     const [reason, setReason] = useState("");
     const [condition, setCondition] = useState<ItemCondition>(ItemCondition.RESELLABLE);
-    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId: "", managerPin: "" });
+    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId:"", managerPin:"" });
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState("");
 
@@ -159,65 +159,65 @@ export function ReturnModal({ itemId, onClose, onConfirm }: ReturnModalProps) {
             await onConfirm({ quantity: 1, reason, condition, ...approval });
             onClose();
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Return failed.");
+            setError(err instanceof Error ? err.message :"Return failed.");
         } finally {
             setIsProcessing(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black p-4">
+            <div className="w-full max-w-md rounded-md bg-white p-6 border border-black">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="flex items-center gap-2 text-xl font-black text-amber-600">
+                    <h3 className="flex items-center gap-2 text-xl font-semibold text-black">
                         <RefreshCw size={20} /> RETURN ITEM
                     </h3>
-                    <button onClick={onClose}><X size={20} className="text-stone-400" /></button>
+                    <button onClick={onClose}><X size={20} className="text-black" /></button>
                 </div>
 
                 <div className="space-y-6">
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Item Condition</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Item Condition</label>
                         <div className="mt-2 grid grid-cols-2 gap-2">
                             {Object.values(ItemCondition).map(c => (
                                 <button
                                     key={c}
                                     onClick={() => setCondition(c)}
-                                    className={`min-h-11 px-3 py-2 rounded-lg border-2 text-[10px] font-black uppercase transition-all ${
+                                    className={`min-h-11 rounded-md border px-3 py-2 text-[10px] font-medium uppercase ${
                                         condition === c
-                                            ? "border-amber-500 bg-amber-50 text-amber-700"
-                                            : "border-stone-100 bg-stone-50 text-stone-500"
+                                            ?"border-black bg-[#FFD758] text-black"
+                                            :"border-black bg-white text-black"
                                     }`}
                                 >
                                     {c}
                                 </button>
                             ))}
                         </div>
-                        <p className="mt-2 text-[10px] text-stone-400 italic">
-                            {condition === 'RESELLABLE' ? "Stock will be restored." : "Stock will be recorded as WASTE."}
+                        <p className="mt-2 text-[10px] text-black italic">
+                            {condition === 'RESELLABLE' ?"Stock will be restored." :"Stock will be recorded as WASTE."}
                         </p>
                     </div>
 
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Reason for Return</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Reason for Return</label>
                         <textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            className="mt-2 w-full rounded-xl border-2 border-stone-200 p-3 outline-none focus:border-amber-500 h-24 resize-none"
+                            className="mt-2 w-full rounded-md border-2 border-black p-3 outline-none focus:border-black h-24 resize-none"
                             placeholder="e.g., Wrong item served, Bad quality..."
                         />
                     </div>
 
                     <ManagerApprovalFields managerUserId={approval.managerUserId} managerPin={approval.managerPin} onChange={setApproval} />
 
-                    {error && <p className="text-sm font-bold text-red-600">{error}</p>}
+                    {error && <p className="bz-alert">{error}</p>}
 
                     <button
                         disabled={isProcessing}
                         onClick={handleConfirm}
-                        className="flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-amber-600 font-black text-white hover:bg-amber-700 shadow-md"
+                        className="bz-btn-primary flex w-full items-center justify-center gap-2"
                     >
-                        {isProcessing ? "PROCESSING..." : "CONFIRM RETURN"}
+                        {isProcessing ?"PROCESSING..." :"CONFIRM RETURN"}
                     </button>
                 </div>
             </div>
@@ -234,7 +234,7 @@ interface HandoverModalProps {
 
 export function HandoverModal({ sessionId, currentWaiterName, onClose, onConfirm }: HandoverModalProps) {
     const [newWaiterId, setNewWaiterId] = useState("");
-    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId: "", managerPin: "" });
+    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId:"", managerPin:"" });
     const [reason, setReason] = useState("");
     const [waiters, setWaiters] = useState<Array<{ id: string; name: string }>>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -260,34 +260,34 @@ export function HandoverModal({ sessionId, currentWaiterName, onClose, onConfirm
             await onConfirm({ newWaiterId, reason, ...approval });
             onClose();
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Handover failed.");
+            setError(err instanceof Error ? err.message :"Handover failed.");
         } finally {
             setIsProcessing(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black p-4">
+            <div className="w-full max-w-md rounded-md bg-white p-6 border border-black">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="flex items-center gap-2 text-xl font-black text-blue-600">
+                    <h3 className="flex items-center gap-2 text-xl font-semibold text-black">
                         <ArrowLeftRight size={20} /> SESSION HANDOVER
                     </h3>
-                    <button onClick={onClose}><X size={20} className="text-stone-400" /></button>
+                    <button onClick={onClose}><X size={20} className="text-black" /></button>
                 </div>
 
                 <div className="space-y-6">
                     <div>
-                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Current Waiter</p>
-                        <p className="text-lg font-black">{currentWaiterName}</p>
+                        <p className="text-xs font-bold text-black uppercase tracking-widest">Current Waiter</p>
+                        <p className="text-lg font-semibold">{currentWaiterName}</p>
                     </div>
 
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Transfer To</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Transfer To</label>
                         <select
                             value={newWaiterId}
                             onChange={(e) => setNewWaiterId(e.target.value)}
-                            className="mt-2 w-full h-12 rounded-xl border-2 border-stone-200 px-4 font-bold outline-none focus:border-blue-500"
+                            className="bz-input mt-2 font-medium"
                         >
                             <option value="">Select New Waiter...</option>
                             {waiters.map(w => (
@@ -297,25 +297,25 @@ export function HandoverModal({ sessionId, currentWaiterName, onClose, onConfirm
                     </div>
 
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Reason</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Reason</label>
                         <input
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            className="mt-2 w-full h-12 rounded-xl border-2 border-stone-200 px-4 font-bold outline-none focus:border-blue-500"
+                            className="bz-input mt-2 font-medium"
                             placeholder="e.g., Shift end, Break..."
                         />
                     </div>
 
                     <ManagerApprovalFields managerUserId={approval.managerUserId} managerPin={approval.managerPin} onChange={setApproval} />
 
-                    {error && <p className="text-sm font-bold text-red-600">{error}</p>}
+                    {error && <p className="bz-alert">{error}</p>}
 
                     <button
                         disabled={isProcessing}
                         onClick={handleConfirm}
-                        className="flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 font-black text-white hover:bg-blue-700 shadow-md"
+                        className="bz-btn-primary flex w-full items-center justify-center gap-2"
                     >
-                        {isProcessing ? "PROCESSING..." : "CONFIRM HANDOVER"}
+                        {isProcessing ?"PROCESSING..." :"CONFIRM HANDOVER"}
                     </button>
                 </div>
             </div>
@@ -335,7 +335,7 @@ export function ExchangeModal({ originalItem, products, onClose, onConfirm }: Ex
     const [condition, setCondition] = useState<ItemCondition>(ItemCondition.RESELLABLE);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [selectedVariant, setSelectedProductVariant] = useState<any>(null);
-    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId: "", managerPin: "" });
+    const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId:"", managerPin:"" });
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState("");
 
@@ -360,37 +360,37 @@ export function ExchangeModal({ originalItem, products, onClose, onConfirm }: Ex
             });
             onClose();
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Exchange failed.");
+            setError(err instanceof Error ? err.message :"Exchange failed.");
         } finally {
             setIsProcessing(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
-            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black p-4">
+            <div className="w-full max-w-lg rounded-md bg-white p-6 border border-black max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="flex items-center gap-2 text-xl font-black text-indigo-600">
+                    <h3 className="flex items-center gap-2 text-xl font-semibold text-black">
                         <ArrowLeftRight size={20} /> EXCHANGE ITEM
                     </h3>
-                    <button onClick={onClose}><X size={20} className="text-stone-400" /></button>
+                    <button onClick={onClose}><X size={20} className="text-black" /></button>
                 </div>
 
                 <div className="space-y-6">
-                    <div className="rounded-lg bg-stone-50 p-4 border border-dashed">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Original Item</p>
-                        <p className="font-bold">{originalItem.product.name} ({originalItem.productVariant?.name || "Portion"})</p>
+                    <div className="rounded-lg bg-white p-4 border border-dashed">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-black">Original Item</p>
+                        <p className="font-bold">{originalItem.product.name} ({originalItem.productVariant?.name ||"Portion"})</p>
                     </div>
 
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Replacement Product</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Replacement Product</label>
                         <select
                             onChange={(e) => {
                                 const p = products.find(p => p.id === e.target.value);
                                 setSelectedProduct(p);
                                 setSelectedProductVariant(p?.variants[0] || null);
                             }}
-                            className="mt-2 w-full h-12 rounded-xl border-2 border-stone-200 px-4 font-bold outline-none focus:border-indigo-500"
+                            className="bz-input mt-2 font-medium"
                         >
                             <option value="">Select Replacement...</option>
                             {products.map(p => (
@@ -403,10 +403,10 @@ export function ExchangeModal({ originalItem, products, onClose, onConfirm }: Ex
                                     <button
                                         key={v.id}
                                         onClick={() => setSelectedProductVariant(v)}
-                                        className={`min-h-11 px-3 py-2 rounded-lg border-2 text-[10px] font-black uppercase whitespace-nowrap ${
+                                        className={`min-h-11 px-3 py-2 rounded-lg border-2 text-[10px] font-semibold uppercase whitespace-nowrap ${
                                             selectedVariant?.id === v.id
-                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                : "border-stone-100 bg-stone-50 text-stone-500"
+                                                ?"border-black bg-[#FFD758] text-black"
+                                                :"border-black bg-white text-black"
                                         }`}
                                     >
                                         {v.name} · {v.sellingPrice}
@@ -417,16 +417,16 @@ export function ExchangeModal({ originalItem, products, onClose, onConfirm }: Ex
                     </div>
 
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Returned Condition</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Returned Condition</label>
                         <div className="mt-2 grid grid-cols-2 gap-2">
                             {Object.values(ItemCondition).map(c => (
                                 <button
                                     key={c}
                                     onClick={() => setCondition(c)}
-                                    className={`min-h-11 px-3 py-2 rounded-lg border-2 text-[10px] font-black uppercase transition-all ${
+                                    className={`min-h-11 px-3 py-2 rounded-lg border-2 text-[10px] font-semibold uppercase transition-all ${
                                         condition === c
-                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                            : "border-stone-100 bg-stone-50 text-stone-500"
+                                            ?"border-black bg-[#FFD758] text-black"
+                                            :"border-black bg-white text-black"
                                     }`}
                                 >
                                     {c}
@@ -436,25 +436,25 @@ export function ExchangeModal({ originalItem, products, onClose, onConfirm }: Ex
                     </div>
 
                     <div>
-                        <label className="text-xs font-black uppercase tracking-widest text-stone-400">Reason</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-black">Reason</label>
                         <textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            className="mt-2 w-full rounded-xl border-2 border-stone-200 p-3 outline-none focus:border-indigo-500 h-20 resize-none"
+                            className="mt-2 h-20 w-full resize-none rounded-md border border-black p-3 outline-none focus:border-[#FFD758]"
                             placeholder="Reason for exchange..."
                         />
                     </div>
 
                     <ManagerApprovalFields managerUserId={approval.managerUserId} managerPin={approval.managerPin} onChange={setApproval} />
 
-                    {error && <p className="text-sm font-bold text-red-600">{error}</p>}
+                    {error && <p className="bz-alert">{error}</p>}
 
                     <button
                         disabled={isProcessing}
                         onClick={handleConfirm}
-                        className="flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 font-black text-white hover:bg-indigo-700 shadow-md"
+                        className="bz-btn-primary flex w-full items-center justify-center gap-2"
                     >
-                        {isProcessing ? "PROCESSING..." : "CONFIRM EXCHANGE"}
+                        {isProcessing ?"PROCESSING..." :"CONFIRM EXCHANGE"}
                     </button>
                 </div>
             </div>

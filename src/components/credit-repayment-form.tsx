@@ -15,8 +15,8 @@ export function CreditRepaymentForm({ bills }: { bills: Array<{ id: string; labe
     setError("");
     try {
       const res = await fetch("/api/credit/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method:"POST",
+        headers: {"Content-Type":"application/json" },
         body: JSON.stringify({
           creditBillId: String(form.get("creditBillId")),
           amount: Number(form.get("amount")),
@@ -25,10 +25,10 @@ export function CreditRepaymentForm({ bills }: { bills: Array<{ id: string; labe
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Unable to record repayment.");
+      if (!res.ok) throw new Error(data.error ||"Unable to record repayment.");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to record repayment.");
+      setError(err instanceof Error ? err.message :"Unable to record repayment.");
     } finally {
       setBusy(false);
     }
@@ -42,9 +42,9 @@ export function CreditRepaymentForm({ bills }: { bills: Array<{ id: string; labe
         submit(new FormData(event.currentTarget));
       }}
     >
-      <label className="text-xs font-black uppercase tracking-widest text-stone-500">
+      <label className="text-xs font-semibold uppercase tracking-widest text-black">
         Record repayment
-        <select name="creditBillId" required className="mt-1 block min-h-11 w-full rounded-md border border-stone-400 px-3 font-normal text-stone-900">
+        <select name="creditBillId" required className="mt-1 block min-h-11 w-full rounded-md border border-black px-3 font-normal text-black">
           {bills.map((bill) => (
             <option key={bill.id} value={bill.id}>
               {bill.label}
@@ -52,23 +52,23 @@ export function CreditRepaymentForm({ bills }: { bills: Array<{ id: string; labe
           ))}
         </select>
       </label>
-      <label className="text-xs font-black uppercase tracking-widest text-stone-500">
+      <label className="text-xs font-semibold uppercase tracking-widest text-black">
         Amount
-        <input required name="amount" type="number" min="1" step="0.01" className="mt-1 block min-h-11 w-full rounded-md border border-stone-400 px-3 font-normal" />
+        <input required name="amount" type="number" min="1" step="0.01" className="mt-1 block min-h-11 w-full rounded-md border border-black px-3 font-normal" />
       </label>
-      <label className="text-xs font-black uppercase tracking-widest text-stone-500">
+      <label className="text-xs font-semibold uppercase tracking-widest text-black">
         Method
-        <select name="method" className="mt-1 block min-h-11 w-full rounded-md border border-stone-400 px-3 font-normal">
+        <select name="method" className="mt-1 block min-h-11 w-full rounded-md border border-black px-3 font-normal">
           <option value="CASH">Cash</option>
           <option value="MOBILE_MONEY">Mobile money</option>
           <option value="CARD">Card</option>
           <option value="OTHER">Other</option>
         </select>
       </label>
-      <button disabled={busy} className="min-h-11 w-full rounded-md bg-black px-4 font-bold text-[#d4af37] disabled:opacity-50">
-        {busy ? "Saving…" : "Record"}
+      <button disabled={busy} className="bz-btn-primary min-h-11 w-full disabled:border-2 disabled:border-dashed">
+        {busy ?"Saving…" :"Record"}
       </button>
-      {error ? <p className="text-sm font-bold text-red-700">{error}</p> : null}
+      {error ? <p className="bz-alert">{error}</p> : null}
     </form>
   );
 }

@@ -17,31 +17,31 @@ export const INVENTORY_GROUPS: Array<{
     id: "BAR_DRINKS",
     title: "Bar — drinks",
     hint: "Sold from the bar. Main Stock holds unopened drinks until a transfer to Bar.",
-    tone: "border-sky-200 bg-sky-50",
+    tone: "border-black bg-white",
   },
   {
     id: "BAR_OTHER",
     title: "Bar — other items",
     hint: "Bar-sold items that are not bottled or canned drinks.",
-    tone: "border-sky-100 bg-white",
+    tone: "border-black bg-white",
   },
   {
     id: "KITCHEN_FOOD",
     title: "Kitchen — food",
     hint: "Sold from the kitchen. Main Stock holds food supplies until a transfer to Kitchen.",
-    tone: "border-amber-200 bg-amber-50",
+    tone: "border-black bg-white",
   },
   {
     id: "KITCHEN_OTHER",
     title: "Kitchen — other items",
     hint: "Kitchen-sold items that are not plates, portions, or bulk food.",
-    tone: "border-amber-100 bg-white",
+    tone: "border-black bg-white",
   },
   {
     id: "UNASSIGNED",
     title: "Needs a selling location",
     hint: "Set Bar or Kitchen on the menu item so stock belongs to the right operation.",
-    tone: "border-stone-200 bg-stone-50",
+    tone: "border-black bg-white",
   },
 ];
 

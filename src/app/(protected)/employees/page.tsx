@@ -18,13 +18,13 @@ export default async function EmployeesPage() {
   const actor = await requireUser(userAdminRoles);
   const employees = await prisma.user.findMany({
     where: { NOT: { username: { startsWith: DELETED_USERNAME_PREFIX } } },
-    orderBy: [{ active: "desc" }, { name: "asc" }],
+    orderBy: [{ active:"desc" }, { name:"asc" }],
     include: {
-      auditLogs: { orderBy: { createdAt: "desc" }, take: 5, select: { id: true, action: true, createdAt: true } },
+      auditLogs: { orderBy: { createdAt:"desc" }, take: 5, select: { id: true, action: true, createdAt: true } },
     },
   });
   const roles = assignableRoles(actor.role);
-  const activeOwners = employees.filter((employee) => employee.role === "OWNER" && employee.active);
+  const activeOwners = employees.filter((employee) => employee.role ==="OWNER" && employee.active);
   const lastOwnerId = activeOwners.length === 1 ? activeOwners[0].id : null;
 
   return (
@@ -35,7 +35,7 @@ export default async function EmployeesPage() {
         subtitle="Admins can create users, promote them to owner, and delete accounts. The last active owner cannot be removed. Sales history is kept if the person already recorded transactions."
       />
       <details className="rounded-lg border bg-white">
-        <summary className="min-h-14 cursor-pointer p-4 font-black">Add user</summary>
+        <summary className="min-h-14 cursor-pointer p-4 font-semibold">Add user</summary>
         <ActionForm action={createEmployee} className="grid gap-3 border-t p-4 md:grid-cols-2">
           <input required name="firstName" placeholder="First name" className="min-h-11 rounded-md border px-3" />
           <input required name="lastName" placeholder="Last name" className="min-h-11 rounded-md border px-3" />
@@ -51,20 +51,20 @@ export default async function EmployeesPage() {
           <label className="flex items-center gap-2 font-bold">
             <input name="active" type="checkbox" defaultChecked /> Active
           </label>
-          <button className="min-h-11 rounded-md bg-black font-bold text-[#d4af37] md:col-span-2">Create user</button>
+          <button className="bz-btn-primary md:col-span-2">Create user</button>
         </ActionForm>
       </details>
       {employees.length === 0 ? (
-        <p className="rounded-lg border border-dashed bg-white p-10 text-center text-stone-500">No users found.</p>
+        <p className="rounded-lg border border-dashed bg-white p-10 text-center text-black">No users found.</p>
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
           {employees.map((employee) => {
             const lastOwner = employee.id === lastOwnerId;
             const pinStatus = employee.mustChangePin
-              ? "Must change PIN on next login."
+              ?"Must change PIN on next login."
               : employee.pinHash
-                ? "PIN ready."
-                : "No PIN.";
+                ?"PIN ready."
+                :"No PIN.";
             const canDelete = authorizeEmployeeDelete({
               actorId: actor.id,
               actorRole: actor.role,
@@ -72,7 +72,7 @@ export default async function EmployeesPage() {
               targetRole: employee.role,
               targetActive: employee.active,
               otherActiveOwnerCount:
-                employee.role === "OWNER" && employee.active ? activeOwners.length - 1 : activeOwners.length,
+                employee.role ==="OWNER" && employee.active ? activeOwners.length - 1 : activeOwners.length,
             }).ok;
 
             return (
@@ -82,8 +82,8 @@ export default async function EmployeesPage() {
                   className="grid gap-3 sm:grid-cols-2"
                   footer={
                     employee.auditLogs.length > 0 ? (
-                      <div className="sm:col-span-2 border-t pt-3 text-xs text-stone-500">
-                        <p className="mb-1 font-bold text-stone-700">Recent activity</p>
+                      <div className="sm:col-span-2 border-t pt-3 text-xs text-black">
+                        <p className="mb-1 font-bold text-black">Recent activity</p>
                         {employee.auditLogs.map((log) => (
                           <p key={log.id}>
                             {formatDateTime(log.createdAt)} · {log.action}
@@ -96,17 +96,17 @@ export default async function EmployeesPage() {
                   <div className="flex items-start justify-between gap-3 sm:col-span-2">
                     <div>
                       <b>{employee.name}</b>
-                      <p className="text-xs text-stone-500">
+                      <p className="text-xs text-black">
                         @{employee.username}
-                        {employee.lastLoginAt ? ` · Last login ${formatDateTime(employee.lastLoginAt)}` : " · Never logged in"}
+                        {employee.lastLoginAt ? ` · Last login ${formatDateTime(employee.lastLoginAt)}` :" · Never logged in"}
                       </p>
                     </div>
-                    <span className={`rounded-full px-2 py-1 text-xs font-bold ${employee.active ? "bg-green-100 text-green-800" : "bg-stone-200 text-stone-600"}`}>
-                      {employee.active ? "ACTIVE" : "INACTIVE"}
+                    <span className={`rounded-md px-2 py-1 text-xs font-medium ${employee.active ?"bg-[#FFD758] text-black" :"border border-black bg-white text-black"}`}>
+                      {employee.active ?"ACTIVE" :"INACTIVE"}
                     </span>
                   </div>
                   {lastOwner ? (
-                    <p className="rounded-md bg-amber-50 p-3 text-sm font-semibold text-amber-900 sm:col-span-2">{LAST_OWNER_MESSAGE}</p>
+                    <p className="rounded-md bg-white p-3 text-sm font-semibold text-black sm:col-span-2">{LAST_OWNER_MESSAGE}</p>
                   ) : null}
                   <input required name="firstName" defaultValue={employee.firstName} className="min-h-11 rounded-md border px-3" />
                   <input required name="lastName" defaultValue={employee.lastName} className="min-h-11 rounded-md border px-3" />
@@ -114,7 +114,7 @@ export default async function EmployeesPage() {
                   {lastOwner ? (
                     <>
                       <input type="hidden" name="role" value={employee.role} />
-                      <select disabled defaultValue={employee.role} className="min-h-11 rounded-md border bg-stone-50 px-3">
+                      <select disabled defaultValue={employee.role} className="min-h-11 rounded-md border bg-white px-3">
                         <option value={employee.role}>{roleTitle(employee.role)}</option>
                       </select>
                     </>
@@ -138,17 +138,17 @@ export default async function EmployeesPage() {
                   {lastOwner ? (
                     <>
                       <input type="hidden" name="active" value="on" />
-                      <label className="flex items-center gap-2 font-bold text-stone-500">
+                      <label className="flex items-center gap-2 font-bold text-black">
                         <input type="checkbox" defaultChecked={employee.active} disabled /> Active
                       </label>
-                      <p className="self-center text-sm text-stone-500">{pinStatus}</p>
+                      <p className="self-center text-sm text-black">{pinStatus}</p>
                     </>
                   ) : (
                     <>
                       <label className="flex items-center gap-2 font-bold">
                         <input name="active" type="checkbox" defaultChecked={employee.active} /> Active
                       </label>
-                      <p className="self-center text-sm text-stone-500">{pinStatus}</p>
+                      <p className="self-center text-sm text-black">{pinStatus}</p>
                     </>
                   )}
                   <button className="min-h-11 rounded-md border font-bold sm:col-span-2">Save user</button>

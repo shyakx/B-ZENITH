@@ -31,7 +31,7 @@ export function ReceiptPrintControls({ autoprint = false }: { autoprint?: boolea
       <button
         type="button"
         onClick={() => void printReceipt()}
-        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-black px-5 font-bold text-[#d4af37]"
+        className="bz-btn-primary flex w-full items-center justify-center gap-2"
       >
         <Printer size={18} /> Print
       </button>

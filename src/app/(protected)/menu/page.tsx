@@ -20,19 +20,19 @@ export default async function MenuPage({
     prisma.product.findMany({
       where: {
         NOT: { sku: { startsWith: DELETED_PRODUCT_SKU_PREFIX } },
-        ...(filters.q ? { name: { contains: filters.q, mode: "insensitive" } } : {}),
+        ...(filters.q ? { name: { contains: filters.q, mode:"insensitive" } } : {}),
         ...(filters.category ? { categoryId: filters.category } : {}),
       },
-      include: { category: true, variants: { orderBy: { sortOrder: "asc" } }, sellingLocation: true },
-      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+      include: { category: true, variants: { orderBy: { sortOrder:"asc" } }, sellingLocation: true },
+      orderBy: [{ category: { sortOrder:"asc" } }, { name:"asc" }],
     }),
-    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    prisma.category.findMany({ orderBy: [{ sortOrder:"asc" }, { name:"asc" }] }),
   ]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-sm font-bold uppercase tracking-widest text-[#947313]">Catalog</p><h1 className="text-3xl font-black">Menu management</h1></div>
+        <div><p className="text-sm font-bold uppercase tracking-widest text-black">Catalog</p><h1 className="text-3xl font-semibold">Menu management</h1></div>
         <Link href="/categories" className="grid min-h-11 place-items-center rounded-md border bg-white px-4 font-bold">Manage categories</Link>
       </div>
       <form className="flex flex-wrap gap-3 rounded-lg border bg-white p-4">
@@ -41,10 +41,10 @@ export default async function MenuPage({
           <option value="">All categories</option>
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select>
-        <button className="min-h-11 rounded-md bg-black px-5 font-bold text-[#d4af37]">Search</button>
+        <button className="bz-btn-primary">Search</button>
       </form>
       <details className="rounded-lg border bg-white">
-        <summary className="flex min-h-14 cursor-pointer items-center gap-2 p-4 font-black"><Plus size={19} /> Add menu item</summary>
+        <summary className="flex min-h-14 cursor-pointer items-center gap-2 p-4 font-semibold"><Plus size={19} /> Add menu item</summary>
         <form action={createProduct} className="grid gap-4 border-t p-5 md:grid-cols-2">
           <label className="text-sm font-bold">Name<input required name="name" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
           <label className="text-sm font-bold">SKU (optional)<input name="sku" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
@@ -52,7 +52,7 @@ export default async function MenuPage({
           <label className="text-sm font-bold">Unit<select name="unit" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal">{Object.values(ProductUnit).map((unit) => <option key={unit}>{unit}</option>)}</select></label>
           <label className="text-sm font-bold">Cost price<input required name="costPrice" type="number" min="0" step="0.01" defaultValue="0" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
           <label className="text-sm font-bold">Selling price<input required name="sellingPrice" type="number" min="0.01" step="0.01" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
-          <p className="text-sm text-stone-500 md:col-span-2">
+          <p className="text-sm text-black md:col-span-2">
             New items start at 0. Enter opening quantities on the Stock page using Count stock — do not type stock on this form.
           </p>
           <label className="text-sm font-bold">Image URL<input name="imageUrl" type="url" className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" /></label>
@@ -66,34 +66,34 @@ export default async function MenuPage({
               </select>
             </label>
           </div>
-          <button className="min-h-12 rounded-md bg-black px-5 font-bold text-[#d4af37] md:col-span-2">Create menu item</button>
+          <button className="bz-btn-primary md:col-span-2">Create menu item</button>
         </form>
       </details>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((product) => (
           <article key={product.id} className="rounded-lg border bg-white p-4">
             <div className="flex justify-between gap-3">
-              <div><p className="text-xs font-bold uppercase text-stone-500">{product.category.name}</p><h2 className="font-black">{product.name}</h2><p className="text-xs text-stone-500">{product.sku}</p></div>
-              <span className={`h-fit rounded-full px-2 py-1 text-xs font-bold ${product.active ? "bg-green-100 text-green-800" : "bg-stone-200 text-stone-600"}`}>{product.active ? "ACTIVE" : "INACTIVE"}</span>
+              <div><p className="text-xs font-bold uppercase text-black">{product.category.name}</p><h2 className="font-semibold">{product.name}</h2><p className="text-xs text-black">{product.sku}</p></div>
+              <span className={`h-fit rounded-md px-2 py-1 text-xs font-medium ${product.active ?"bg-[#FFD758] text-black" :"border border-black bg-white text-black"}`}>{product.active ?"ACTIVE" :"INACTIVE"}</span>
             </div>
             <div className="mt-4 flex items-end justify-between">
               <div>
                 {product.variants.length > 1 ? (
                   product.variants.map((variant) => (
-                    <p key={variant.id} className="text-sm font-black text-[#947313]">
+                    <p key={variant.id} className="text-sm font-semibold text-black">
                       {variant.name}: {variant.sellingPrice.toFixed(0)} RWF
                     </p>
                   ))
                 ) : (
-                  <p className="text-xl font-black text-[#947313]">{product.sellingPrice.toFixed(0)} RWF</p>
+                  <p className="text-xl font-semibold text-black">{product.sellingPrice.toFixed(0)} RWF</p>
                 )}
-                <p className="text-sm text-stone-500">
-                  {product.stockQuantity} {product.unit.toLowerCase()} · {product.sellingLocation?.code === "KITCHEN" ? "Kitchen" : "Bar"}
+                <p className="text-sm text-black">
+                  {product.stockQuantity} {product.unit.toLowerCase()} · {product.sellingLocation?.code ==="KITCHEN" ?"Kitchen" :"Bar"}
                 </p>
               </div>
               <Link href={`/menu/${product.id}`} className="grid size-11 place-items-center rounded-md border" aria-label={`Edit ${product.name}`}><Pencil size={17} /></Link>
             </div>
-            <form action={toggleProduct.bind(null, product.id, !product.active)} className="mt-3"><button className="min-h-11 w-full rounded-md border font-bold">{product.active ? "Deactivate" : "Activate"}</button></form>
+            <form action={toggleProduct.bind(null, product.id, !product.active)} className="mt-3"><button className="min-h-11 w-full rounded-md border font-bold">{product.active ?"Deactivate" :"Activate"}</button></form>
             {canDelete ? (
               <div className="mt-2">
                 <DeleteProductButton productId={product.id} name={product.name} />
@@ -101,7 +101,7 @@ export default async function MenuPage({
             ) : null}
           </article>
         ))}
-        {products.length === 0 && <p className="col-span-full rounded-lg border border-dashed bg-white p-10 text-center text-stone-500">No menu items found. Add products from the verified B-ZENITH menu.</p>}
+        {products.length === 0 && <p className="col-span-full rounded-lg border border-dashed bg-white p-10 text-center text-black">No menu items found. Add products from the verified B-ZENITH menu.</p>}
       </section>
     </div>
   );

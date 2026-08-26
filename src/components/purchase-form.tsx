@@ -25,15 +25,15 @@ export function PurchaseForm({
   initialProductId?: string;
 }) {
   const router = useRouter();
-  const [productId, setProductId] = useState(initialProductId || "");
+  const [productId, setProductId] = useState(initialProductId ||"");
   const [quantity, setQuantity] = useState(1);
-  const [step, setStep] = useState<"edit" | "confirm">("edit");
+  const [step, setStep] = useState<"edit" |"confirm">("edit");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
   const product = products.find((item) => item.id === productId) ?? null;
   const available = product?.available ?? product?.mainQuantity ?? 0;
-  const unit = product?.unit ?? "PIECE";
+  const unit = product?.unit ??"PIECE";
   const qtyLabel = formatQuantity(quantity, unit);
 
   async function submit() {
@@ -41,8 +41,8 @@ export function PurchaseForm({
     setPending(true);
     setMessage("");
     const response = await fetch("/api/purchases", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method:"POST",
+      headers: {"Content-Type":"application/json" },
       body: JSON.stringify({
         supplierId: null,
         referenceNumber: `ADD-${Date.now()}`,
@@ -53,10 +53,10 @@ export function PurchaseForm({
     setPending(false);
     if (!response.ok) {
       setStep("edit");
-      const raw = result.error ?? "";
+      const raw = result.error ??"";
       setMessage(
         !raw || raw.includes("Prisma") || /purchase/i.test(raw)
-          ? "We couldn't add the stock. Please try again."
+          ?"We couldn't add the stock. Please try again."
           : raw,
       );
       return;
@@ -68,24 +68,24 @@ export function PurchaseForm({
   }
 
   if (!products.length) {
-    return <p className="rounded-lg border bg-white p-6 text-sm text-stone-600">No stock items are available to add.</p>;
+    return <p className="rounded-lg border bg-white p-6 text-sm text-black">No stock items are available to add.</p>;
   }
 
-  if (step === "confirm" && product) {
+  if (step ==="confirm" && product) {
     return (
-      <div className="space-y-4 rounded-lg border border-stone-300 bg-white p-4">
-        <p className="text-lg font-black text-stone-950">
+      <div className="space-y-4 rounded-lg border border-black bg-white p-4">
+        <p className="text-lg font-semibold text-black">
           Add {qtyLabel} of {product.name} to Main Store?
         </p>
-        <p className="text-sm font-medium text-stone-600">
+        <p className="text-sm font-medium text-black">
           Arrivals go to Main Store first. Move them to Bar or Kitchen after that.
         </p>
         <div className="grid grid-cols-2 gap-3">
           <button type="button" disabled={pending} onClick={() => setStep("edit")} className="min-h-12 rounded-md border font-bold">
             Cancel
           </button>
-          <button type="button" disabled={pending} onClick={submit} className="min-h-12 rounded-md bg-black font-bold text-[#d4af37] disabled:opacity-40">
-            {pending ? "Adding..." : "Confirm"}
+          <button type="button" disabled={pending} onClick={submit} className="bz-btn-primary disabled:border-2 disabled:border-dashed">
+            {pending ?"Adding..." :"Confirm"}
           </button>
         </div>
       </div>
@@ -93,7 +93,7 @@ export function PurchaseForm({
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-stone-300 bg-white p-4">
+    <div className="space-y-4 rounded-lg border border-black bg-white p-4">
       <StockItemPicker
         products={products.map((item) => ({
           id: item.id,
@@ -120,23 +120,23 @@ export function PurchaseForm({
               step={1}
               value={quantity}
               onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
-              className="mt-1 min-h-14 w-full rounded-md border border-stone-300 px-3 text-2xl font-black"
+              className="mt-1 min-h-14 w-full rounded-md border border-black px-3 text-2xl font-semibold"
             />
           </label>
           <label className="block text-sm font-bold">
             Where it arrives
-            <input readOnly value="Main Store" className="mt-1 min-h-11 w-full rounded-md border bg-stone-50 px-3 font-normal" />
+            <input readOnly value="Main Store" className="mt-1 min-h-11 w-full rounded-md border bg-white px-3 font-normal" />
           </label>
-          <p className="text-sm font-medium text-stone-600">
+          <p className="text-sm font-medium text-black">
             {product.name} currently has {formatQuantity(available, unit)}.
           </p>
         </>
       ) : (
-        <p className="text-sm font-medium text-stone-600">Choose an item, then enter how many arrived.</p>
+        <p className="text-sm font-medium text-black">Choose an item, then enter how many arrived.</p>
       )}
 
       {message ? (
-        <p className={`text-sm font-bold ${message.startsWith("Added ") ? "text-emerald-700" : "text-red-700"}`}>
+        <p className={message.startsWith("Added") ?"bz-success" :"bz-alert"}>
           {message}
         </p>
       ) : null}
@@ -144,9 +144,9 @@ export function PurchaseForm({
         type="button"
         disabled={!product || quantity < 1}
         onClick={() => { setMessage(""); setStep("confirm"); }}
-        className="min-h-14 w-full rounded-md bg-black text-lg font-black text-[#d4af37] disabled:opacity-40"
+        className="bz-btn-primary min-h-14 w-full text-lg disabled:border-2 disabled:border-dashed"
       >
-        Add {product ? qtyLabel : "stock"}
+        Add {product ? qtyLabel :"stock"}
       </button>
     </div>
   );

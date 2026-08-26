@@ -10,12 +10,12 @@ export default async function PosPage() {
   const [categories, products, settings, sessions, tables] = await Promise.all([
     prisma.category.findMany({
       where: { active: true, products: { some: { active: true } } },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      orderBy: [{ sortOrder:"asc" }, { name:"asc" }],
       select: { id: true, name: true },
     }),
     prisma.product.findMany({
       where: { active: true, category: { active: true } },
-      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+      orderBy: [{ category: { sortOrder:"asc" } }, { name:"asc" }],
       select: {
         id: true,
         name: true,
@@ -26,27 +26,27 @@ export default async function PosPage() {
         categoryId: true,
         variants: {
           where: { active: true },
-          orderBy: { sortOrder: "asc" },
+          orderBy: { sortOrder:"asc" },
           select: { id: true, name: true, sku: true, sellingPrice: true },
         },
       },
     }),
     prisma.businessSettings.upsert({
-      where: { id: "default" },
+      where: { id:"default" },
       update: {},
-      create: { id: "default" },
+      create: { id:"default" },
     }),
     prisma.serviceSession.findMany({
-        where: { status: { in: ["ACTIVE", "SETTLING"] } },
+        where: { status: { in: ["ACTIVE","SETTLING"] } },
         include: {
             waiter: { select: { name: true } },
             table: true,
             rounds: { include: { items: true } }
         },
-        orderBy: { openedAt: "desc" }
+        orderBy: { openedAt:"desc" }
     }),
     prisma.table.findMany({
-        orderBy: { sortOrder: "asc" }
+        orderBy: { sortOrder:"asc" }
     })
   ]);
 
@@ -59,7 +59,7 @@ export default async function PosPage() {
       trackInventory: product.trackInventory,
       stockQuantity:
         product.locationStocks.find((row) => row.locationId === product.sellingLocationId)?.quantity ??
-        product.locationStocks.find((row) => row.location.code === "BAR")?.quantity ??
+        product.locationStocks.find((row) => row.location.code ==="BAR")?.quantity ??
         product.stockQuantity,
       variants: product.variants.map((variant) => ({
         id: variant.id,
@@ -100,7 +100,7 @@ export default async function PosPage() {
       categories={categories}
       products={sellable}
       currency={settings.currency}
-      taxRate={settings.taxEnabled ? settings.taxRate.toFixed(2) : "0.00"}
+      taxRate={settings.taxEnabled ? settings.taxRate.toFixed(2) :"0.00"}
     />
   );
 }

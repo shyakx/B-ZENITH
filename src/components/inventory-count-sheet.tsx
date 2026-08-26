@@ -27,7 +27,7 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
       products.map((product) => {
         const system = product.quantities[locationCode] ?? 0;
         const raw = counts[product.id];
-        const physical = raw === undefined || raw === "" ? null : Number(raw);
+        const physical = raw === undefined || raw ==="" ? null : Number(raw);
         const difference = physical === null || !Number.isInteger(physical) ? null : physical - system;
         return { product, system, physical, difference };
       }),
@@ -42,13 +42,13 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
     let saved = 0;
     for (const row of changed) {
       const response = await fetch("/api/inventory/stock-take", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method:"POST",
+        headers: {"Content-Type":"application/json" },
         body: JSON.stringify({
           productId: row.product.id,
           locationCode,
           countedQuantity: row.physical,
-          reason: note.trim() || "Physical count",
+          reason: note.trim() ||"Physical count",
           confirmNegative: (row.difference ?? 0) < 0,
         }),
       });
@@ -56,14 +56,14 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
         const result = (await response.json()) as { error?: string };
         setPending(false);
         const raw = result.error ?? `Could not save ${row.product.name}.`;
-        setMessage(raw.includes("Prisma") ? "We couldn't update the stock. Please try again." : raw);
+        setMessage(raw.includes("Prisma") ?"We couldn't update the stock. Please try again." : raw);
         return;
       }
       saved += 1;
     }
     setPending(false);
     setCounts({});
-    setMessage(saved ? `Saved ${saved} physical count${saved === 1 ? "" : "s"} for ${locationLabel(locationCode)}.` : "No quantity changes to save.");
+    setMessage(saved ? `Saved ${saved} physical count${saved === 1 ?"" :"s"} for ${locationLabel(locationCode)}.` :"No quantity changes to save.");
     router.refresh();
   }
 
@@ -83,12 +83,12 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
           <input value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border px-3 font-normal" />
         </label>
       </div>
-      <p className="text-sm text-stone-500">
+      <p className="text-sm text-black">
         Enter the number you physically counted at {locationLabel(locationCode)}. Empty rows are skipped.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="bg-stone-100">
+          <thead className="bg-white">
             <tr>
               <th className="p-3">Product</th>
               <th className="p-3">Category</th>
@@ -98,7 +98,7 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
               <th className="p-3">Stock value</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-black">
             {rows.map(({ product, system, physical }) => (
               <tr key={product.id}>
                 <td className="p-3 font-bold">{product.name}</td>
@@ -109,7 +109,7 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
                     type="number"
                     min={0}
                     step={1}
-                    value={counts[product.id] ?? ""}
+                    value={counts[product.id] ??""}
                     onChange={(event) => setCounts((current) => ({ ...current, [product.id]: event.target.value }))}
                     className="min-h-10 w-28 rounded-md border px-2"
                     placeholder={String(system)}
@@ -122,9 +122,9 @@ export function InventoryCountSheet({ products, currency }: { products: CountPro
           </tbody>
         </table>
       </div>
-      {message ? <p className={`text-sm font-bold ${message.startsWith("Saved") ? "text-green-700" : "text-red-700"}`}>{message}</p> : null}
-      <button type="button" onClick={save} disabled={pending || changed.length === 0} className="min-h-12 rounded-md bg-black px-6 font-bold text-[#d4af37] disabled:opacity-40">
-        {pending ? "Saving counts…" : `Save ${changed.length} count${changed.length === 1 ? "" : "s"}`}
+      {message ? <p className={message.startsWith("Saved") ?"bz-success" :"bz-alert"}>{message}</p> : null}
+      <button type="button" onClick={save} disabled={pending || changed.length === 0} className="bz-btn-primary px-6 disabled:border-2 disabled:border-dashed">
+        {pending ?"Saving counts…" : `Save ${changed.length} count${changed.length === 1 ?"" :"s"}`}
       </button>
     </div>
   );

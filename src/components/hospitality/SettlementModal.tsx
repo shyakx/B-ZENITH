@@ -32,8 +32,8 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
   const [cashReceivedInput, setCashReceivedInput] = useState("");
   const [putRemainderOnCredit, setPutRemainderOnCredit] = useState(false);
   const [chargeToRoom, setChargeToRoom] = useState(false);
-  const [customerName, setCustomerName] = useState(session.customerName ?? "");
-  const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId: "", managerPin: "" });
+  const [customerName, setCustomerName] = useState(session.customerName ??"");
+  const [approval, setApproval] = useState<ManagerApprovalInput>({ managerUserId:"", managerPin:"" });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [completed, setCompleted] = useState(false);
@@ -98,7 +98,7 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
       if (result?.id) setReceiptSaleId(result.id);
       setCompleted(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Settlement failed.");
+      setError(err instanceof Error ? err.message :"Settlement failed.");
     } finally {
       setIsProcessing(false);
     }
@@ -106,25 +106,25 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
 
   if (completed) {
     return (
-      <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
-          <div className="mx-auto grid size-20 place-items-center rounded-full bg-green-100 text-green-600">
+      <div className="fixed inset-0 z-[60] grid place-items-center bg-black p-4">
+        <div className="w-full max-w-md rounded-md bg-white p-8 text-center border border-black">
+          <div className="mx-auto grid size-20 place-items-center rounded-full bg-[#FFD758] text-black">
             <CheckCircle2 size={48} />
           </div>
-          <h2 className="mt-6 text-3xl font-black">Settled!</h2>
-          <p className="mt-2 text-stone-500">Session for {session.table ? session.table.name : "Service"} is closed.</p>
+          <h2 className="mt-6 text-3xl font-semibold">Settled!</h2>
+          <p className="mt-2 text-black">Session for {session.table ? session.table.name :"Service"} is closed.</p>
           <div className="mt-8 grid gap-3">
             {receiptSaleId && (
               <a
                 href={`/print/receipt/${receiptSaleId}`}
                 target="_blank"
                 rel="noreferrer"
-                className="grid min-h-14 place-items-center rounded-xl border-2 border-black font-black"
+                className="grid min-h-14 place-items-center rounded-md border-2 border-black font-semibold"
               >
                 PRINT RECEIPT
               </a>
             )}
-            <button onClick={() => window.location.reload()} className="min-h-14 rounded-xl bg-black font-black text-[#d4af37]">
+            <button onClick={() => window.location.reload()} className="bz-btn-primary min-h-14">
               DONE
             </button>
           </div>
@@ -134,34 +134,34 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
-      <div className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl md:flex-row">
-        <div className="flex max-h-[34vh] w-full shrink-0 flex-col border-b bg-stone-50 p-4 md:max-h-none md:w-1/3 md:border-b-0 md:border-r md:p-6">
-          <h2 className="mb-6 text-xl font-black uppercase tracking-widest text-stone-400">Settlement</h2>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black p-4">
+      <div className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-md bg-white  md:flex-row">
+        <div className="flex max-h-[34vh] w-full shrink-0 flex-col border-b bg-white p-4 md:max-h-none md:w-1/3 md:border-b-0 md:border-r md:p-6">
+          <h2 className="mb-6 text-xl font-semibold uppercase tracking-widest text-black">Settlement</h2>
           <div className="flex-1 space-y-6 overflow-y-auto">
             <div>
-              <p className="text-xs font-bold text-stone-400">SESSION</p>
-              <p className="text-lg font-black">{session.table ? session.table.name : session.destinationLabel || session.channel}</p>
-              <p className="text-xs text-stone-500">{session.waiter.name} · {new Date(session.openedAt).toLocaleTimeString()}</p>
+              <p className="text-xs font-bold text-black">SESSION</p>
+              <p className="text-lg font-semibold">{session.table ? session.table.name : session.destinationLabel || session.channel}</p>
+              <p className="text-xs text-black">{session.waiter.name} · {new Date(session.openedAt).toLocaleTimeString()}</p>
             </div>
             <div className="space-y-2 border-t pt-4">
-              <div className="flex justify-between text-xl font-black">
+              <div className="flex justify-between text-xl font-semibold">
                 <span>Grand Total</span>
                 <span>{formatMoney(totalDue, currency, 0)}</span>
               </div>
             </div>
             <div className="space-y-3 border-t pt-4">
-              <p className="text-xs font-bold text-stone-400">PAYMENTS</p>
-              {payments.length === 0 && <p className="text-xs italic text-stone-400">No payments added yet.</p>}
+              <p className="text-xs font-bold text-black">PAYMENTS</p>
+              {payments.length === 0 && <p className="text-xs italic text-black">No payments added yet.</p>}
               {payments.map((payment, index) => (
-                <div key={`${payment.method}-${index}`} className="flex items-center justify-between rounded-lg border bg-white p-2 text-sm shadow-sm">
+                <div key={`${payment.method}-${index}`} className="flex items-center justify-between rounded-lg border bg-white p-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-black">{payment.method}</span>
+                    <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold">{payment.method}</span>
                     <span className="font-bold">{formatMoney(payment.amount, currency, 0)}</span>
                   </div>
                   <button
                     onClick={() => setPayments(payments.filter((_, idx) => idx !== index))}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-black"
                     disabled={isProcessing}
                   >
                     <X size={14} />
@@ -169,40 +169,40 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
                 </div>
               ))}
               {usesCredit && remaining > 0 && (
-                <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm">
-                  <span className="text-[10px] font-black uppercase text-amber-700">{chargeToRoom ? "Room credit" : "Credit"}</span>
+                <div className="flex items-center justify-between rounded-lg border border-black bg-white p-2 text-sm">
+                  <span className="text-[10px] font-semibold uppercase text-black">{chargeToRoom ?"Room credit" :"Credit"}</span>
                   <span className="font-bold">{formatMoney(remaining, currency, 0)}</span>
                 </div>
               )}
             </div>
           </div>
           <div className="mt-auto border-t pt-4">
-            <div className="mb-2 flex justify-between text-xs font-bold uppercase tracking-widest text-stone-400">
+            <div className="mb-2 flex justify-between text-xs font-bold uppercase tracking-widest text-black">
               <span>Remaining</span>
-              <span className={remaining > 0 && !usesCredit ? "text-red-600" : "text-green-600"}>
+              <span className={remaining > 0 && !usesCredit ?"text-black" :"text-black"}>
                 {formatMoney(usesCredit ? 0 : remaining, currency, 0)}
               </span>
             </div>
             <button
               disabled={!canFinalize || isProcessing}
               onClick={handleComplete}
-              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-black font-black text-[#d4af37] shadow-lg disabled:opacity-40"
+              className="bz-btn-primary flex min-h-14 w-full items-center justify-center gap-2 disabled:border-2 disabled:border-dashed"
             >
-              <Receipt size={20} /> {isProcessing ? "PROCESSING..." : "FINALIZE & CLOSE"}
+              <Receipt size={20} /> {isProcessing ?"PROCESSING..." :"FINALIZE & CLOSE"}
             </button>
           </div>
         </div>
 
         <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto p-5 md:p-8">
-          <button onClick={onClose} className="absolute right-4 top-4 text-stone-400 hover:text-stone-600" disabled={isProcessing}>
+          <button onClick={onClose} className="absolute right-4 top-4 text-black hover:text-black" disabled={isProcessing}>
             <X size={24} />
           </button>
-          <h3 className="mb-8 text-2xl font-black">Add Payment</h3>
+          <h3 className="mb-8 text-2xl font-semibold">Add Payment</h3>
           <div className="mb-6 grid grid-cols-3 gap-2 sm:mb-8 sm:gap-4">
             {[
-              { id: PaymentMethod.CASH, label: "Cash", icon: Banknote },
-              { id: PaymentMethod.MOBILE_MONEY, label: "MoMo", icon: Smartphone },
-              { id: PaymentMethod.CARD, label: "Card", icon: CreditCard },
+              { id: PaymentMethod.CASH, label:"Cash", icon: Banknote },
+              { id: PaymentMethod.MOBILE_MONEY, label:"MoMo", icon: Smartphone },
+              { id: PaymentMethod.CARD, label:"Card", icon: CreditCard },
             ].map((method) => (
               <button
                 key={method.id}
@@ -210,25 +210,25 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
                   setCurrentMethod(method.id);
                   setAmountInput(remaining.toString());
                 }}
-                className={`flex min-h-16 flex-col items-center justify-center gap-2 rounded-2xl border-2 py-4 transition-all sm:py-6 ${
-                  currentMethod === method.id ? "border-black bg-black text-[#d4af37]" : "border-stone-200 hover:border-[#d4af37]"
+                className={`flex min-h-16 flex-col items-center justify-center gap-2 rounded-md border-2 py-4 transition-all sm:py-6 ${
+                  currentMethod === method.id ?"border-black bg-[#FFD758] text-black" :"border-black hover:border-[#FFD758]"
                 }`}
               >
                 <method.icon size={28} />
-                <span className="font-black">{method.label}</span>
+                <span className="font-semibold">{method.label}</span>
               </button>
             ))}
           </div>
           <div className="space-y-6">
             <div>
-              <label className="text-sm font-black uppercase tracking-widest text-stone-400">Payment Amount</label>
+              <label className="text-sm font-semibold uppercase tracking-widest text-black">Payment Amount</label>
               <div className="relative mt-2">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-stone-400">{currency}</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold text-black">{currency}</span>
                 <input
                   type="number"
                   value={amountInput}
                   onChange={(event) => setAmountInput(event.target.value)}
-                  className="h-16 w-full rounded-xl border-2 border-stone-200 pl-16 pr-4 text-2xl font-black outline-none focus:border-black"
+                  className="bz-input mt-2 h-16 pl-16 pr-4 text-2xl font-semibold"
                   placeholder="0"
                   disabled={isProcessing || remaining === 0}
                 />
@@ -236,26 +236,26 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
             </div>
             {currentMethod === PaymentMethod.CASH && (
               <div>
-                <label className="text-sm font-black uppercase tracking-widest text-stone-400">Cash Received</label>
+                <label className="text-sm font-semibold uppercase tracking-widest text-black">Cash Received</label>
                 <input
                   type="number"
                   value={cashReceivedInput}
                   onChange={(event) => setCashReceivedInput(event.target.value)}
-                  className="mt-2 h-16 w-full rounded-xl border-2 border-stone-200 px-4 text-2xl font-black outline-none focus:border-black"
+                  className="bz-input mt-2 h-16 text-2xl font-semibold"
                   placeholder="0"
                   disabled={isProcessing}
                 />
               </div>
             )}
-            {error && <p className="text-sm font-bold text-red-600">{error}</p>}
+            {error && <p className="bz-alert">{error}</p>}
             <button
               onClick={addPayment}
               disabled={isProcessing || remaining === 0}
-              className="flex min-h-16 w-full items-center justify-center rounded-xl bg-stone-900 font-black text-white shadow-md hover:bg-black disabled:opacity-40"
+              className="bz-btn-secondary flex min-h-16 w-full items-center justify-center disabled:border-2 disabled:border-dashed"
             >
               ADD {paymentLabel(currentMethod)} PAYMENT
             </button>
-            <label className="flex items-start gap-3 rounded-xl border-2 border-stone-200 p-4 text-sm font-bold">
+            <label className="flex items-start gap-3 rounded-md border-2 border-black p-4 text-sm font-bold">
               <input
                 type="checkbox"
                 checked={putRemainderOnCredit}
@@ -268,7 +268,7 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
               <span>Convert remaining {formatMoney(remaining, currency, 0)} to credit</span>
             </label>
             {isAccommodation && (
-              <label className="flex items-start gap-3 rounded-xl border-2 border-amber-200 bg-amber-50 p-4 text-sm font-bold">
+              <label className="flex items-start gap-3 rounded-md border-2 border-black bg-white p-4 text-sm font-bold">
                 <input
                   type="checkbox"
                   checked={chargeToRoom}
@@ -279,19 +279,19 @@ export function SettlementModal({ session, currency, onClose, onComplete }: Sett
                   disabled={isProcessing || remaining === 0}
                 />
                 <span className="flex items-center gap-2">
-                  <BedDouble size={16} /> Charge remaining to room {session.destinationLabel || "(missing destination)"}
+                  <BedDouble size={16} /> Charge remaining to room {session.destinationLabel ||"(missing destination)"}
                 </span>
               </label>
             )}
             {usesCredit && (
               <div className="space-y-3">
-                <label className="block text-xs font-black uppercase tracking-widest text-stone-500">
+                <label className="block text-xs font-semibold uppercase tracking-widest text-black">
                   Customer / guest
                   <input
                     value={customerName}
                     onChange={(event) => setCustomerName(event.target.value)}
-                    className="mt-2 h-12 w-full rounded-xl border-2 border-stone-200 px-4 font-bold outline-none focus:border-black"
-                    placeholder={session.destinationLabel ? `Room ${session.destinationLabel}` : "Guest name"}
+                    className="bz-input mt-2 h-12 font-medium"
+                    placeholder={session.destinationLabel ? `Room ${session.destinationLabel}` :"Guest name"}
                   />
                 </label>
                 <ManagerApprovalFields managerUserId={approval.managerUserId} managerPin={approval.managerPin} onChange={setApproval} />

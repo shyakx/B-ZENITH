@@ -25,7 +25,7 @@ export function DeleteUserButton({ userId, name }: { userId: string; name: strin
   return (
     <div className="sm:col-span-2 grid gap-2">
       {error ? (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">
+        <p role="alert" className="rounded-md bg-black p-3 text-sm font-semibold text-white">
           {error}
         </p>
       ) : null}
@@ -33,9 +33,9 @@ export function DeleteUserButton({ userId, name }: { userId: string; name: strin
         type="button"
         onClick={onDelete}
         disabled={pending}
-        className="min-h-11 rounded-md border border-red-200 font-bold text-red-700 disabled:opacity-60"
+        className="bz-btn-secondary disabled:border-2 disabled:border-dashed"
       >
-        {pending ? "Deleting…" : "Delete user"}
+        {pending ?"Deleting…" :"Delete user"}
       </button>
     </div>
   );

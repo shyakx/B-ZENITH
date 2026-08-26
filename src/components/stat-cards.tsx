@@ -14,7 +14,7 @@ export function StatCards({
         <StatCard
           key={card.label}
           label={card.label}
-          value={card.money && typeof card.value === "number" ? formatMoney(card.value, currency) : String(card.value)}
+          value={card.money && typeof card.value ==="number" ? formatMoney(card.value, currency) : String(card.value)}
         />
       ))}
     </StatGrid>

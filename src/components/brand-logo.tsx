@@ -2,16 +2,16 @@ import Image from "next/image";
 
 export function BrandLogo({
   size = 48,
-  className = "",
+  className ="",
   priority = false,
-  variant = "full",
+  variant ="full",
 }: {
   size?: number;
   className?: string;
   priority?: boolean;
-  variant?: "full" | "receipt";
+  variant?:"full" |"receipt";
 }) {
-  const src = variant === "receipt" ? "/brand/bzenith-receipt.png" : "/brand/bzenith-logo.png";
+  const src = variant ==="receipt" ?"/brand/bzenith-receipt.png" :"/brand/bzenith-logo.png";
   return (
     <Image
       src={src}
