@@ -62,7 +62,7 @@ function InfoPanel({ title, children }: { title: string; children: ReactNode }) 
 
 export default async function SettingsPage() {
   await requireUser(userAdminRoles);
-  const settings = await prisma.businessSettings.upsert({ where: { id:"default" }, update: {}, create: { id:"default" } });
+  const settings = await prisma.businessSettings.findUnique({ where: { id:"default" } });
   const inputClass ="mt-1 min-h-11 w-full rounded-md border border-black px-3 font-normal outline-none focus:border-[#FFD758]";
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -78,23 +78,23 @@ export default async function SettingsPage() {
         <form action={updateSettings} className="space-y-6 rounded-md border border-black bg-white p-4 sm:p-5">
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">Business identity</h3>
-            <label className="block text-sm font-medium">Business name<input required name="businessName" defaultValue={settings.businessName} className={inputClass} /></label>
+            <label className="block text-sm font-medium">Business name<input required name="businessName" defaultValue={settings?.businessName ?? "B-ZENITH"} className={inputClass} /></label>
           </div>
 
           <div className="space-y-3 border-t border-black pt-4">
             <h3 className="text-sm font-semibold">Contact information</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-medium">Phone<input name="phone" defaultValue={settings.phone ??""} className={inputClass} /></label>
-              <label className="block text-sm font-medium">Email<input name="email" type="email" defaultValue={settings.email ??""} className={inputClass} /></label>
+              <label className="block text-sm font-medium">Phone<input name="phone" defaultValue={settings?.phone ??""} className={inputClass} /></label>
+              <label className="block text-sm font-medium">Email<input name="email" type="email" defaultValue={settings?.email ??""} className={inputClass} /></label>
             </div>
-            <label className="block text-sm font-medium">Address<textarea name="address" rows={2} defaultValue={settings.address ??""} className="mt-1 w-full rounded-md border border-black p-3 font-normal outline-none focus:border-[#FFD758]" /></label>
+            <label className="block text-sm font-medium">Address<textarea name="address" rows={2} defaultValue={settings?.address ??""} className="mt-1 w-full rounded-md border border-black p-3 font-normal outline-none focus:border-[#FFD758]" /></label>
           </div>
 
           <div className="space-y-3 border-t border-black pt-4">
             <h3 className="text-sm font-semibold">Regional settings</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-medium">Currency<input readOnly value={settings.currency} className={`${inputClass} bg-white`} /></label>
-              <label className="block text-sm font-medium">Timezone<input readOnly value={settings.timezone} className={`${inputClass} bg-white`} /></label>
+              <label className="block text-sm font-medium">Currency<input readOnly value={settings?.currency ?? "RWF"} className={`${inputClass} bg-white`} /></label>
+              <label className="block text-sm font-medium">Timezone<input readOnly value={settings?.timezone ?? "Africa/Kigali"} className={`${inputClass} bg-white`} /></label>
             </div>
             <p className="text-sm font-normal text-black">Currency is RWF and dates use Africa/Kigali. These values are fixed in the system.</p>
           </div>
@@ -102,11 +102,11 @@ export default async function SettingsPage() {
           <div className="space-y-3 border-t border-black pt-4">
             <h3 className="text-sm font-semibold">Tax</h3>
             <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-              <input type="checkbox" name="taxEnabled" defaultChecked={settings.taxEnabled} />
+              <input type="checkbox" name="taxEnabled" defaultChecked={settings?.taxEnabled ?? false} />
               Charge VAT / tax on sales
             </label>
             <label className="block text-sm font-medium">Tax rate (%)
-              <input name="taxRate" type="number" min="0" max="100" step="0.01" defaultValue={settings.taxRate.toFixed(2)} className={inputClass} />
+              <input name="taxRate" type="number" min="0" max="100" step="0.01" defaultValue={Number(settings?.taxRate ?? 0).toFixed(2)} className={inputClass} />
             </label>
             <p className="text-sm font-normal text-black">Leave tax disabled until the correct B-ZENITH rate is confirmed. Do not guess a rate.</p>
           </div>
@@ -114,17 +114,17 @@ export default async function SettingsPage() {
           <div className="space-y-3 border-t border-black pt-4">
             <h3 className="text-sm font-semibold">Inventory alerts</h3>
             <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-              <input type="checkbox" name="lowStockEnabled" defaultChecked={settings.lowStockEnabled} />
+              <input type="checkbox" name="lowStockEnabled" defaultChecked={settings?.lowStockEnabled ?? true} />
               Show low-stock warnings
             </label>
             <label className="block text-sm font-medium">Default low-stock level
-              <input name="defaultReorderLevel" type="number" min="0" defaultValue={settings.defaultReorderLevel} className={inputClass} />
+              <input name="defaultReorderLevel" type="number" min="0" defaultValue={settings?.defaultReorderLevel ?? 5} className={inputClass} />
             </label>
           </div>
 
           <div className="space-y-3 border-t border-black pt-4">
             <h3 className="text-sm font-semibold">Receipt</h3>
-            <label className="block text-sm font-medium">Receipt footer<textarea required name="receiptFooter" rows={3} defaultValue={settings.receiptFooter} className="mt-1 w-full rounded-md border border-black p-3 font-normal outline-none focus:border-[#FFD758]" /></label>
+            <label className="block text-sm font-medium">Receipt footer<textarea required name="receiptFooter" rows={3} defaultValue={settings?.receiptFooter ?? "Thank you for dining with us."} className="mt-1 w-full rounded-md border border-black p-3 font-normal outline-none focus:border-[#FFD758]" /></label>
             <p className="text-sm font-normal text-black">Receipts also print “Powered by Cloud Sync Company”.</p>
           </div>
 

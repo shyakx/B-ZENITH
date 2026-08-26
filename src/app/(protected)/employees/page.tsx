@@ -16,13 +16,27 @@ import { prisma } from "@/lib/prisma";
 
 export default async function EmployeesPage() {
   const actor = await requireUser(userAdminRoles);
-  const employees = await prisma.user.findMany({
+  const employeeRows = await prisma.user.findMany({
     where: { NOT: { username: { startsWith: DELETED_USERNAME_PREFIX } } },
     orderBy: [{ active:"desc" }, { name:"asc" }],
-    include: {
+    select: {
+      id: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      role: true,
+      active: true,
+      mustChangePin: true,
+      lastLoginAt: true,
+      pinHash: true,
       auditLogs: { orderBy: { createdAt:"desc" }, take: 5, select: { id: true, action: true, createdAt: true } },
     },
   });
+  const employees = employeeRows.map(({ pinHash, ...employee }) => ({
+    ...employee,
+    hasPin: Boolean(pinHash),
+  }));
   const roles = assignableRoles(actor.role);
   const activeOwners = employees.filter((employee) => employee.role ==="OWNER" && employee.active);
   const lastOwnerId = activeOwners.length === 1 ? activeOwners[0].id : null;
@@ -62,7 +76,7 @@ export default async function EmployeesPage() {
             const lastOwner = employee.id === lastOwnerId;
             const pinStatus = employee.mustChangePin
               ?"Must change PIN on next login."
-              : employee.pinHash
+              : employee.hasPin
                 ?"PIN ready."
                 :"No PIN.";
             const canDelete = authorizeEmployeeDelete({

@@ -31,10 +31,8 @@ export default async function PosPage() {
         },
       },
     }),
-    prisma.businessSettings.upsert({
+    prisma.businessSettings.findUnique({
       where: { id:"default" },
-      update: {},
-      create: { id:"default" },
     }),
     prisma.serviceSession.findMany({
         where: { status: { in: ["ACTIVE","SETTLING"] } },
@@ -100,8 +98,8 @@ export default async function PosPage() {
       initialTables={tables as TableInfo[]}
       categories={categories}
       products={sellable}
-      currency={settings.currency}
-      taxRate={settings.taxEnabled ? settings.taxRate.toFixed(2) :"0.00"}
+      currency={settings?.currency ?? "RWF"}
+      taxRate={settings?.taxEnabled ? Number(settings.taxRate).toFixed(2) :"0.00"}
     />
   );
 }
