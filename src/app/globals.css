@@ -26,6 +26,65 @@ textarea {
   touch-action: manipulation;
 }
 
+@keyframes login-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes login-ops-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes login-ops-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.82);
+  }
+}
+
+.login-step {
+  animation: login-step-in 140ms ease-out;
+}
+
+.login-ops-float {
+  animation: login-ops-float 4.8s ease-in-out infinite;
+}
+
+.login-ops-float-delay {
+  animation: login-ops-float 5.2s ease-in-out infinite;
+  animation-delay: 1.1s;
+}
+
+.login-ops-dot {
+  animation: login-ops-dot 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-step,
+  .login-ops-float,
+  .login-ops-float-delay,
+  .login-ops-dot {
+    animation: none;
+  }
+}
+
 @media print {
   .print\:hidden,
   .print-hidden {
