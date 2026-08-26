@@ -12,9 +12,11 @@ import {
     SessionInfo,
     TableInfo
 } from "./types";
-import { ServiceChannel } from "@prisma/client";
+import { ServiceChannel, type Role } from "@prisma/client";
+import { resolveTableSelection, tableOpenFailureMessage } from "@/lib/table-selection";
 
 interface HospitalityPosProps {
+  operator: { id: string; role: Role };
   initialSessions: SessionInfo[];
   initialTables: TableInfo[];
   products: PosProduct[];
@@ -24,6 +26,7 @@ interface HospitalityPosProps {
 }
 
 export function HospitalityPos({
+  operator,
   initialSessions,
   initialTables,
   products,
@@ -109,46 +112,61 @@ export function HospitalityPos({
     setChannelCapture(null);
   };
 
-  const handleOpenSession = async (sessionId: string) => {
+  const handleOpenSession = async (sessionId: string, fromTable = false) => {
     try {
         const res = await fetch(`/api/sessions/${sessionId}`);
         const session = await res.json();
-        if (!res.ok) throw new Error(session.error ||"Failed to open session");
+        if (!res.ok) {
+          throw new Error(
+            fromTable
+              ? tableOpenFailureMessage(res.status, session.error)
+              : session.error || "Failed to open session",
+          );
+        }
         setActiveSession(mapSession(session));
         setActiveSessionId(sessionId);
         setView("SESSION");
     } catch (err) {
-        alert("Failed to open session");
+        alert(err instanceof Error ? err.message : "Failed to open session");
     }
   };
 
   const handleSelectTable = async (tableId: string) => {
-    const table = tables.find(t => t.id === tableId);
-    if (!table) return;
+    const table = tables.find((t) => t.id === tableId);
+    const session = sessions.find((s) => s.tableId === tableId);
+    const decision = resolveTableSelection({
+      table,
+      session,
+      operatorRole: operator.role,
+      operatorId: operator.id,
+    });
 
-    if (table.status ==="OCCUPIED") {
-        const session = sessions.find(s => s.tableId === tableId);
-        if (session) {
-            handleOpenSession(session.id);
-        }
-    } else if (table.status ==="AVAILABLE") {
-        try {
-            const res = await fetch("/api/sessions", {
-                method:"POST",
-                headers: {"Content-Type":"application/json" },
-                body: JSON.stringify({
-                    channel: ServiceChannel.TABLE,
-                    tableId: table.id
-                })
-            });
-            const newSession = await res.json();
-            if (!res.ok) throw new Error(newSession.error ||"Failed to start table session");
-            if (newSession.id) {
-                handleOpenSession(newSession.id);
-            }
-        } catch (err) {
-            alert(err instanceof Error ? err.message :"Failed to start table session");
-        }
+    if (decision.action === "block") {
+      alert(decision.message);
+      return;
+    }
+
+    if (decision.action === "open") {
+      await handleOpenSession(decision.sessionId, true);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: ServiceChannel.TABLE,
+          tableId: table!.id,
+        }),
+      });
+      const newSession = await res.json();
+      if (!res.ok) throw new Error(tableOpenFailureMessage(res.status, newSession.error));
+      if (newSession.id) {
+        await handleOpenSession(newSession.id, true);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to start table session");
     }
   };
 
@@ -330,6 +348,7 @@ export function HospitalityPos({
   return (
     <>
     <ServiceDashboard
+      operator={operator}
       activeSessions={sessions}
       tables={tables}
       onSelectChannel={handleSelectChannel}

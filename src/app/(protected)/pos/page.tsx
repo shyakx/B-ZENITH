@@ -95,6 +95,7 @@ export default async function PosPage() {
 
   return (
     <HospitalityPos
+      operator={{ id: user.id, role: user.role }}
       initialSessions={mappedSessions}
       initialTables={tables as TableInfo[]}
       categories={categories}

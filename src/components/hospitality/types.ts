@@ -23,6 +23,7 @@ export type TableInfo = {
   name: string;
   status: string;
   sortOrder: number;
+  active?: boolean;
 };
 
 export type SessionInfo = {
