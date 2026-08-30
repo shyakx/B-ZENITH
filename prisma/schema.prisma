@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  WAITER
+  CASHIER
+  MANAGER
+  ADMIN
+}
+
+enum BusinessArea {
+  BAR
+  CAFE
+  KITCHEN
+  OTHER
+}
+
+enum OrderStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  PAY_LATER
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  CARD
+  OTHER
+}
+
+enum MovementType {
+  PURCHASE
+  SALE
+  WASTE
+  ADJUSTMENT
+  COUNT
+  VOID_RESTORE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  pinHash   String
+  role      Role
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  waiterOrders      Order[]              @relation("WaiterOrders")
+  payments          Payment[]
+  inventoryMoves    InventoryMovement[]
+  purchases         Purchase[]
+  auditLogs         AuditLog[]
+  maisonRecords     MaisonRecord[]
+  creditsRecorded   CreditRecord[]       @relation("CreditRecorder")
+  creditsSettled    CreditRecord[]       @relation("CreditSettler")
+}
+
+model Category {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  area      BusinessArea
+  sortOrder Int          @default(0)
+  products  Product[]
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  name           String
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id])
+  sellingPrice   Int
+  costPrice      Int?
+  trackInventory Boolean  @default(false)
+  stockQuantity  Int      @default(0)
+  active         Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  orderItems OrderItem[]
+  purchases  Purchase[]
+  movements  InventoryMovement[]
+
+  @@index([categoryId, active])
+  @@index([active, name])
+}
+
+model ServiceTable {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+  orders    Order[]
+}
+
+model OrderSequence {
+  id    Int @id
+  value Int
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  orderNumber    Int           @unique
+  idempotencyKey String        @unique
+  waiterId       String
+  waiter         User          @relation("WaiterOrders", fields: [waiterId], references: [id])
+  tableId        String
+  table          ServiceTable  @relation(fields: [tableId], references: [id])
+  status         OrderStatus   @default(OPEN)
+  paymentStatus  PaymentStatus @default(UNPAID)
+  total          Int
+  paidAmount     Int           @default(0)
+  note           String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  completedAt    DateTime?
+
+  items    OrderItem[]
+  payments Payment[]
+  credit   CreditRecord?
+
+  @@index([tableId, paymentStatus])
+  @@index([waiterId, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  unitPrice Int
+  quantity  Int
+  lineTotal Int
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id])
+  amount         Int
+  method         PaymentMethod
+  cashierId      String
+  cashier        User          @relation(fields: [cashierId], references: [id])
+  idempotencyKey String        @unique
+  createdAt      DateTime      @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model CreditRecord {
+  id            String    @id @default(cuid())
+  orderId       String    @unique
+  order         Order     @relation(fields: [orderId], references: [id])
+  customerName  String
+  customerPhone String?
+  amountOwed    Int
+  settled       Boolean   @default(false)
+  recordedById  String
+  recordedBy    User      @relation("CreditRecorder", fields: [recordedById], references: [id])
+  settledById   String?
+  settledBy     User?     @relation("CreditSettler", fields: [settledById], references: [id])
+  settledAt     DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitCost  Int?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model InventoryMovement {
+  id        String       @id @default(cuid())
+  productId String
+  product   Product      @relation(fields: [productId], references: [id])
+  quantity  Int
+  type      MovementType
+  reason    String?
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  reference String?
+  createdAt DateTime     @default(now())
+
+  @@index([productId, createdAt])
+}
+
+model MaisonRecord {
+  id            String        @id @default(cuid())
+  customerName  String
+  customerPhone String?
+  reference     String?
+  date          DateTime
+  amount        Int
+  paidAmount    Int           @default(0)
+  paymentStatus PaymentStatus @default(UNPAID)
+  notes         String?
+  staffId       String
+  staff         User          @relation(fields: [staffId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+}
+
+model Setting {
+  key   String @id
+  value String
+}

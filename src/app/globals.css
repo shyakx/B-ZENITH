@@ -1,26 +1,248 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-zenith-bg: #ffffff;
+  --color-zenith-surface: #faf6f1;
+  --color-zenith-card: #ffffff;
+  --color-zenith-raised: #f4ebe3;
+  --color-zenith-border: #e4d6c8;
+  --color-zenith-gold: #3d2314;
+  --color-zenith-gold-bright: #5c3822;
+  --color-zenith-accent: #c4a574;
+  --color-zenith-orange: #c4a574;
+  --color-zenith-cream: #24160f;
+  --color-zenith-muted: #6e5648;
+  --color-zenith-success: #2f7a52;
+  --color-zenith-danger: #b42318;
+  --color-zenith-warning: #9a6b12;
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-playfair);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  background: #ffffff;
+  color: #24160f;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
+}
+
+.brand-pattern {
+  background-color: #fffdf9;
+  background-image:
+    linear-gradient(135deg, rgba(61, 35, 20, 0.04) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(196, 165, 116, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.touch-btn {
+  min-height: 52px;
+}
+
+.app-shell {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+.app-sidebar {
+  display: none;
+  width: 16rem;
+  max-width: 16rem;
+  min-width: 0;
+  height: 100%;
+  max-height: 100%;
+  flex-shrink: 0;
+}
+
+.app-sidebar-nav {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-sidebar-lock {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.app-main-column {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  flex: 1 1 0%;
+  flex-direction: column;
+}
+
+.app-main {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .app-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-main {
+    padding: 1.5rem;
+  }
+}
+
+.order-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.order-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.order-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.order-categories > button {
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.order-products,
+.order-tables {
+  display: grid;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  gap: 0.75rem;
+}
+
+.order-products {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+}
+
+.order-tables {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 7rem), 1fr));
+}
+
+.order-card {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.order-sticky-bar {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.order-basket {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  max-height: min(24rem, calc(100dvh - 11rem));
+}
+
+.order-basket-head,
+.order-basket-foot {
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.order-basket-items {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.order-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.order-line-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1100px) {
+  .order-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 19rem);
+    align-items: start;
+  }
+
+  .order-sticky-bar {
+    display: none;
+  }
+
+  .order-basket {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100dvh - 7.25rem);
+  }
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
 }

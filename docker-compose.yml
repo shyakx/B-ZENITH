@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bzenith-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: bzenith
+      POSTGRES_PASSWORD: bzenith
+      POSTGRES_DB: bzenith
+    volumes:
+      - bzenith-pg:/var/lib/postgresql/data
+
+volumes:
+  bzenith-pg:
