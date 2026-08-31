@@ -8,6 +8,7 @@ import {
 } from "@/lib/domain/stock";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { lockProductForUpdate } from "@/lib/stock-lock";
 
 async function requireTrackedProduct(productId: string) {
   const product = await prisma.product.findUnique({ where: { id: productId } });
@@ -25,10 +26,16 @@ export async function receivePurchase(input: {
   notes?: string;
   userId: string;
 }) {
-  const product = await requireTrackedProduct(input.productId);
-  const next = nextStockAfterIncrease(product.stockQuantity, input.quantity);
+  await requireTrackedProduct(input.productId);
 
   return prisma.$transaction(async (tx) => {
+    await lockProductForUpdate(tx, input.productId);
+    const product = await tx.product.findUnique({ where: { id: input.productId } });
+    if (!product || !product.trackInventory) {
+      throw new AppError("This product does not track inventory.");
+    }
+    const next = nextStockAfterIncrease(product.stockQuantity, input.quantity);
+
     const purchase = await tx.purchase.create({
       data: {
         productId: product.id,
@@ -71,12 +78,18 @@ export async function recordWaste(input: {
   reason: string;
   userId: string;
 }) {
-  const product = await requireTrackedProduct(input.productId);
   const reason = input.reason.trim();
   if (reason.length < 2) throw new AppError("Give a short reason for waste.");
-  const next = nextStockAfterWaste(product.stockQuantity, input.quantity);
+  await requireTrackedProduct(input.productId);
 
   return prisma.$transaction(async (tx) => {
+    await lockProductForUpdate(tx, input.productId);
+    const product = await tx.product.findUnique({ where: { id: input.productId } });
+    if (!product || !product.trackInventory) {
+      throw new AppError("This product does not track inventory.");
+    }
+    const next = nextStockAfterWaste(product.stockQuantity, input.quantity);
+
     await tx.product.update({
       where: { id: product.id },
       data: { stockQuantity: next },
@@ -109,12 +122,18 @@ export async function adjustStock(input: {
   reason: string;
   userId: string;
 }) {
-  const product = await requireTrackedProduct(input.productId);
   const reason = input.reason.trim();
   if (reason.length < 2) throw new AppError("Give a short reason for the adjustment.");
-  const next = nextStockAfterAdjustment(product.stockQuantity, input.delta);
+  await requireTrackedProduct(input.productId);
 
   return prisma.$transaction(async (tx) => {
+    await lockProductForUpdate(tx, input.productId);
+    const product = await tx.product.findUnique({ where: { id: input.productId } });
+    if (!product || !product.trackInventory) {
+      throw new AppError("This product does not track inventory.");
+    }
+    const next = nextStockAfterAdjustment(product.stockQuantity, input.delta);
+
     await tx.product.update({
       where: { id: product.id },
       data: { stockQuantity: next },
@@ -146,11 +165,17 @@ export async function countStock(input: {
   counted: number;
   userId: string;
 }) {
-  const product = await requireTrackedProduct(input.productId);
-  const { next } = nextStockAfterCount(input.counted);
-  const delta = next - product.stockQuantity;
+  await requireTrackedProduct(input.productId);
 
   return prisma.$transaction(async (tx) => {
+    await lockProductForUpdate(tx, input.productId);
+    const product = await tx.product.findUnique({ where: { id: input.productId } });
+    if (!product || !product.trackInventory) {
+      throw new AppError("This product does not track inventory.");
+    }
+    const { next } = nextStockAfterCount(input.counted);
+    const delta = next - product.stockQuantity;
+
     await tx.product.update({
       where: { id: product.id },
       data: { stockQuantity: next },

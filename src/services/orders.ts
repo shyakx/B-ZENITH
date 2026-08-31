@@ -5,6 +5,7 @@ import { CURRENT_TABLE_PAYMENT_STATUSES } from "@/lib/domain/payments";
 import { nextStockAfterSale } from "@/lib/domain/stock";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { lockProductsForUpdate } from "@/lib/stock-lock";
 
 const currentTableBillWhere: Prisma.OrderWhereInput = {
   status: { not: OrderStatus.CANCELLED },
@@ -79,77 +80,98 @@ export async function createOrder(input: {
 
   const total = sumLineTotals(lines);
 
-  return prisma.$transaction(async (tx) => {
-    const sequence = await tx.orderSequence.update({
-      where: { id: 1 },
-      data: { value: { increment: 1 } },
-    });
-
-    for (const line of lines) {
-      if (!line.product.trackInventory) continue;
-      const current = await tx.product.findUnique({ where: { id: line.product.id } });
-      if (!current) throw new AppError("Product not found.");
-      const next = nextStockAfterSale(current.stockQuantity, line.quantity);
-      await tx.product.update({
-        where: { id: current.id },
-        data: { stockQuantity: next },
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const sequence = await tx.orderSequence.update({
+        where: { id: 1 },
+        data: { value: { increment: 1 } },
       });
-      await tx.inventoryMovement.create({
+
+      await lockProductsForUpdate(
+        tx,
+        lines.filter((line) => line.product.trackInventory).map((line) => line.product.id),
+      );
+
+      for (const line of lines) {
+        if (!line.product.trackInventory) continue;
+        const current = await tx.product.findUnique({ where: { id: line.product.id } });
+        if (!current) throw new AppError("Product not found.");
+        if (current.stockQuantity < line.quantity) {
+          throw new AppError(
+            `Not enough stock for ${current.name}. Available: ${current.stockQuantity}.`,
+          );
+        }
+        const next = nextStockAfterSale(current.stockQuantity, line.quantity);
+        await tx.product.update({
+          where: { id: current.id },
+          data: { stockQuantity: next },
+        });
+        await tx.inventoryMovement.create({
+          data: {
+            productId: current.id,
+            quantity: -line.quantity,
+            type: MovementType.SALE,
+            reason: "Order sale",
+            userId: input.waiterId,
+            reference: String(sequence.value),
+          },
+        });
+      }
+
+      const order = await tx.order.create({
         data: {
-          productId: current.id,
-          quantity: -line.quantity,
-          type: MovementType.SALE,
-          reason: "Order sale",
-          userId: input.waiterId,
-          reference: String(sequence.value),
+          orderNumber: sequence.value,
+          idempotencyKey: input.idempotencyKey,
+          waiterId: input.waiterId,
+          tableId: input.tableId,
+          status: OrderStatus.OPEN,
+          paymentStatus: PaymentStatus.UNPAID,
+          total,
+          paidAmount: 0,
+          note: input.note?.trim() || null,
+          items: {
+            create: lines.map((line) => ({
+              productId: line.product.id,
+              name: line.product.name,
+              unitPrice: line.unitPrice,
+              quantity: line.quantity,
+              lineTotal: line.lineTotal,
+            })),
+          },
         },
+        include: orderInclude,
       });
-    }
 
-    const order = await tx.order.create({
-      data: {
-        orderNumber: sequence.value,
-        idempotencyKey: input.idempotencyKey,
-        waiterId: input.waiterId,
-        tableId: input.tableId,
-        status: OrderStatus.OPEN,
-        paymentStatus: PaymentStatus.UNPAID,
-        total,
-        paidAmount: 0,
-        note: input.note?.trim() || null,
-        items: {
-          create: lines.map((line) => ({
-            productId: line.product.id,
+      await writeAudit({
+        tx,
+        userId: input.waiterId,
+        action: "ORDER_CREATED",
+        entity: "Order",
+        entityId: order.id,
+        after: {
+          orderNumber: order.orderNumber,
+          table: table.name,
+          total: order.total,
+          items: lines.map((line) => ({
             name: line.product.name,
-            unitPrice: line.unitPrice,
             quantity: line.quantity,
-            lineTotal: line.lineTotal,
+            unitPrice: line.unitPrice,
           })),
         },
-      },
-      include: orderInclude,
-    });
+      });
 
-    await writeAudit({
-      tx,
-      userId: input.waiterId,
-      action: "ORDER_CREATED",
-      entity: "Order",
-      entityId: order.id,
-      after: {
-        orderNumber: order.orderNumber,
-        table: table.name,
-        total: order.total,
-        items: lines.map((line) => ({
-          name: line.product.name,
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-        })),
-      },
+      return order;
     });
-
-    return order;
-  });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const replayed = await prisma.order.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+        include: orderInclude,
+      });
+      if (replayed) return replayed;
+    }
+    throw error;
+  }
 }
 
 export async function cancelOrder(input: {
