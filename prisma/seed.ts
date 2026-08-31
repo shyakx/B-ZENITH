@@ -1,3 +1,9 @@
+/**
+ * DEVELOPMENT / TEST SEED ONLY.
+ *
+ * This script deletes existing rows and inserts demo staff, PINs, menu, and tables.
+ * Do not run it against production. Use `prisma/production-setup.ts` instead.
+ */
 import {
   BusinessArea,
   PrismaClient,
