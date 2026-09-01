@@ -15,7 +15,7 @@ export default async function PaymentsPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
-      <h1 className="font-display text-3xl text-zenith-gold">Payments</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">Payments</h1>
       <div className="mt-2">
         <VisibleDate />
       </div>

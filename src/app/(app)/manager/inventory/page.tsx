@@ -1,71 +1,112 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
-import { formatDateTime } from "@/lib/dates";
-import { AdjustForm, CountForm, PurchaseForm, WasteForm } from "@/components/manager/InventoryForms";
+import { formatRwf } from "@/lib/domain/money";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { listMovements, listStock } from "@/services/inventory";
+import { inventoryValuation, listMovements, listStock } from "@/services/inventory";
 
-export default async function InventoryPage() {
+export default async function InventoryOverviewPage() {
   await requireRole("MANAGER");
-  const [stock, movements] = await Promise.all([listStock(), listMovements()]);
-  const options = stock.map((product) => ({
-    id: product.id,
-    name: product.name,
-    stockQuantity: product.stockQuantity,
-  }));
+  const [stock, movements, valuation] = await Promise.all([
+    listStock(),
+    listMovements(12),
+    inventoryValuation(),
+  ]);
+  const totals = stock.reduce(
+    (sum, row) => ({
+      main: sum.main + row.main,
+      bar: sum.bar + row.bar,
+      kitchen: sum.kitchen + row.kitchen,
+      cafe: sum.cafe + row.cafe,
+    }),
+    { main: 0, bar: 0, kitchen: 0, cafe: 0 },
+  );
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-5xl">
-      <PageHeader title="Inventory" subtitle="Stock in, stock out, with a reason and a name on every change." />
-      <div className="mb-6 grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <h2 className="mb-3 font-semibold">Receive purchase</h2>
-          <PurchaseForm products={options} />
-        </Card>
-        <Card>
-          <h2 className="mb-3 font-semibold">Waste</h2>
-          <WasteForm products={options} />
-        </Card>
-        <Card>
-          <h2 className="mb-3 font-semibold">Adjustment</h2>
-          <AdjustForm products={options} />
-        </Card>
-        <Card>
-          <h2 className="mb-3 font-semibold">Stock count</h2>
-          <CountForm products={options} />
-        </Card>
+    <div>
+      <PageHeader
+        title="Stock Overview"
+        subtitle="Buy into Main Stock, then move what you need to Bar, Kitchen, or Cafe."
+      />
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[
+          ["Main Stock", totals.main, "Central store"],
+          ["Bar", totals.bar, "Ready to sell"],
+          ["Kitchen", totals.kitchen, "Kitchen use"],
+          ["Cafe", totals.cafe, "Cafe use"],
+        ].map(([label, value, hint]) => (
+          <div key={label} className="rounded-xl border border-zenith-border bg-white p-3">
+            <div className="text-xl font-semibold text-zenith-gold">{value}</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label}</div>
+            <div className="mt-1 text-xs text-zenith-muted">{hint}</div>
+          </div>
+        ))}
       </div>
-      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-        <section className="min-w-0 rounded-2xl border border-zenith-border bg-white p-5">
-          <h2 className="mb-3 font-display text-2xl">Current stock</h2>
+      <p className="mb-4 text-sm">Stock value: {formatRwf(valuation.total)}</p>
+      <div className="mb-4 flex flex-wrap gap-2 text-sm font-semibold">
+        <Link className="rounded-lg bg-zenith-gold px-3 py-1.5 text-white" href="/manager/purchases">
+          Receive Stock
+        </Link>
+        <Link className="rounded-lg border border-zenith-gold px-3 py-1.5 text-zenith-gold" href="/manager/inventory/transfer">
+          Move Stock
+        </Link>
+        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/locations">
+          Stock by Location
+        </Link>
+      </div>
+      <Card className="mb-4">
+        <h2 className="mb-3 font-semibold">Stock</h2>
+        <div className="overflow-x-auto text-sm">
+          <table className="w-full min-w-[520px] text-left">
+            <thead>
+              <tr className="border-b border-zenith-border text-xs uppercase tracking-wider text-zenith-muted">
+                <th className="py-2 pr-2">Product</th>
+                <th className="py-2 pr-2 text-right">Main</th>
+                <th className="py-2 pr-2 text-right">Bar</th>
+                <th className="py-2 pr-2 text-right">Kitchen</th>
+                <th className="py-2 text-right">Cafe</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stock.map((product) => (
+                <tr key={product.id} className="border-b border-zenith-border/70">
+                  <td className="py-2 pr-2 font-semibold">{product.name}</td>
+                  <td className="py-2 pr-2 text-right">{product.main}</td>
+                  <td className="py-2 pr-2 text-right">{product.bar}</td>
+                  <td className="py-2 pr-2 text-right">{product.kitchen}</td>
+                  <td className="py-2 text-right">{product.cafe}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-3 font-semibold">Running low</h2>
           <div className="space-y-2 text-sm">
-            {stock.map((product) => (
-              <div key={product.id} className="flex justify-between">
-                <span>
-                  {product.name}{" "}
-                  <span className="text-zenith-muted">· {product.category.name}</span>
-                </span>
-                <span className={product.stockQuantity <= 5 ? "text-red-300" : "text-zenith-gold"}>
-                  {product.stockQuantity}
-                </span>
+            {stock.filter((row) => row.total <= 5).slice(0, 12).map((product) => (
+              <div key={product.id} className="flex justify-between gap-2">
+                <span>{product.name}</span>
+                <span className="font-semibold text-zenith-danger">{product.total}</span>
               </div>
             ))}
           </div>
-        </section>
-        <section className="min-w-0 rounded-2xl border border-zenith-border bg-white p-5">
-          <h2 className="mb-3 font-display text-2xl">Movements</h2>
+        </Card>
+        <Card>
+          <h2 className="mb-3 font-semibold">Recent changes</h2>
           <div className="space-y-2 text-sm">
             {movements.map((move) => (
-              <div key={move.id} className="flex justify-between gap-3">
+              <div key={move.id} className="flex justify-between gap-2">
                 <span>
-                  {move.product.name} · {move.type} · {move.user.name}
-                  <div className="text-xs text-zenith-muted">{formatDateTime(move.createdAt)}</div>
+                  {move.product.name}
+                  {move.location ? ` · ${move.location.name}` : ""}
                 </span>
                 <span>{move.quantity > 0 ? `+${move.quantity}` : move.quantity}</span>
               </div>
             ))}
           </div>
-        </section>
+        </Card>
       </div>
     </div>
   );

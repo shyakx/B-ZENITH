@@ -1,47 +1,55 @@
 import { requireRole } from "@/lib/auth/current-user";
 import { formatDateTime } from "@/lib/dates";
-import { formatRwf } from "@/lib/domain/money";
+import { costTimesQuantity, formatRwf } from "@/lib/domain/money";
 import { PurchaseForm } from "@/components/manager/InventoryForms";
+import { InventoryNav } from "@/components/manager/InventoryNav";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { listPurchases, listStock } from "@/services/inventory";
+import { listReceipts, listStock } from "@/services/inventory";
+import { listSuppliers } from "@/services/suppliers";
 
 export default async function PurchasesPage() {
   await requireRole("MANAGER");
-  const [purchases, stock] = await Promise.all([listPurchases(), listStock()]);
+  const [receipts, stock, suppliers] = await Promise.all([
+    listReceipts(30),
+    listStock(),
+    listSuppliers(),
+  ]);
 
   return (
-    <div>
-      <PageHeader title="Purchases" subtitle="Receiving stock increases inventory immediately." />
-      <div className="mb-6 max-w-md">
+    <div className="mx-auto w-full min-w-0 max-w-5xl">
+      <InventoryNav />
+      <PageHeader
+        title="Receive Stock"
+        subtitle="Buy from a supplier. Everything received first goes into Main Stock."
+      />
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <Card>
-          <PurchaseForm
-            products={stock.map((product) => ({
-              id: product.id,
-              name: product.name,
-              stockQuantity: product.stockQuantity,
-            }))}
-          />
+          <PurchaseForm products={stock} suppliers={suppliers} />
         </Card>
-      </div>
-      <div className="space-y-3">
-        {purchases.map((purchase) => (
-          <div
-            key={purchase.id}
-            className="flex flex-wrap justify-between gap-3 rounded-2xl border border-zenith-border bg-zenith-card p-4"
-          >
-            <div>
-              <div className="font-semibold">{purchase.product.name}</div>
-              <div className="text-sm text-zenith-muted">
-                {purchase.user.name} · {formatDateTime(purchase.createdAt)}
+        <Card>
+          <h2 className="mb-3 font-semibold">Recent receipts</h2>
+          <div className="space-y-3 text-sm">
+            {receipts.map((receipt) => (
+              <div key={receipt.id} className="flex flex-wrap justify-between gap-2">
+                <div>
+                  <div className="font-semibold">{receipt.supplier.name}</div>
+                  <div className="text-zenith-muted">
+                    {receipt.location.name} · {receipt.receivedBy.name} · {formatDateTime(receipt.receivedAt)}
+                  </div>
+                  {receipt.lines.map((line) => (
+                    <div key={line.id}>
+                      {line.product.name} · {line.packQuantity}
+                      {line.unitCost != null
+                        ? ` · ${formatRwf(costTimesQuantity(line.unitCost, line.baseQuantity))} paid`
+                        : ""}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div>
-              +{purchase.quantity}
-              {purchase.unitCost ? ` · ${formatRwf(purchase.unitCost)}` : ""}
-            </div>
+            ))}
           </div>
-        ))}
+        </Card>
       </div>
     </div>
   );

@@ -7,16 +7,16 @@ import { itemQuantity, waiterTodayStats } from "@/lib/waiter-dashboard";
 import { Button } from "@/components/ui/Button";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
-import { listOrders } from "@/services/orders";
+import { listOrders, waiterTodaySnapshot } from "@/services/orders";
 
 export default async function WaiterHomePage() {
   const user = await requireRole("WAITER");
   const from = startOfDay();
   const to = endOfDay();
   const [todayOrders, openOrders, recentOrders] = await Promise.all([
-    listOrders({ waiterId: user.id, from, to }),
-    listOrders({ waiterId: user.id, openOnly: true, take: 30 }),
-    listOrders({ waiterId: user.id, take: 5 }),
+    waiterTodaySnapshot(user.id, from, to),
+    listOrders({ waiterId: user.id, openOnly: true, take: 30, withItems: true }),
+    listOrders({ waiterId: user.id, take: 5, withItems: true }),
   ]);
   const stats = waiterTodayStats(todayOrders);
   const noOrdersToday = todayOrders.length === 0;
@@ -24,15 +24,15 @@ export default async function WaiterHomePage() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zenith-muted">B-ZENITH</p>
-      <h1 className="mt-1 font-display text-2xl text-zenith-gold sm:text-3xl">{staffGreeting(user.name)}</h1>
-      <p className="mt-1 text-zenith-muted">Ready to take the next order?</p>
+      <h1 className="mt-1 font-display text-2xl text-zenith-gold">{staffGreeting(user.name)}</h1>
+      <p className="mt-1 text-sm text-zenith-muted">Ready to take the next order?</p>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Link href="/waiter/orders/new" className="min-w-0 sm:flex-1">
-          <Button className="h-16 w-full text-lg sm:h-20 sm:text-xl">+ New order</Button>
+          <Button className="pos-tap h-14 w-full text-base sm:h-16 sm:text-lg">+ New order</Button>
         </Link>
-        <Link href="/waiter/orders" className="min-w-0 sm:w-44">
-          <Button variant="secondary" className="h-14 w-full sm:h-20">
+        <Link href="/waiter/orders" className="min-w-0 sm:w-40">
+          <Button variant="secondary" className="h-12 w-full sm:h-16">
             My orders
           </Button>
         </Link>
@@ -43,26 +43,26 @@ export default async function WaiterHomePage() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-3xl text-zenith-gold">{stats.orderCount}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-2xl font-semibold text-zenith-gold">{stats.orderCount}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Today&apos;s orders
           </div>
         </div>
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-3xl text-zenith-gold">{openOrders.length}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-2xl font-semibold text-zenith-gold">{openOrders.length}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Open orders
           </div>
         </div>
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-3xl text-zenith-gold">{stats.tableCount}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-2xl font-semibold text-zenith-gold">{stats.tableCount}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Tables served
           </div>
         </div>
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-3xl text-zenith-gold">{stats.itemCount}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-2xl font-semibold text-zenith-gold">{stats.itemCount}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Items ordered
           </div>
@@ -70,8 +70,8 @@ export default async function WaiterHomePage() {
       </div>
 
       {noOrdersToday ? (
-        <section className="mt-8 rounded-3xl border border-zenith-border bg-white px-5 py-8 text-center">
-          <p className="font-display text-2xl text-zenith-gold">No orders yet today</p>
+        <section className="mt-6 rounded-xl border border-zenith-border bg-white px-5 py-6 text-center">
+          <p className="font-display text-xl text-zenith-gold">No orders yet today</p>
           <p className="mt-2 text-zenith-muted">Ready to serve your first table?</p>
           <Link href="/waiter/orders/new" className="mt-5 inline-block">
             <Button>+ New order</Button>
@@ -80,7 +80,7 @@ export default async function WaiterHomePage() {
       ) : null}
 
       <section className="mt-8 min-w-0">
-        <h2 className="font-display text-2xl">My open orders</h2>
+        <h2 className="font-display text-xl">My open orders</h2>
         {openOrders.length === 0 ? (
           <div className="mt-3 rounded-2xl border border-zenith-border bg-white px-4 py-6">
             <p className="font-semibold">
@@ -96,11 +96,11 @@ export default async function WaiterHomePage() {
               <Link
                 key={order.id}
                 href={`/waiter/orders#order-${order.id}`}
-                className="block min-w-0 rounded-2xl border border-zenith-border bg-white p-4"
+                className="block min-w-0 rounded-xl border border-zenith-border bg-white p-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-display text-2xl text-zenith-gold">ORDER #{order.orderNumber}</div>
+                    <div className="text-lg font-semibold text-zenith-gold">ORDER #{order.orderNumber}</div>
                     <div className="mt-1 text-sm">
                       Table {order.table.name} · {itemQuantity(order)} items
                     </div>
@@ -115,7 +115,7 @@ export default async function WaiterHomePage() {
       </section>
 
       <section className="mt-8 min-w-0">
-        <h2 className="font-display text-2xl">Tables served today</h2>
+        <h2 className="font-display text-xl">Tables served today</h2>
         <p className="mt-1 text-sm text-zenith-muted">Tables where you submitted an order today. Anyone can serve these tables.</p>
         {stats.tableNames.length === 0 ? (
           <p className="mt-3 text-zenith-muted">No tables yet today.</p>
@@ -135,7 +135,7 @@ export default async function WaiterHomePage() {
 
       <section className="mt-8 min-w-0">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-display text-2xl">Recent orders</h2>
+          <h2 className="font-display text-xl">Recent orders</h2>
           <Link href="/waiter/orders" className="text-sm font-semibold text-zenith-gold">
             View my orders →
           </Link>

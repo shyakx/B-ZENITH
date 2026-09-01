@@ -10,6 +10,16 @@ describe("authentication and authorization", () => {
   });
 
   it("keeps each role on its own screens", () => {
+    expect(canAccessPath("MANAGER", "/manager/tables")).toBe(true);
+    expect(canAccessPath("MANAGER", "/manager/products")).toBe(true);
+    expect(canAccessPath("MANAGER", "/manager/inventory")).toBe(true);
+    expect(canAccessPath("MANAGER", "/manager/reports")).toBe(true);
+    expect(canAccessPath("ADMIN", "/manager/tables")).toBe(false);
+    expect(canAccessPath("ADMIN", "/manager/products")).toBe(false);
+    expect(canAccessPath("ADMIN", "/manager/inventory")).toBe(false);
+    expect(canAccessPath("WAITER", "/manager/tables")).toBe(false);
+    expect(canAccessPath("CASHIER", "/manager/tables")).toBe(false);
+    expect(canAccessPath("CASHIER", "/manager/products")).toBe(false);
     expect(canAccessPath("WAITER", "/waiter/orders/new")).toBe(true);
     expect(canAccessPath("WAITER", "/cashier/bills")).toBe(false);
     expect(canAccessPath("CASHIER", "/cashier/outstanding")).toBe(true);
@@ -52,6 +62,9 @@ describe("authentication and authorization", () => {
     expect(hasPermission("WAITER", "viewAllOrders")).toBe(false);
     expect(hasPermission("WAITER", "viewOwnOrders")).toBe(true);
     expect(hasPermission("ADMIN", "manageUsers")).toBe(true);
+    expect(hasPermission("ADMIN", "manageProducts")).toBe(false);
+    expect(hasPermission("ADMIN", "manageInventory")).toBe(false);
+    expect(hasPermission("WAITER", "manageProducts")).toBe(false);
     expect(hasPermission("ADMIN", "manageSettings")).toBe(true);
     expect(hasPermission("ADMIN", "viewAudit")).toBe(true);
     expect(hasPermission("ADMIN", "recordPayment")).toBe(false);

@@ -48,6 +48,25 @@ enum MovementType {
   ADJUSTMENT
   COUNT
   VOID_RESTORE
+  TRANSFER_OUT
+  TRANSFER_IN
+}
+
+enum LocationKind {
+  WAREHOUSE
+  OPERATIONAL
+}
+
+enum ProductType {
+  MENU_ITEM
+  RAW_MATERIAL
+  PACKAGED_GOOD
+}
+
+enum UnitFamily {
+  COUNT
+  WEIGHT
+  VOLUME
 }
 
 model User {
@@ -63,6 +82,8 @@ model User {
   payments          Payment[]
   inventoryMoves    InventoryMovement[]
   purchases         Purchase[]
+  stockReceipts     StockReceipt[]
+  stockTransfers    StockTransfer[]
   auditLogs         AuditLog[]
   maisonRecords     MaisonRecord[]
   creditsRecorded   CreditRecord[]       @relation("CreditRecorder")
@@ -77,25 +98,116 @@ model Category {
   products  Product[]
 }
 
+model Unit {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  name      String
+  family    UnitFamily
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  products Product[]
+  packs    ProductPack[]
+  receiptLines StockReceiptLine[]
+}
+
+model StockLocation {
+  id        String       @id @default(cuid())
+  code      String       @unique
+  name      String
+  kind      LocationKind
+  active    Boolean      @default(true)
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  stocks             ProductStock[]
+  defaultProducts    Product[]            @relation("ProductDefaultStockLocation")
+  movements          InventoryMovement[]
+  receipts           StockReceipt[]
+  transfersFrom      StockTransfer[]      @relation("TransferFrom")
+  transfersTo        StockTransfer[]      @relation("TransferTo")
+  orderItems         OrderItem[]
+}
+
 model Product {
-  id             String   @id @default(cuid())
-  name           String
-  categoryId     String
-  category       Category @relation(fields: [categoryId], references: [id])
-  sellingPrice   Int
-  costPrice      Int?
-  trackInventory Boolean  @default(false)
-  stockQuantity  Int      @default(0)
-  active         Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                     String      @id @default(cuid())
+  name                   String
+  categoryId             String
+  category               Category    @relation(fields: [categoryId], references: [id])
+  sellingPrice           Int
+  costPrice              Decimal?  @db.Decimal(19, 10)
+  trackInventory         Boolean     @default(false)
+  stockQuantity          Int         @default(0)
+  productType            ProductType @default(MENU_ITEM)
+  sellOnPos              Boolean     @default(true)
+  baseUnitId             String?
+  baseUnit               Unit?       @relation(fields: [baseUnitId], references: [id])
+  defaultStockLocationId String?
+  defaultStockLocation   StockLocation? @relation("ProductDefaultStockLocation", fields: [defaultStockLocationId], references: [id])
+  active                 Boolean     @default(true)
+  sortOrder              Int         @default(0)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
 
   orderItems OrderItem[]
   purchases  Purchase[]
   movements  InventoryMovement[]
+  stocks     ProductStock[]
+  packs      ProductPack[]
+  receiptLines StockReceiptLine[]
+  transferLines StockTransferLine[]
 
   @@index([categoryId, active])
+  @@index([active, name])
+  @@index([productType, active])
+  @@index([sellOnPos, active])
+  @@index([defaultStockLocationId])
+}
+
+model ProductStock {
+  id         String        @id @default(cuid())
+  productId  String
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  locationId String
+  location   StockLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  quantity   Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([productId, locationId])
+  @@index([locationId, quantity])
+}
+
+model ProductPack {
+  id           String   @id @default(cuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitId       String
+  unit         Unit     @relation(fields: [unitId], references: [id])
+  baseQuantity Int
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([productId, unitId])
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  taxId     String?
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  receipts StockReceipt[]
+
   @@index([active, name])
 }
 
@@ -129,9 +241,10 @@ model Order {
   updatedAt      DateTime      @updatedAt
   completedAt    DateTime?
 
-  items    OrderItem[]
-  payments Payment[]
-  credit   CreditRecord?
+  items     OrderItem[]
+  payments  Payment[]
+  credit    CreditRecord?
+  movements InventoryMovement[]
 
   @@index([tableId, paymentStatus])
   @@index([waiterId, createdAt])
@@ -140,15 +253,18 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-  name      String
-  unitPrice Int
-  quantity  Int
-  lineTotal Int
+  id              String         @id @default(cuid())
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product        @relation(fields: [productId], references: [id])
+  name            String
+  unitPrice       Int
+  quantity        Int
+  lineTotal       Int
+  stockLocationId String?
+  stockLocation   StockLocation? @relation(fields: [stockLocationId], references: [id])
+  movements       InventoryMovement[]
 }
 
 model Payment {
@@ -193,19 +309,103 @@ model Purchase {
   createdAt DateTime @default(now())
 }
 
+model StockReceipt {
+  id             String        @id @default(cuid())
+  supplierId     String
+  supplier       Supplier      @relation(fields: [supplierId], references: [id])
+  locationId     String
+  location       StockLocation @relation(fields: [locationId], references: [id])
+  reference      String?
+  receivedById   String
+  receivedBy     User          @relation(fields: [receivedById], references: [id])
+  receivedAt     DateTime      @default(now())
+  notes          String?
+  idempotencyKey String        @unique
+  createdAt      DateTime      @default(now())
+
+  lines     StockReceiptLine[]
+  movements InventoryMovement[]
+
+  @@index([supplierId, receivedAt])
+  @@index([locationId, receivedAt])
+}
+
+model StockReceiptLine {
+  id           String       @id @default(cuid())
+  receiptId    String
+  receipt      StockReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product      @relation(fields: [productId], references: [id])
+  packUnitId   String?
+  packUnit     Unit?        @relation(fields: [packUnitId], references: [id])
+  packQuantity Int
+  baseQuantity Int
+  unitCost     Decimal? @db.Decimal(19, 10)
+  movements    InventoryMovement[]
+
+  @@index([receiptId])
+  @@index([productId])
+}
+
+model StockTransfer {
+  id             String        @id @default(cuid())
+  fromLocationId String
+  fromLocation   StockLocation @relation("TransferFrom", fields: [fromLocationId], references: [id])
+  toLocationId   String
+  toLocation     StockLocation @relation("TransferTo", fields: [toLocationId], references: [id])
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  notes          String?
+  idempotencyKey String        @unique
+  createdAt      DateTime      @default(now())
+
+  lines     StockTransferLine[]
+  movements InventoryMovement[]
+
+  @@index([fromLocationId, createdAt])
+  @@index([toLocationId, createdAt])
+}
+
+model StockTransferLine {
+  id           String        @id @default(cuid())
+  transferId   String
+  transfer     StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product       @relation(fields: [productId], references: [id])
+  baseQuantity Int
+
+  @@index([transferId])
+  @@index([productId])
+}
+
 model InventoryMovement {
-  id        String       @id @default(cuid())
-  productId String
-  product   Product      @relation(fields: [productId], references: [id])
-  quantity  Int
-  type      MovementType
-  reason    String?
-  userId    String
-  user      User         @relation(fields: [userId], references: [id])
-  reference String?
-  createdAt DateTime     @default(now())
+  id           String        @id @default(cuid())
+  productId    String
+  product      Product       @relation(fields: [productId], references: [id])
+  quantity     Int
+  type         MovementType
+  reason       String?
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  reference    String?
+  locationId   String?
+  location     StockLocation? @relation(fields: [locationId], references: [id])
+  transferId   String?
+  transfer     StockTransfer? @relation(fields: [transferId], references: [id])
+  receiptId    String?
+  receipt      StockReceipt?  @relation(fields: [receiptId], references: [id])
+  receiptLineId String?
+  receiptLine  StockReceiptLine? @relation(fields: [receiptLineId], references: [id])
+  orderId      String?
+  order        Order?         @relation(fields: [orderId], references: [id])
+  orderItemId  String?
+  orderItem    OrderItem?     @relation(fields: [orderItemId], references: [id])
+  createdAt    DateTime      @default(now())
 
   @@index([productId, createdAt])
+  @@index([locationId, createdAt])
+  @@index([transferId])
+  @@index([type, createdAt])
 }
 
 model MaisonRecord {

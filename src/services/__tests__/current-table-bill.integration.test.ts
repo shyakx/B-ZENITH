@@ -4,20 +4,19 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTableBill, getOrderById, createOrder } from "@/services/orders";
 import { recordPayment } from "@/services/payments";
+import { cleanupInventoryArtifacts, createIsolatedPosProduct } from "./inventory-helpers";
 
 loadEnvConfig(process.cwd());
 
 const createdOrderIds: string[] = [];
 const createdTableIds: string[] = [];
-let heinekenId = "";
-let startingStock = 0;
+let productId = "";
+let categoryId = "";
 
 beforeAll(async () => {
-  const heineken = await prisma.product.findFirst({ where: { name: "Heineken", active: true } });
-  if (heineken) {
-    heinekenId = heineken.id;
-    startingStock = heineken.stockQuantity;
-  }
+  const isolated = await createIsolatedPosProduct({ sellingPrice: 2000, barQuantity: 30 });
+  productId = isolated.product.id;
+  categoryId = isolated.category.id;
 });
 
 afterAll(async () => {
@@ -36,11 +35,13 @@ afterAll(async () => {
   if (createdTableIds.length > 0) {
     await prisma.serviceTable.deleteMany({ where: { id: { in: createdTableIds } } });
   }
-  if (heinekenId) {
-    await prisma.product.update({
-      where: { id: heinekenId },
-      data: { stockQuantity: startingStock },
-    });
+  if (productId) {
+    await prisma.inventoryMovement.deleteMany({ where: { productId } });
+    await cleanupInventoryArtifacts([productId]);
+    await prisma.product.deleteMany({ where: { id: productId } });
+  }
+  if (categoryId) {
+    await prisma.category.deleteMany({ where: { id: categoryId } });
   }
   await prisma.$disconnect();
 });
@@ -54,16 +55,16 @@ describe("current table bill against the database", () => {
       data: { name: `TEST-BILL-${Date.now()}`, sortOrder: 9000 },
     });
     createdTableIds.push(table.id);
-    const heineken = await prisma.product.findUnique({ where: { id: heinekenId } });
-    if (!john || !mary || !grace || !heineken) {
-      throw new Error("Seed data is required (John, Mary, Grace, Heineken).");
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!john || !mary || !grace || !product) {
+      throw new Error("Seed data is required (John, Mary, Grace).");
     }
 
     const stamp = Date.now();
     const paid = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 1 }],
+      items: [{ productId: product.id, quantity: 1 }],
       idempotencyKey: `test-bill-paid-${stamp}`,
     });
     createdOrderIds.push(paid.id);
@@ -78,13 +79,13 @@ describe("current table bill against the database", () => {
     const unpaid = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 2 }],
+      items: [{ productId: product.id, quantity: 2 }],
       idempotencyKey: `test-bill-unpaid-${stamp}`,
     });
     const partial = await createOrder({
       waiterId: mary.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 3 }],
+      items: [{ productId: product.id, quantity: 3 }],
       idempotencyKey: `test-bill-partial-${stamp}`,
     });
     createdOrderIds.push(unpaid.id, partial.id);
@@ -105,7 +106,7 @@ describe("current table bill against the database", () => {
     const cancelled = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 1 }],
+      items: [{ productId: product.id, quantity: 1 }],
       idempotencyKey: `test-bill-cancel-${stamp}`,
     });
     createdOrderIds.push(cancelled.id);

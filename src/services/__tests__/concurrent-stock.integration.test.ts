@@ -1,8 +1,10 @@
 import { loadEnvConfig } from "@next/env";
-import { BusinessArea } from "@prisma/client";
+import { BusinessArea, ProductType } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { createOrder } from "@/services/orders";
+import { ensureTrackedProductStocks, getLocationByCode, syncCompatibilityStock } from "@/services/stock";
+import { cleanupInventoryArtifacts } from "./inventory-helpers";
 
 loadEnvConfig(process.cwd());
 
@@ -29,6 +31,7 @@ afterAll(async () => {
   }
   if (createdProductIds.length > 0) {
     await prisma.inventoryMovement.deleteMany({ where: { productId: { in: createdProductIds } } });
+    await cleanupInventoryArtifacts(createdProductIds);
     await prisma.product.deleteMany({ where: { id: { in: createdProductIds } } });
   }
   if (createdTableIds.length > 0) {
@@ -47,6 +50,8 @@ async function setupTrackedProduct(stockQuantity: number) {
   });
   createdCategoryIds.push(category.id);
 
+  const bar = await getLocationByCode(prisma, "BAR");
+  const bottle = await prisma.unit.findUnique({ where: { code: "BOTTLE" } });
   const product = await prisma.product.create({
     data: {
       name: `Concurrent Lager ${stamp}`,
@@ -54,10 +59,20 @@ async function setupTrackedProduct(stockQuantity: number) {
       sellingPrice: 2000,
       trackInventory: true,
       stockQuantity,
+      productType: ProductType.PACKAGED_GOOD,
+      sellOnPos: true,
+      defaultStockLocationId: bar.id,
+      baseUnitId: bottle?.id,
       active: true,
     },
   });
   createdProductIds.push(product.id);
+  await ensureTrackedProductStocks(prisma, product.id, 0);
+  await prisma.productStock.update({
+    where: { productId_locationId: { productId: product.id, locationId: bar.id } },
+    data: { quantity: stockQuantity },
+  });
+  await syncCompatibilityStock(prisma, product.id);
 
   const table = await prisma.serviceTable.create({
     data: { name: `T ${stamp}`, active: true, sortOrder: 9000 },
@@ -130,7 +145,7 @@ describe("concurrent tracked stock against the database", () => {
     createdOrderIds.push(winner.id);
 
     const failed = rejected[0] as PromiseRejectedResult;
-    expect(String(failed.reason)).toMatch(/Not enough stock for Concurrent Lager/);
+    expect(String(failed.reason)).toMatch(/Not enough Bar stock for Concurrent Lager/);
     expect(String(failed.reason)).toMatch(/Available: 1/);
 
     const final = await prisma.product.findUnique({ where: { id: product.id } });

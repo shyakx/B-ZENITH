@@ -6,20 +6,19 @@ import { prisma } from "@/lib/prisma";
 import { createOrder } from "@/services/orders";
 import { listOpenOrdersByTable } from "@/services/orders";
 import { markPayLater, recordPayment, recordTablePayment, settleCredit } from "@/services/payments";
+import { createIsolatedPosProduct, cleanupInventoryArtifacts } from "./inventory-helpers";
 
 loadEnvConfig(process.cwd());
 
 const createdOrderIds: string[] = [];
 const createdTableIds: string[] = [];
-let heinekenId = "";
-let startingStock = 0;
+let productId = "";
+let categoryId = "";
 
 beforeAll(async () => {
-  const heineken = await prisma.product.findFirst({ where: { name: "Heineken", active: true } });
-  if (heineken) {
-    heinekenId = heineken.id;
-    startingStock = heineken.stockQuantity;
-  }
+  const isolated = await createIsolatedPosProduct({ sellingPrice: 2000, barQuantity: 50 });
+  productId = isolated.product.id;
+  categoryId = isolated.category.id;
 });
 
 afterAll(async () => {
@@ -45,11 +44,13 @@ afterAll(async () => {
   if (createdTableIds.length > 0) {
     await prisma.serviceTable.deleteMany({ where: { id: { in: createdTableIds } } });
   }
-  if (heinekenId) {
-    await prisma.product.update({
-      where: { id: heinekenId },
-      data: { stockQuantity: startingStock },
-    });
+  if (productId) {
+    await prisma.inventoryMovement.deleteMany({ where: { productId } });
+    await cleanupInventoryArtifacts([productId]);
+    await prisma.product.deleteMany({ where: { id: productId } });
+  }
+  if (categoryId) {
+    await prisma.category.deleteMany({ where: { id: categoryId } });
   }
   await prisma.$disconnect();
 });
@@ -63,9 +64,9 @@ describe("cashier payments against the database", () => {
       data: { name: `TEST-PAY-${Date.now()}`, sortOrder: 9001 },
     });
     createdTableIds.push(table.id);
-    const heineken = await prisma.product.findUnique({ where: { id: heinekenId } });
-    if (!john || !mary || !grace || !heineken) {
-      throw new Error("Seed data is required (John, Mary, Grace, Heineken).");
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!john || !mary || !grace || !product) {
+      throw new Error("Seed data is required (John, Mary, Grace).");
     }
 
     expect(hasPermission("CASHIER", "createOrder")).toBe(false);
@@ -77,13 +78,13 @@ describe("cashier payments against the database", () => {
     const johnOrder = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 2 }],
+      items: [{ productId: product.id, quantity: 2 }],
       idempotencyKey: `test-cash-john-${stamp}`,
     });
     const maryOrder = await createOrder({
       waiterId: mary.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 3 }],
+      items: [{ productId: product.id, quantity: 3 }],
       idempotencyKey: `test-cash-mary-${stamp}`,
     });
     createdOrderIds.push(johnOrder.id, maryOrder.id);
@@ -131,13 +132,13 @@ describe("cashier payments against the database", () => {
     const laterA = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 2 }],
+      items: [{ productId: product.id, quantity: 2 }],
       idempotencyKey: `test-cash-table-a-${stamp}`,
     });
     const laterB = await createOrder({
       waiterId: mary.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 3 }],
+      items: [{ productId: product.id, quantity: 3 }],
       idempotencyKey: `test-cash-table-b-${stamp}`,
     });
     createdOrderIds.push(laterA.id, laterB.id);
@@ -178,7 +179,7 @@ describe("cashier payments against the database", () => {
     const creditOrder = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 1 }],
+      items: [{ productId: product.id, quantity: 1 }],
       idempotencyKey: `test-cash-later-${stamp}`,
     });
     createdOrderIds.push(creditOrder.id);
@@ -212,7 +213,7 @@ describe("cashier payments against the database", () => {
     const over = await createOrder({
       waiterId: mary.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 1 }],
+      items: [{ productId: product.id, quantity: 1 }],
       idempotencyKey: `test-cash-over-${stamp}`,
     });
     createdOrderIds.push(over.id);

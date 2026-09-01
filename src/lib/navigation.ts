@@ -36,9 +36,11 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
   ],
   MANAGER: [
     { href: "/manager", label: "Home" },
-    { href: "/manager/orders", label: "Orders" },
-    { href: "/manager/inventory", label: "Inventory" },
+    { href: "/manager/tables", label: "Tables" },
     { href: "/manager/products", label: "Products" },
+    { href: "/manager/inventory", label: "Inventory" },
+    { href: "/manager/purchases", label: "Receive Stock" },
+    { href: "/manager/orders", label: "Orders" },
     { href: "/manager/reports", label: "Reports" },
     { href: "/manager/maison", label: "Maison de Passage" },
   ],

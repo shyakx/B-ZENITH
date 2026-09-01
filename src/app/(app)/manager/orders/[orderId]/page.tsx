@@ -26,7 +26,7 @@ export default async function ManagerOrderDetailPage({
       </Link>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl text-zenith-gold">ORDER #{order.orderNumber}</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">ORDER #{order.orderNumber}</h1>
           <p className="mt-1">{formatDateTime(order.createdAt)}</p>
           <p className="mt-1 text-base">Table {order.table.name}</p>
           <p className="text-base">Waiter: {order.waiter.name}</p>

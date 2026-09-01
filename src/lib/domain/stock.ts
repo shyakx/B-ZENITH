@@ -46,3 +46,51 @@ export function nextStockAfterCount(counted: number): { next: number } {
 export function isLowStock(trackInventory: boolean, stockQuantity: number, threshold = 5): boolean {
   return trackInventory && stockQuantity <= threshold;
 }
+
+export function assertNonNegativeStock(quantity: number): void {
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    throw new Error("Stock quantity cannot be negative.");
+  }
+}
+
+export function convertPackToBase(packQuantity: number, baseQuantityPerPack: number): number {
+  assertPositiveQuantity(packQuantity, "Pack quantity");
+  if (!Number.isInteger(baseQuantityPerPack) || baseQuantityPerPack <= 0) {
+    throw new Error("Pack conversion must use a positive whole number of base units.");
+  }
+  return packQuantity * baseQuantityPerPack;
+}
+
+export function nextStockAfterTransferOut(current: number, quantity: number): number {
+  assertPositiveQuantity(quantity, "Transfer quantity");
+  if (current < quantity) {
+    throw new Error("Not enough stock to transfer.");
+  }
+  return current - quantity;
+}
+
+export function assertTransferQuantity(quantity: number): void {
+  assertPositiveQuantity(quantity, "Transfer quantity");
+}
+
+export function assertReceiptDestination(code: string): void {
+  if (code !== "MAIN") {
+    throw new Error("Stock can only be received into Main Stock.");
+  }
+}
+
+export function assertAllowedV1Transfer(fromCode: string, toCode: string): void {
+  if (fromCode === toCode) {
+    throw new Error("Source and destination must be different.");
+  }
+  if (fromCode !== "MAIN") {
+    throw new Error("Stock can only be transferred from Main Stock.");
+  }
+  if (toCode !== "BAR" && toCode !== "KITCHEN" && toCode !== "CAFE") {
+    throw new Error("Stock can only be transferred to Bar, Kitchen, or Cafe.");
+  }
+}
+
+export function saleStockMessage(productName: string, locationName: string, available: number): string {
+  return `Not enough ${locationName} stock for ${productName}. Available: ${available}. Transfer stock from Main Stock first.`;
+}

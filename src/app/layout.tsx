@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,43 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
+const title = "B-ZENITH | Restaurant, Bar & Cafe POS";
+const description = "B-ZENITH restaurant, bar and cafe POS and inventory management.";
+
 export const metadata: Metadata = {
-  title: "B-ZENITH",
-  description: "B-ZENITH bar and hospitality POS",
+  applicationName: "B-ZENITH",
+  title: {
+    default: title,
+    template: "%s | B-ZENITH",
+  },
+  description,
+  metadataBase: new URL("https://b-zenith.vercel.app"),
+  robots: { index: false, follow: false },
+  icons: {
+    icon: [{ url: "/favicon.ico" }, { url: "/brand/logo.png", type: "image/png" }],
+    apple: [{ url: "/brand/logo.png" }],
+  },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "B-ZENITH",
+    statusBarStyle: "default",
+  },
+  openGraph: {
+    title,
+    description,
+    siteName: "B-ZENITH",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title,
+    description,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#3d2314",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -11,7 +11,7 @@ export default async function StaffPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
-      <h1 className="font-display text-3xl text-zenith-gold">Staff</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">Staff</h1>
       <p className="mt-2 text-sm">Create an account, give the person a temporary PIN, then they log in as usual.</p>
 
       <section className="mt-6 rounded-2xl border border-zenith-border bg-white p-5">

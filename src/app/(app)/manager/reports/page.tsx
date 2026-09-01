@@ -4,9 +4,10 @@ import { formatRwf } from "@/lib/domain/money";
 import { currentOutstandingAmount } from "@/lib/manager-dashboard";
 import { PageHeader, StatCard } from "@/components/ui/PageHeader";
 import { VisibleDateRange } from "@/components/ui/VisibleDate";
-import { listOpenOrdersByTable } from "@/services/orders";
-import { listOutstanding } from "@/services/payments";
+import { payableOutstandingBalance } from "@/services/orders";
+import { listOutstanding, unsettledCreditTotal } from "@/services/payments";
 import { salesSummary } from "@/services/reports";
+import { inventoryValuation, listStock } from "@/services/inventory";
 
 export default async function ReportsPage({
   searchParams,
@@ -17,15 +18,17 @@ export default async function ReportsPage({
   const params = await searchParams;
   const from = params.from ? parseDateInput(params.from) : startOfDay();
   const to = params.to ? endOfDay(params.to) : endOfDay();
-  const [summary, outstandingCredits, openGroups] = await Promise.all([
+  const [summary, outstandingCredits, payableDue, creditDue, valuation, stock] = await Promise.all([
     salesSummary(from, to),
     listOutstanding(),
-    listOpenOrdersByTable(),
+    payableOutstandingBalance(),
+    unsettledCreditTotal(),
+    inventoryValuation(),
+    listStock(),
   ]);
-  const outstanding = currentOutstandingAmount(
-    openGroups.flatMap((group) => group.orders),
-    outstandingCredits,
-  );
+  const outstanding = currentOutstandingAmount([{ total: payableDue, paidAmount: 0 }], [
+    { amountOwed: creditDue },
+  ]);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
@@ -61,8 +64,8 @@ export default async function ReportsPage({
         <StatCard label="Outstanding now" value={formatRwf(outstanding)} />
       </div>
       <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-        <section className="min-w-0 rounded-2xl border border-zenith-border bg-white p-5">
-          <h2 className="mb-3 font-display text-2xl">Product sales</h2>
+        <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+          <h2 className="mb-3 font-display text-xl">Product sales</h2>
           {summary.products.slice(0, 15).map((product) => (
             <div key={product.name} className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
               <span>
@@ -72,8 +75,8 @@ export default async function ReportsPage({
             </div>
           ))}
         </section>
-        <section className="min-w-0 rounded-2xl border border-zenith-border bg-white p-5">
-          <h2 className="mb-3 font-display text-2xl">Waiters</h2>
+        <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+          <h2 className="mb-3 font-display text-xl">Waiters</h2>
           {summary.waiters.map((waiter) => (
             <div key={waiter.name} className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
               <span>
@@ -83,8 +86,8 @@ export default async function ReportsPage({
             </div>
           ))}
         </section>
-        <section className="min-w-0 rounded-2xl border border-zenith-border bg-white p-5">
-          <h2 className="mb-3 font-display text-2xl">Payments by cashier</h2>
+        <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+          <h2 className="mb-3 font-display text-xl">Payments by cashier</h2>
           {summary.cashiers.map((cashier) => (
             <div key={cashier.name} className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
               <span>
@@ -95,8 +98,8 @@ export default async function ReportsPage({
           ))}
           {summary.cashiers.length === 0 ? <p className="text-sm">No payments in this date range.</p> : null}
         </section>
-        <section className="min-w-0 rounded-2xl border border-zenith-border bg-white p-5">
-          <h2 className="mb-3 font-display text-2xl">Outstanding pay later</h2>
+        <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+          <h2 className="mb-3 font-display text-xl">Outstanding pay later</h2>
           {outstandingCredits.map((credit) => (
             <div key={credit.id} className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
               <span>
@@ -106,6 +109,25 @@ export default async function ReportsPage({
             </div>
           ))}
           {outstandingCredits.length === 0 ? <p className="text-sm">None.</p> : null}
+        </section>
+        <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+          <h2 className="mb-3 font-display text-xl">Inventory by location</h2>
+          <p className="mb-2 text-sm text-zenith-muted">Last-cost valuation: cost price × quantity.</p>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between"><span>Main</span><span>{formatRwf(valuation.byLocation.MAIN)}</span></div>
+            <div className="flex justify-between"><span>Bar</span><span>{formatRwf(valuation.byLocation.BAR)}</span></div>
+            <div className="flex justify-between"><span>Kitchen</span><span>{formatRwf(valuation.byLocation.KITCHEN)}</span></div>
+            <div className="flex justify-between"><span>Cafe</span><span>{formatRwf(valuation.byLocation.CAFE)}</span></div>
+            <div className="flex justify-between font-semibold"><span>Total</span><span>{formatRwf(valuation.total)}</span></div>
+          </div>
+          <div className="mt-3 text-sm">
+            {stock.slice(0, 8).map((product) => (
+              <div key={product.id} className="mb-1 flex justify-between gap-2">
+                <span>{product.name}</span>
+                <span>M{product.main} B{product.bar} K{product.kitchen} C{product.cafe}</span>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </div>

@@ -55,7 +55,7 @@ export default async function AccessPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
-      <h1 className="font-display text-3xl text-zenith-gold">Access</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">Access</h1>
       <p className="mt-2 text-sm">These four roles are fixed. Assign people. Do not invent extra roles.</p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

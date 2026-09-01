@@ -11,7 +11,7 @@ export default async function ManagerOrdersPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
-      <h1 className="font-display text-3xl text-zenith-gold">Orders</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">Orders</h1>
       <p className="mt-1 text-zenith-muted">All waiters. Each order stays separate.</p>
 
       <div className="mt-6 grid gap-3">
@@ -24,11 +24,11 @@ export default async function ManagerOrdersPage() {
           <Link
             key={order.id}
             href={`/manager/orders/${order.id}`}
-            className="block min-w-0 rounded-2xl border border-zenith-border bg-white p-4"
+            className="block min-w-0 rounded-xl border border-zenith-border bg-white p-3"
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-display text-2xl text-zenith-gold">#{order.orderNumber}</div>
+                <div className="text-lg font-semibold text-zenith-gold">#{order.orderNumber}</div>
                 <div className="mt-1 text-base">
                   {order.waiter.name} · Table {order.table.name}
                 </div>

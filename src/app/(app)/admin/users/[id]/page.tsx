@@ -26,7 +26,7 @@ export default async function StaffDetailPage({
       </Link>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl text-zenith-gold">{user.name}</h1>
+          <h1 className="font-display text-2xl text-zenith-gold">{user.name}</h1>
           <p className="mt-1 text-sm font-semibold uppercase tracking-wider">{user.role}</p>
           <p className="mt-1 text-sm">Created {formatDate(user.createdAt)}</p>
         </div>

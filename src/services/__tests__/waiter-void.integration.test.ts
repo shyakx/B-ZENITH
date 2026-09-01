@@ -3,19 +3,20 @@ import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { cancelOrder, createOrder } from "@/services/orders";
+import { cleanupInventoryArtifacts, createIsolatedPosProduct } from "./inventory-helpers";
 
 loadEnvConfig(process.cwd());
 
 const createdOrderIds: string[] = [];
-let heinekenId = "";
+let productId = "";
+let categoryId = "";
 let startingStock = 0;
 
 beforeAll(async () => {
-  const heineken = await prisma.product.findFirst({ where: { name: "Heineken", active: true } });
-  if (heineken) {
-    heinekenId = heineken.id;
-    startingStock = heineken.stockQuantity;
-  }
+  const isolated = await createIsolatedPosProduct({ sellingPrice: 2000, barQuantity: 30 });
+  productId = isolated.product.id;
+  categoryId = isolated.category.id;
+  startingStock = isolated.barQuantity;
 });
 
 afterAll(async () => {
@@ -30,11 +31,13 @@ afterAll(async () => {
     await prisma.orderItem.deleteMany({ where: { orderId: { in: createdOrderIds } } });
     await prisma.order.deleteMany({ where: { id: { in: createdOrderIds } } });
   }
-  if (heinekenId) {
-    await prisma.product.update({
-      where: { id: heinekenId },
-      data: { stockQuantity: startingStock },
-    });
+  if (productId) {
+    await prisma.inventoryMovement.deleteMany({ where: { productId } });
+    await cleanupInventoryArtifacts([productId]);
+    await prisma.product.deleteMany({ where: { id: productId } });
+  }
+  if (categoryId) {
+    await prisma.category.deleteMany({ where: { id: categoryId } });
   }
   await prisma.$disconnect();
 });
@@ -44,20 +47,20 @@ describe("waiter void + order again against the database", () => {
     const john = await prisma.user.findFirst({ where: { name: "John", role: "WAITER" } });
     const mary = await prisma.user.findFirst({ where: { name: "Mary", role: "WAITER" } });
     const table = await prisma.serviceTable.findFirst({ where: { active: true } });
-    const heineken = await prisma.product.findUnique({ where: { id: heinekenId } });
-    if (!john || !mary || !table || !heineken) {
-      throw new Error("Seed data is required for this test (John, Mary, a table, Heineken).");
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!john || !mary || !table || !product) {
+      throw new Error("Seed data is required for this test (John, Mary, a table).");
     }
 
     const first = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 5 }],
+      items: [{ productId: product.id, quantity: 5 }],
       idempotencyKey: `test-void-first-${Date.now()}`,
     });
     createdOrderIds.push(first.id);
 
-    const afterSale = await prisma.product.findUnique({ where: { id: heineken.id } });
+    const afterSale = await prisma.product.findUnique({ where: { id: product.id } });
     expect(afterSale?.stockQuantity).toBe(startingStock - 5);
 
     await expect(
@@ -66,7 +69,7 @@ describe("waiter void + order again against the database", () => {
 
     const stillOpen = await prisma.order.findUnique({ where: { id: first.id } });
     expect(stillOpen?.status).toBe(OrderStatus.OPEN);
-    const stockAfterFailedTheft = await prisma.product.findUnique({ where: { id: heineken.id } });
+    const stockAfterFailedTheft = await prisma.product.findUnique({ where: { id: product.id } });
     expect(stockAfterFailedTheft?.stockQuantity).toBe(startingStock - 5);
 
     const voided = await cancelOrder({
@@ -82,19 +85,19 @@ describe("waiter void + order again against the database", () => {
     expect(history?.status).toBe(OrderStatus.CANCELLED);
     expect(history?.orderNumber).toBe(first.orderNumber);
 
-    const afterVoid = await prisma.product.findUnique({ where: { id: heineken.id } });
+    const afterVoid = await prisma.product.findUnique({ where: { id: product.id } });
     expect(afterVoid?.stockQuantity).toBe(startingStock);
 
     await expect(
       cancelOrder({ orderId: first.id, userId: john.id, ownerWaiterId: john.id }),
     ).rejects.toThrow("This order is already cancelled.");
-    const afterDuplicate = await prisma.product.findUnique({ where: { id: heineken.id } });
+    const afterDuplicate = await prisma.product.findUnique({ where: { id: product.id } });
     expect(afterDuplicate?.stockQuantity).toBe(startingStock);
 
     const second = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 2 }],
+      items: [{ productId: product.id, quantity: 2 }],
       idempotencyKey: `test-void-second-${Date.now()}`,
     });
     createdOrderIds.push(second.id);
@@ -108,23 +111,23 @@ describe("waiter void + order again against the database", () => {
     const originalStillVoided = await prisma.order.findUnique({ where: { id: first.id } });
     expect(originalStillVoided?.status).toBe(OrderStatus.CANCELLED);
 
-    const afterReplacement = await prisma.product.findUnique({ where: { id: heineken.id } });
+    const afterReplacement = await prisma.product.findUnique({ where: { id: product.id } });
     expect(afterReplacement?.stockQuantity).toBe(startingStock - 2);
   });
 
   it("rejects waiter void after partial or full payment without changing stock", async () => {
     const john = await prisma.user.findFirst({ where: { name: "John", role: "WAITER" } });
     const table = await prisma.serviceTable.findFirst({ where: { active: true } });
-    const heineken = await prisma.product.findUnique({ where: { id: heinekenId } });
-    if (!john || !table || !heineken) {
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!john || !table || !product) {
       throw new Error("Seed data is required for this test.");
     }
 
-    const stockBefore = heineken.stockQuantity;
+    const stockBefore = product.stockQuantity;
     const order = await createOrder({
       waiterId: john.id,
       tableId: table.id,
-      items: [{ productId: heineken.id, quantity: 1 }],
+      items: [{ productId: product.id, quantity: 1 }],
       idempotencyKey: `test-void-paid-${Date.now()}`,
     });
     createdOrderIds.push(order.id);
@@ -133,7 +136,7 @@ describe("waiter void + order again against the database", () => {
       where: { id: order.id },
       data: { paidAmount: 1000, paymentStatus: PaymentStatus.PARTIALLY_PAID },
     });
-    const afterPartialSale = await prisma.product.findUnique({ where: { id: heineken.id } });
+    const afterPartialSale = await prisma.product.findUnique({ where: { id: product.id } });
     const stockAfterSubmit = afterPartialSale?.stockQuantity ?? 0;
 
     await expect(
@@ -148,7 +151,7 @@ describe("waiter void + order again against the database", () => {
       cancelOrder({ orderId: order.id, userId: john.id, ownerWaiterId: john.id }),
     ).rejects.toThrow("A paid or partially paid order cannot be voided.");
 
-    const stockAfter = await prisma.product.findUnique({ where: { id: heineken.id } });
+    const stockAfter = await prisma.product.findUnique({ where: { id: product.id } });
     expect(stockAfter?.stockQuantity).toBe(stockAfterSubmit);
     expect(stockAfterSubmit).toBe(stockBefore - 1);
     const stillThere = await prisma.order.findUnique({ where: { id: order.id } });

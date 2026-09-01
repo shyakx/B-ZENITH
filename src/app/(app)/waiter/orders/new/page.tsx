@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth/current-user";
 import { NewOrderScreen } from "@/components/pos/NewOrderScreen";
-import { listActiveProducts, listCategories, listTables } from "@/services/products";
+import { listPosCatalog, listTables } from "@/services/products";
 import { draftCartFromOrder } from "@/lib/domain/void-order";
 import { getOrderById } from "@/services/orders";
 
@@ -11,10 +11,9 @@ export default async function NewOrderPage({
 }) {
   const user = await requireRole("WAITER");
   const { again } = await searchParams;
-  const [tables, products, categories] = await Promise.all([
+  const [{ categories, products }, tables] = await Promise.all([
+    listPosCatalog(),
     listTables(true),
-    listActiveProducts(),
-    listCategories(),
   ]);
 
   let initialTableId: string | undefined;
@@ -39,7 +38,7 @@ export default async function NewOrderPage({
     <NewOrderScreen
       tables={tables.map((table) => ({ id: table.id, name: table.name }))}
       products={products}
-      categories={categories.map((category) => ({ id: category.id, name: category.name }))}
+      categories={categories}
       initialTableId={initialTableId}
       initialLines={initialLines}
     />

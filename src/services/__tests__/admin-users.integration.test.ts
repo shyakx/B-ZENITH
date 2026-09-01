@@ -73,9 +73,13 @@ describe("admin staff management against the database", () => {
     });
     createdUserIds.push(created.id);
 
-    const existingOrders = await prisma.order.count();
-    const existingPayments = await prisma.payment.count();
-    const existingMoves = await prisma.inventoryMovement.count();
+    const ordersForUser = () => prisma.order.count({ where: { waiterId: created.id } });
+    const paymentsForUser = () => prisma.payment.count({ where: { cashierId: created.id } });
+    const movesForUser = () => prisma.inventoryMovement.count({ where: { userId: created.id } });
+
+    expect(await ordersForUser()).toBe(0);
+    expect(await paymentsForUser()).toBe(0);
+    expect(await movesForUser()).toBe(0);
 
     const changed = await updateUser({
       id: created.id,
@@ -134,9 +138,9 @@ describe("admin staff management against the database", () => {
     });
     expect(activated).toBeTruthy();
 
-    expect(await prisma.order.count()).toBe(existingOrders);
-    expect(await prisma.payment.count()).toBe(existingPayments);
-    expect(await prisma.inventoryMovement.count()).toBe(existingMoves);
+    expect(await ordersForUser()).toBe(0);
+    expect(await paymentsForUser()).toBe(0);
+    expect(await movesForUser()).toBe(0);
   });
 
   it("does not let an admin deactivate themselves", async () => {

@@ -25,7 +25,7 @@ export default async function TableBillPage({
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl text-zenith-gold">TABLE {table.name}</h1>
+          <h1 className="font-display text-2xl text-zenith-gold">TABLE {table.name}</h1>
           <p className="mt-1 text-zenith-muted">Pay one order or the remaining table balance.</p>
         </div>
         {orders.length > 0 ? (

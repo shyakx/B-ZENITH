@@ -18,7 +18,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
   return (
     <button
-      className={`touch-btn inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-base font-semibold transition-colors disabled:cursor-not-allowed ${styles[variant]} ${className}`}
+      className={`touch-btn inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold focus-visible:ring-offset-1 disabled:cursor-not-allowed ${styles[variant]} ${className}`}
       {...props}
     />
   );

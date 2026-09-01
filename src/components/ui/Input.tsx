@@ -6,7 +6,7 @@ import type {
 } from "react";
 
 const field =
-  "w-full rounded-2xl border border-zenith-border bg-white px-4 py-3 text-zenith-cream outline-none placeholder:text-zenith-muted focus:border-zenith-gold";
+  "min-h-10 w-full rounded-xl border border-zenith-border bg-white px-3 py-2 text-sm text-zenith-cream outline-none placeholder:text-zenith-muted focus:border-zenith-gold focus-visible:ring-2 focus-visible:ring-zenith-gold";
 
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`${field} ${className}`} {...props} />;
@@ -28,7 +28,7 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="block space-y-2">
+    <label className="block space-y-1.5">
       <span className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label}</span>
       {children}
     </label>

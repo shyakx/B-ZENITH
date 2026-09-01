@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:production-setup": "tsx prisma/production-setup.ts",
+    "db:production-catalog": "tsx prisma/production-catalog-import.ts",
     "db:setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:start": "powershell -File scripts/start-db.ps1",

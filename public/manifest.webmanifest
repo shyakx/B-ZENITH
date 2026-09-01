@@ -1,0 +1,22 @@
+{
+  "name": "B-ZENITH",
+  "short_name": "B-ZENITH",
+  "description": "B-ZENITH restaurant, bar and cafe POS and inventory management.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3d2314",
+  "icons": [
+    {
+      "src": "/brand/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

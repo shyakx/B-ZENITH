@@ -408,12 +408,46 @@ export async function settleCredit(input: {
 export async function listOutstanding() {
   return prisma.creditRecord.findMany({
     where: { settled: false },
-    include: {
-      order: { include: orderInclude },
-      recordedBy: { select: { id: true, name: true } },
+    select: {
+      id: true,
+      customerName: true,
+      customerPhone: true,
+      amountOwed: true,
+      createdAt: true,
+      order: {
+        select: {
+          orderNumber: true,
+          createdAt: true,
+          table: { select: { name: true } },
+          waiter: { select: { name: true } },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function countOutstandingCredits() {
+  return prisma.creditRecord.count({ where: { settled: false } });
+}
+
+export async function unsettledCreditTotal() {
+  const result = await prisma.creditRecord.aggregate({
+    where: { settled: false },
+    _sum: { amountOwed: true },
+  });
+  return result._sum.amountOwed ?? 0;
+}
+
+export async function sumPaymentsReceived(from: Date, to: Date, method?: PaymentMethod) {
+  const result = await prisma.payment.aggregate({
+    where: {
+      createdAt: { gte: from, lte: to },
+      ...(method ? { method } : {}),
+    },
+    _sum: { amount: true },
+  });
+  return result._sum.amount ?? 0;
 }
 
 export async function listPayments(from: Date, to: Date) {
@@ -432,9 +466,10 @@ export async function listPayments(from: Date, to: Date) {
   });
 }
 
-export async function listRecentPayments(take = 8) {
+export async function listRecentPayments(take = 8, from?: Date, to?: Date) {
   return prisma.payment.findMany({
     take,
+    where: from && to ? { createdAt: { gte: from, lte: to } } : undefined,
     include: {
       cashier: { select: { id: true, name: true } },
       order: {

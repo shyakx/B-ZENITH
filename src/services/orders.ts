@@ -1,11 +1,17 @@
 import { MovementType, OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
+import { LOCATION_CODES } from "@/lib/domain/locations";
 import { sumLineTotals } from "@/lib/domain/money";
 import { CURRENT_TABLE_PAYMENT_STATUSES } from "@/lib/domain/payments";
-import { nextStockAfterSale } from "@/lib/domain/stock";
+import { nextStockAfterIncrease, nextStockAfterSale, saleStockMessage } from "@/lib/domain/stock";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
-import { lockProductsForUpdate } from "@/lib/stock-lock";
+import { lockProductStocksForUpdate } from "@/lib/stock-lock";
+import {
+  applyStockChange,
+  ensureTrackedProductStocks,
+  rethrowDomain,
+} from "@/services/stock";
 
 const currentTableBillWhere: Prisma.OrderWhereInput = {
   status: { not: OrderStatus.CANCELLED },
@@ -23,7 +29,40 @@ export const orderInclude = {
   credit: true,
 } satisfies Prisma.OrderInclude;
 
+export const orderListInclude = {
+  waiter: { select: { id: true, name: true } },
+  table: { select: { id: true, name: true } },
+} satisfies Prisma.OrderInclude;
+
+export const orderWaiterListInclude = {
+  waiter: { select: { id: true, name: true } },
+  table: { select: { id: true, name: true } },
+  items: { select: { id: true, productId: true, name: true, quantity: true } },
+} satisfies Prisma.OrderInclude;
+
 export type OrderWithDetails = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
+export type OrderListItem = Prisma.OrderGetPayload<{ include: typeof orderListInclude }>;
+export type OrderWaiterListItem = Prisma.OrderGetPayload<{ include: typeof orderWaiterListInclude }>;
+
+const orderListFilter = (filter: {
+  waiterId?: string;
+  tableId?: string;
+  openOnly?: boolean;
+  unpaidOnly?: boolean;
+  from?: Date;
+  to?: Date;
+}): Prisma.OrderWhereInput => ({
+  waiterId: filter.waiterId,
+  tableId: filter.tableId,
+  status: filter.openOnly ? OrderStatus.OPEN : undefined,
+  paymentStatus: filter.unpaidOnly
+    ? { in: [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID, PaymentStatus.PAY_LATER] }
+    : undefined,
+  createdAt: {
+    gte: filter.from,
+    lte: filter.to,
+  },
+});
 
 type OrderItemInput = {
   productId: string;
@@ -57,7 +96,8 @@ export async function createOrder(input: {
 
   const uniqueIds = [...new Set(input.items.map((item) => item.productId))];
   const products = await prisma.product.findMany({
-    where: { id: { in: uniqueIds }, active: true },
+    where: { id: { in: uniqueIds }, active: true, sellOnPos: true },
+    include: { defaultStockLocation: true },
   });
   if (products.length !== uniqueIds.length) {
     throw new AppError("One or more products are no longer available.");
@@ -87,35 +127,50 @@ export async function createOrder(input: {
         data: { value: { increment: 1 } },
       });
 
-      await lockProductsForUpdate(
+      const tracked = lines.filter((line) => line.product.trackInventory);
+      for (const line of tracked) {
+        if (!line.product.sellOnPos) {
+          throw new AppError(`${line.product.name} cannot be sold on POS.`);
+        }
+        const location = line.product.defaultStockLocation;
+        if (!location || !location.active) {
+          throw new AppError(`${line.product.name} has no operational stock location.`);
+        }
+        if (location.code === LOCATION_CODES.MAIN || location.kind !== "OPERATIONAL") {
+          throw new AppError("POS cannot take stock from Main Stock.");
+        }
+        await ensureTrackedProductStocks(tx, line.product.id);
+      }
+
+      await lockProductStocksForUpdate(
         tx,
-        lines.filter((line) => line.product.trackInventory).map((line) => line.product.id),
+        tracked.map((line) => ({
+          productId: line.product.id,
+          locationId: line.product.defaultStockLocation!.id,
+        })),
       );
 
-      for (const line of lines) {
-        if (!line.product.trackInventory) continue;
-        const current = await tx.product.findUnique({ where: { id: line.product.id } });
-        if (!current) throw new AppError("Product not found.");
-        if (current.stockQuantity < line.quantity) {
-          throw new AppError(
-            `Not enough stock for ${current.name}. Available: ${current.stockQuantity}.`,
-          );
+      const running = new Map<string, number>();
+      for (const line of tracked) {
+        const location = line.product.defaultStockLocation!;
+        const key = `${line.product.id}:${location.id}`;
+        if (!running.has(key)) {
+          const stock = await tx.productStock.findUnique({
+            where: {
+              productId_locationId: { productId: line.product.id, locationId: location.id },
+            },
+          });
+          running.set(key, stock?.quantity ?? 0);
         }
-        const next = nextStockAfterSale(current.stockQuantity, line.quantity);
-        await tx.product.update({
-          where: { id: current.id },
-          data: { stockQuantity: next },
-        });
-        await tx.inventoryMovement.create({
-          data: {
-            productId: current.id,
-            quantity: -line.quantity,
-            type: MovementType.SALE,
-            reason: "Order sale",
-            userId: input.waiterId,
-            reference: String(sequence.value),
-          },
-        });
+        const available = running.get(key) ?? 0;
+        if (available < line.quantity) {
+          throw new AppError(saleStockMessage(line.product.name, location.name, available));
+        }
+        try {
+          running.set(key, nextStockAfterSale(available, line.quantity));
+        } catch {
+          throw new AppError(saleStockMessage(line.product.name, location.name, available));
+        }
       }
 
       const order = await tx.order.create({
@@ -136,11 +191,45 @@ export async function createOrder(input: {
               unitPrice: line.unitPrice,
               quantity: line.quantity,
               lineTotal: line.lineTotal,
+              stockLocationId: line.product.trackInventory
+                ? line.product.defaultStockLocation?.id ?? null
+                : null,
             })),
           },
         },
         include: orderInclude,
       });
+
+      for (const item of order.items) {
+        const product = productMap.get(item.productId);
+        if (!product?.trackInventory) continue;
+        const location = product.defaultStockLocation!;
+        const stock = await tx.productStock.findUnique({
+          where: { productId_locationId: { productId: product.id, locationId: location.id } },
+        });
+        const available = stock?.quantity ?? 0;
+        if (available < item.quantity) {
+          throw new AppError(saleStockMessage(product.name, location.name, available));
+        }
+        let next: number;
+        try {
+          next = nextStockAfterSale(available, item.quantity);
+        } catch {
+          throw new AppError(saleStockMessage(product.name, location.name, available));
+        }
+        await applyStockChange(tx, {
+          productId: product.id,
+          locationId: location.id,
+          next,
+          delta: -item.quantity,
+          type: MovementType.SALE,
+          userId: input.waiterId,
+          reason: "Order sale",
+          reference: String(sequence.value),
+          orderId: order.id,
+          orderItemId: item.id,
+        });
+      }
 
       await writeAudit({
         tx,
@@ -182,7 +271,10 @@ export async function cancelOrder(input: {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
-      include: { items: true, table: { select: { name: true } } },
+      include: {
+        items: true,
+        table: { select: { name: true } },
+      },
     });
     if (!order) throw new AppError("Order not found.");
     if (input.ownerWaiterId && order.waiterId !== input.ownerWaiterId) {
@@ -199,22 +291,56 @@ export async function cancelOrder(input: {
       throw new AppError("A paid or partially paid order cannot be cancelled.");
     }
 
+    const restore: { itemId: string; productId: string; locationId: string; quantity: number }[] = [];
     for (const item of order.items) {
-      const product = await tx.product.findUnique({ where: { id: item.productId } });
-      if (!product || !product.trackInventory) continue;
-      await tx.product.update({
-        where: { id: product.id },
-        data: { stockQuantity: { increment: item.quantity } },
+      const product = await tx.product.findUnique({
+        where: { id: item.productId },
+        include: { defaultStockLocation: true },
       });
-      await tx.inventoryMovement.create({
-        data: {
-          productId: product.id,
-          quantity: item.quantity,
-          type: MovementType.VOID_RESTORE,
-          reason: "Cancelled order",
-          userId: input.userId,
-          reference: String(order.orderNumber),
-        },
+      if (!product || !product.trackInventory) continue;
+      const locationId = item.stockLocationId ?? product.defaultStockLocationId;
+      const location = locationId
+        ? await tx.stockLocation.findUnique({ where: { id: locationId } })
+        : null;
+      if (!location || !location.active || location.code === LOCATION_CODES.MAIN || location.kind !== "OPERATIONAL") {
+        throw new AppError(`Cannot restore ${product.name} to an operational location.`);
+      }
+      await ensureTrackedProductStocks(tx, product.id);
+      restore.push({
+        itemId: item.id,
+        productId: product.id,
+        locationId: location.id,
+        quantity: item.quantity,
+      });
+    }
+
+    await lockProductStocksForUpdate(
+      tx,
+      restore.map((row) => ({ productId: row.productId, locationId: row.locationId })),
+    );
+
+    for (const row of restore) {
+      const stock = await tx.productStock.findUnique({
+        where: { productId_locationId: { productId: row.productId, locationId: row.locationId } },
+      });
+      if (!stock) throw new AppError("Stock record not found.");
+      let next: number;
+      try {
+        next = nextStockAfterIncrease(stock.quantity, row.quantity);
+      } catch (error) {
+        rethrowDomain(error);
+      }
+      await applyStockChange(tx, {
+        productId: row.productId,
+        locationId: row.locationId,
+        next,
+        delta: row.quantity,
+        type: MovementType.VOID_RESTORE,
+        userId: input.userId,
+        reason: "Cancelled order",
+        reference: String(order.orderNumber),
+        orderId: order.id,
+        orderItemId: row.itemId,
       });
     }
 
@@ -260,7 +386,7 @@ export async function getOrderByNumber(orderNumber: number) {
   });
 }
 
-export async function listOrders(filter: {
+type OrderListFilter = {
   waiterId?: string;
   tableId?: string;
   openOnly?: boolean;
@@ -268,23 +394,70 @@ export async function listOrders(filter: {
   from?: Date;
   to?: Date;
   take?: number;
-}) {
+};
+
+export async function listOrders(filter: OrderListFilter & { withItems: true }): Promise<OrderWaiterListItem[]>;
+export async function listOrders(filter: OrderListFilter & { withItems?: false }): Promise<OrderListItem[]>;
+export async function listOrders(filter: OrderListFilter & { withItems?: boolean }) {
+  const where = orderListFilter(filter);
+  const take = filter.take ?? 200;
+  if (filter.withItems) {
+    return prisma.order.findMany({
+      where,
+      include: orderWaiterListInclude,
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+  }
   return prisma.order.findMany({
-    where: {
-      waiterId: filter.waiterId,
-      tableId: filter.tableId,
-      status: filter.openOnly ? OrderStatus.OPEN : undefined,
-      paymentStatus: filter.unpaidOnly
-        ? { in: [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID, PaymentStatus.PAY_LATER] }
-        : undefined,
-      createdAt: {
-        gte: filter.from,
-        lte: filter.to,
-      },
-    },
-    include: orderInclude,
+    where,
+    include: orderListInclude,
     orderBy: { createdAt: "desc" },
-    take: filter.take ?? 200,
+    take,
+  });
+}
+
+export async function todayLiveOrderTotals(from: Date, to: Date) {
+  const where: Prisma.OrderWhereInput = {
+    createdAt: { gte: from, lte: to },
+    status: { not: OrderStatus.CANCELLED },
+  };
+  const [ordersToday, sales] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.aggregate({ where, _sum: { total: true } }),
+  ]);
+  return { ordersToday, salesToday: sales._sum.total ?? 0 };
+}
+
+export async function payableOutstandingBalance() {
+  const orders = await prisma.order.findMany({
+    where: currentTableBillWhere,
+    select: { total: true, paidAmount: true },
+  });
+  return orders.reduce((sum, order) => sum + Math.max(0, order.total - order.paidAmount), 0);
+}
+
+export async function countOpenBillsByStatus() {
+  const groups = await prisma.order.groupBy({
+    by: ["paymentStatus"],
+    where: currentTableBillWhere,
+    _count: { _all: true },
+  });
+  const counts = Object.fromEntries(groups.map((group) => [group.paymentStatus, group._count._all]));
+  return {
+    unpaidBills: counts[PaymentStatus.UNPAID] ?? 0,
+    partialBills: counts[PaymentStatus.PARTIALLY_PAID] ?? 0,
+  };
+}
+
+export async function waiterTodaySnapshot(waiterId: string, from: Date, to: Date) {
+  return prisma.order.findMany({
+    where: { waiterId, createdAt: { gte: from, lte: to } },
+    select: {
+      tableId: true,
+      table: { select: { name: true } },
+      items: { select: { quantity: true } },
+    },
   });
 }
 
@@ -307,11 +480,11 @@ export async function getCurrentTableBill(tableId: string) {
 export async function listOpenOrdersByTable() {
   const orders = await prisma.order.findMany({
     where: currentTableBillWhere,
-    include: orderInclude,
+    include: orderListInclude,
     orderBy: [{ table: { sortOrder: "asc" } }, { orderNumber: "asc" }],
   });
 
-  const groups = new Map<string, { tableId: string; tableName: string; orders: OrderWithDetails[] }>();
+  const groups = new Map<string, { tableId: string; tableName: string; orders: OrderListItem[] }>();
   for (const order of orders) {
     const current = groups.get(order.tableId) ?? {
       tableId: order.tableId,

@@ -2,92 +2,106 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatDateTime, startOfDay, endOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
-import { currentOutstandingAmount, dailyBusinessTotals } from "@/lib/manager-dashboard";
+import { currentOutstandingAmount } from "@/lib/manager-dashboard";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { listStock, listMovements } from "@/services/inventory";
-import { listOrders } from "@/services/orders";
-import { listOutstanding, listPayments, listRecentPayments } from "@/services/payments";
+import { listOrders, payableOutstandingBalance, todayLiveOrderTotals } from "@/services/orders";
+import { listRecentPayments, sumPaymentsReceived, unsettledCreditTotal } from "@/services/payments";
 
 export default async function ManagerDashboardPage() {
   await requireRole("MANAGER");
   const from = startOfDay();
   const to = endOfDay();
-  const [todayOrders, openOrders, todayPayments, outstandingCredits, lowStock, recentOrders, recentPayments, movements] =
-    await Promise.all([
-      listOrders({ from, to }),
-      listOrders({ openOnly: true, take: 20 }),
-      listPayments(from, to),
-      listOutstanding(),
-      listStock(true),
-      listOrders({ take: 5 }),
-      listRecentPayments(5),
-      listMovements(5),
-    ]);
+  const [
+    liveTotals,
+    paidToday,
+    payableDue,
+    creditDue,
+    openOrders,
+    lowStock,
+    recentOrders,
+    recentPayments,
+    movements,
+  ] = await Promise.all([
+    todayLiveOrderTotals(from, to),
+    sumPaymentsReceived(from, to),
+    payableOutstandingBalance(),
+    unsettledCreditTotal(),
+    listOrders({ openOnly: true, take: 20 }),
+    listStock(true),
+    listOrders({ take: 5 }),
+    listRecentPayments(5),
+    listMovements(5),
+  ]);
 
-  const liveToday = todayOrders.filter((order) => order.status !== "CANCELLED");
-  const totals = dailyBusinessTotals(liveToday, todayPayments);
-  const openDue = openOrders.filter((order) => ["UNPAID", "PARTIALLY_PAID"].includes(order.paymentStatus));
-  const outstanding = currentOutstandingAmount(openDue, outstandingCredits);
+  const totals = {
+    ordersToday: liveTotals.ordersToday,
+    salesToday: liveTotals.salesToday,
+    paidToday,
+  };
+  const outstanding = currentOutstandingAmount([{ total: payableDue, paidAmount: 0 }], [
+    { amountOwed: creditDue },
+  ]);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
-      <h1 className="font-display text-3xl text-zenith-gold">Manager Dashboard</h1>
-      <div className="mt-2">
+      <h1 className="font-display text-2xl text-zenith-gold">Manager Dashboard</h1>
+      <div className="mt-1">
         <VisibleDate />
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-5">
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-3xl text-zenith-gold">{totals.ordersToday}</div>
+      <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-5">
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-2xl font-semibold text-zenith-gold">{totals.ordersToday}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Orders today
           </div>
         </div>
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-2xl text-zenith-gold sm:text-3xl">{formatRwf(totals.salesToday)}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(totals.salesToday)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Sales today
           </div>
         </div>
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-2xl text-zenith-gold sm:text-3xl">{formatRwf(totals.paidToday)}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(totals.paidToday)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Paid today
           </div>
         </div>
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-2xl text-zenith-gold sm:text-3xl">{formatRwf(outstanding)}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(outstanding)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Outstanding
           </div>
         </div>
-        <div className="rounded-2xl border border-zenith-border bg-white p-4">
-          <div className="font-display text-3xl text-zenith-gold">{lowStock.length}</div>
+        <div className="rounded-xl border border-zenith-border bg-white p-3">
+          <div className="text-2xl font-semibold text-zenith-gold">{lowStock.length}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Low stock
           </div>
         </div>
       </div>
 
-      <section className="mt-8 min-w-0">
-        <h2 className="font-display text-2xl">Open orders</h2>
+      <section className="mt-6 min-w-0">
+        <h2 className="font-display text-xl">Open orders</h2>
         {openOrders.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-zenith-border bg-white px-4 py-6 font-semibold">
+          <p className="mt-3 rounded-xl border border-zenith-border bg-white px-4 py-5 font-semibold">
             No open orders.
           </p>
         ) : (
-          <div className="mt-3 grid gap-3">
+          <div className="mt-3 grid gap-2">
             {openOrders.map((order) => (
               <Link
                 key={order.id}
                 href={`/manager/orders/${order.id}`}
-                className="block min-w-0 rounded-2xl border border-zenith-border bg-white p-4"
+                className="block min-w-0 rounded-xl border border-zenith-border bg-white p-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-display text-2xl text-zenith-gold">#{order.orderNumber}</div>
-                    <div className="mt-1 text-sm">
+                    <div className="text-lg font-semibold text-zenith-gold">#{order.orderNumber}</div>
+                    <div className="mt-0.5 text-sm">
                       Table {order.table.name} · {order.waiter.name}
                     </div>
                     <div className="text-sm">{formatDateTime(order.createdAt)}</div>
@@ -97,7 +111,7 @@ export default async function ManagerDashboardPage() {
                     <PaymentBadge status={order.paymentStatus} />
                   </div>
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Total</div>
                     <div className="font-semibold">{formatRwf(order.total)}</div>
@@ -119,15 +133,15 @@ export default async function ManagerDashboardPage() {
         )}
       </section>
 
-      <section className="mt-8 grid min-w-0 gap-6 lg:grid-cols-3">
+      <section className="mt-6 grid min-w-0 gap-5 lg:grid-cols-3">
         <div className="min-w-0">
-          <h2 className="font-display text-2xl">Recent orders</h2>
+          <h2 className="font-display text-xl">Recent orders</h2>
           <div className="mt-3 space-y-2">
             {recentOrders.map((order) => (
               <Link
                 key={order.id}
                 href={`/manager/orders/${order.id}`}
-                className="block rounded-2xl border border-zenith-border bg-white p-3"
+                className="block rounded-xl border border-zenith-border bg-white p-3"
               >
                 <div className="font-semibold">
                   #{order.orderNumber} · {order.waiter.name}
@@ -140,11 +154,11 @@ export default async function ManagerDashboardPage() {
           </div>
         </div>
         <div className="min-w-0">
-          <h2 className="font-display text-2xl">Recent payments</h2>
+          <h2 className="font-display text-xl">Recent payments</h2>
           <div className="mt-3 space-y-2">
             {recentPayments.length === 0 ? <p className="text-sm">No payments yet.</p> : null}
             {recentPayments.map((payment) => (
-              <div key={payment.id} className="rounded-2xl border border-zenith-border bg-white p-3">
+              <div key={payment.id} className="rounded-xl border border-zenith-border bg-white p-3">
                 <div className="font-semibold">
                   {formatRwf(payment.amount)} · #{payment.order.orderNumber}
                 </div>
@@ -154,11 +168,11 @@ export default async function ManagerDashboardPage() {
           </div>
         </div>
         <div className="min-w-0">
-          <h2 className="font-display text-2xl">Recent stock</h2>
+          <h2 className="font-display text-xl">Recent stock</h2>
           <div className="mt-3 space-y-2">
             {movements.length === 0 ? <p className="text-sm">No stock movements yet.</p> : null}
             {movements.map((move) => (
-              <div key={move.id} className="rounded-2xl border border-zenith-border bg-white p-3">
+              <div key={move.id} className="rounded-xl border border-zenith-border bg-white p-3">
                 <div className="font-semibold">
                   {move.product.name} · {move.type}
                 </div>
@@ -173,16 +187,18 @@ export default async function ManagerDashboardPage() {
       </section>
 
       {lowStock.length > 0 ? (
-        <section className="mt-8 min-w-0">
-          <h2 className="font-display text-2xl">Low stock</h2>
+        <section className="mt-6 min-w-0">
+          <h2 className="font-display text-xl">Low stock</h2>
           <div className="mt-3 grid gap-2">
             {lowStock.slice(0, 8).map((product) => (
               <div
                 key={product.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-zenith-border bg-white p-3"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zenith-border bg-white p-3"
               >
                 <span className="font-semibold">{product.name}</span>
-                <span className="font-semibold text-zenith-danger">{product.stockQuantity}</span>
+                <span className="font-semibold text-zenith-danger">
+                  Main {product.main} · Bar {product.bar} · Total {product.total}
+                </span>
               </div>
             ))}
           </div>

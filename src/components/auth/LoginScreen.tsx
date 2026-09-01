@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { loginAction } from "@/actions/auth";
 import { roleLabel, type Role } from "@/lib/auth/roles";
 import { Logo } from "@/components/brand/Logo";
+import { PoweredByCloudSync } from "@/components/brand/PoweredByCloudSync";
 import { Button } from "@/components/ui/Button";
 
 type Staff = { id: string; name: string; role: Role };
@@ -53,13 +54,14 @@ export function LoginScreen({
 
   return (
     <div className="brand-pattern flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-5xl rounded-3xl border border-zenith-border bg-white p-6 shadow-sm md:p-10">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <Logo size={110} />
-          <h1 className="mt-4 font-display text-4xl tracking-[0.18em] text-zenith-gold">B-ZENITH</h1>
+      <div className="w-full max-w-5xl rounded-xl border border-zenith-border bg-white p-5 shadow-sm md:p-8">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <Logo size={88} />
+          <h1 className="mt-3 font-display text-3xl tracking-[0.18em] text-zenith-gold">B-ZENITH</h1>
           <p className="mt-2 text-sm font-semibold uppercase tracking-[0.22em] text-zenith-muted">
             Staff login
           </p>
+          <PoweredByCloudSync className="mt-3" />
         </div>
 
         {!selected ? (
@@ -70,9 +72,9 @@ export function LoginScreen({
                 <button
                   key={person.id}
                   onClick={() => setSelected(person)}
-                  className="min-h-20 rounded-2xl border-2 border-zenith-border bg-white px-4 py-5 text-left hover:border-zenith-gold"
+                  className="min-h-16 rounded-xl border-2 border-zenith-border bg-white px-4 py-4 text-left hover:border-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
                 >
-                  <div className="text-xl font-semibold">{person.name}</div>
+                  <div className="text-lg font-semibold">{person.name}</div>
                   <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-gold">
                     {roleLabel(person.role)}
                   </div>
@@ -106,14 +108,14 @@ export function LoginScreen({
                 <button
                   key={key}
                   onClick={() => press(key)}
-                  className="h-16 rounded-2xl border-2 border-zenith-border bg-white text-2xl font-semibold hover:border-zenith-gold"
+                  className="h-14 rounded-xl border-2 border-zenith-border bg-white text-xl font-semibold hover:border-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
                 >
                   {key}
                 </button>
               ))}
             </div>
             {error ? <p className="mt-4 text-center text-sm text-zenith-danger">{error}</p> : null}
-            <Button className="mt-5 w-full" disabled={pin.length < 4 || busy} onClick={submit}>
+            <Button className="pos-tap mt-5 h-12 w-full" disabled={pin.length < 4 || busy} onClick={submit}>
               {busy ? "Checking…" : "Enter"}
             </Button>
           </div>

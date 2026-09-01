@@ -49,7 +49,7 @@ export function CategoryPicker({
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((current) => !current)}
-        className="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-2xl border-2 border-zenith-gold bg-white px-4 py-3 text-left text-lg font-semibold text-zenith-gold"
+        className="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-xl border-2 border-zenith-gold bg-white px-4 py-3 text-left text-base font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
       >
         <span className="min-w-0 break-words">{selected?.name ?? "Category"}</span>
         <ChevronDown
@@ -62,7 +62,7 @@ export function CategoryPicker({
         <div
           role="listbox"
           aria-label="Categories"
-          className="absolute left-0 top-full z-20 mt-2 w-full min-w-0 max-w-full rounded-2xl border border-zenith-border bg-white p-3 shadow-[0_8px_24px_rgba(36,22,15,0.08)]"
+          className="absolute left-0 top-full z-20 mt-2 w-full min-w-0 max-w-full rounded-xl border border-zenith-border bg-white p-3 shadow-[0_8px_24px_rgba(36,22,15,0.08)]"
         >
           <div className="order-categories max-h-[min(20rem,70vh)] overflow-x-hidden overflow-y-auto">
             {categories.map((category) => {

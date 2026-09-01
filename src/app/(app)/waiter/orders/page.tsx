@@ -10,13 +10,13 @@ import { listOrders } from "@/services/orders";
 
 export default async function MyOrdersPage() {
   const user = await requireRole("WAITER");
-  const orders = await listOrders({ waiterId: user.id, take: 80 });
+  const orders = await listOrders({ waiterId: user.id, take: 80, withItems: true });
 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl text-zenith-gold">My orders</h1>
+          <h1 className="font-display text-2xl text-zenith-gold">My orders</h1>
           <p className="mt-1 text-zenith-muted">Only your orders. Payment is handled by the cashier.</p>
         </div>
         <Link href="/waiter/orders/new">
@@ -26,10 +26,10 @@ export default async function MyOrdersPage() {
       <div className="space-y-3">
         {orders.length === 0 ? <p className="text-zenith-muted">No orders yet.</p> : null}
         {orders.map((order) => (
-          <article id={`order-${order.id}`} key={order.id} className="rounded-3xl border border-zenith-border bg-white p-5">
+          <article id={`order-${order.id}`} key={order.id} className="rounded-xl border border-zenith-border bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="font-display text-3xl text-zenith-gold">#{order.orderNumber}</div>
+                <div className="text-xl font-semibold text-zenith-gold">#{order.orderNumber}</div>
                 <div className="mt-1 text-lg">Table {order.table.name}</div>
                 <div className="text-sm text-zenith-muted">{formatDateTime(order.createdAt)}</div>
               </div>
@@ -47,7 +47,7 @@ export default async function MyOrdersPage() {
               ))}
             </ul>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-2xl font-semibold">{formatRwf(order.total)}</div>
+              <div className="text-xl font-semibold">{formatRwf(order.total)}</div>
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Link href={`/waiter/orders/new?again=${order.id}`}>
                   <Button variant="secondary">Order again</Button>

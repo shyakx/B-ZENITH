@@ -1,6 +1,6 @@
 "use server";
 
-import { BusinessArea } from "@prisma/client";
+import { BusinessArea, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/current-user";
 import { fail, ok, type ActionResult } from "@/lib/errors";
@@ -14,6 +14,12 @@ export async function saveProductAction(input: {
   costPrice?: number | null;
   trackInventory: boolean;
   active: boolean;
+  productType?: ProductType;
+  sellOnPos?: boolean;
+  baseUnitId?: string | null;
+  defaultStockLocationId?: string | null;
+  purchaseUnitId?: string | null;
+  purchaseContains?: number | null;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requirePermission("manageProducts");
@@ -48,6 +54,7 @@ export async function saveTableAction(input: {
   try {
     await requirePermission("manageProducts");
     const table = await upsertTable(input);
+    revalidatePath("/manager/tables");
     revalidatePath("/manager/products");
     return ok({ id: table.id });
   } catch (error) {

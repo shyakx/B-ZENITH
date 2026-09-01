@@ -13,7 +13,7 @@ export default async function AuditPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
-      <h1 className="font-display text-3xl text-zenith-gold">Audit</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">Audit</h1>
       <p className="mt-2 text-sm">Who changed the system, and what they changed.</p>
 
       {logs.length === 0 ? (

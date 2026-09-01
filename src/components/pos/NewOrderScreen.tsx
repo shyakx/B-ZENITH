@@ -109,9 +109,9 @@ export function NewOrderScreen({
 
   if (step === "done" && submitted) {
     return (
-      <div className="mx-auto w-full min-w-0 max-w-lg rounded-3xl border border-zenith-border bg-white p-6 text-center sm:p-8">
+      <div className="mx-auto w-full min-w-0 max-w-lg rounded-xl border border-zenith-border bg-white p-5 text-center sm:p-6">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zenith-muted">Submitted</p>
-        <h2 className="mt-2 break-words font-display text-3xl text-zenith-gold sm:text-4xl">
+        <h2 className="mt-2 break-words font-display text-2xl text-zenith-gold sm:text-3xl">
           ORDER #{submitted.orderNumber}
         </h2>
         <p className="mt-4 text-lg">Table {table?.name}</p>
@@ -133,14 +133,14 @@ export function NewOrderScreen({
   if (step === "table") {
     return (
       <div className="order-page">
-        <h2 className="mb-2 font-display text-3xl">Select table</h2>
-        <p className="mb-6 text-zenith-muted">Any waiter can serve any table.</p>
+        <h2 className="mb-2 font-display text-2xl">Select table</h2>
+        <p className="mb-5 text-sm text-zenith-muted">Any waiter can serve any table.</p>
         <div className="order-tables">
           {tables.map((item) => (
             <button
               key={item.id}
               onClick={() => chooseTable(item.id)}
-              className="min-h-20 min-w-0 break-words rounded-2xl border-2 border-zenith-border bg-white px-2 py-3 text-lg font-semibold leading-snug sm:text-xl hover:border-zenith-gold"
+              className="min-h-20 min-w-0 break-words rounded-xl border-2 border-zenith-border bg-white px-2 py-3 text-base font-semibold leading-snug sm:text-lg hover:border-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
             >
               {item.name}
             </button>
@@ -156,9 +156,9 @@ export function NewOrderScreen({
         <button className="mb-4 min-h-11 font-semibold text-zenith-gold" onClick={() => setStep("menu")}>
           ← Back to menu
         </button>
-        <div className="rounded-3xl border border-zenith-border bg-white p-5 sm:p-6">
+        <div className="rounded-xl border border-zenith-border bg-white p-4 sm:p-5">
           <p className="text-sm font-semibold uppercase tracking-wider text-zenith-muted">Review</p>
-          <h2 className="mt-1 break-words font-display text-3xl">Table {table?.name}</h2>
+          <h2 className="mt-1 break-words font-display text-2xl">Table {table?.name}</h2>
           <ul className="mt-6 space-y-3 text-lg">
             {cart.map((line) => (
               <li key={line.product.id} className="flex justify-between gap-3">
@@ -172,12 +172,12 @@ export function NewOrderScreen({
             ))}
           </ul>
           {note ? <p className="mt-4 text-sm break-words text-zenith-muted">Note: {note}</p> : null}
-          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-2 font-display text-3xl">
+          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-2 font-display text-2xl">
             <span>Total</span>
             <span className="text-zenith-gold">{formatRwf(total)}</span>
           </div>
           {error ? <p className="mt-4 text-zenith-danger">{error}</p> : null}
-          <Button className="mt-6 w-full text-lg" disabled={busy} onClick={submit}>
+          <Button className="pos-tap mt-6 h-12 w-full text-base" disabled={busy} onClick={submit}>
             {busy ? "Submitting…" : "Submit order"}
           </Button>
         </div>
@@ -192,7 +192,7 @@ export function NewOrderScreen({
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               onClick={() => setStep("table")}
-              className="min-h-12 shrink-0 rounded-2xl bg-zenith-gold px-5 py-3 text-lg font-semibold text-white"
+              className="pos-tap min-h-12 shrink-0 rounded-xl bg-zenith-gold px-5 py-3 text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
             >
               Table {table?.name}
             </button>
@@ -200,7 +200,7 @@ export function NewOrderScreen({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search menu"
-              className="min-h-12 w-full min-w-0 flex-1 rounded-2xl border border-zenith-border px-4 py-3"
+              className="min-h-11 w-full min-w-0 flex-1 rounded-xl border border-zenith-border px-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
             />
           </div>
 
@@ -222,7 +222,7 @@ export function NewOrderScreen({
               <button
                 key={product.id}
                 onClick={() => add(product)}
-                className="order-card flex min-h-24 flex-col rounded-2xl border-2 border-zenith-border bg-white p-3 text-left hover:border-zenith-gold sm:min-h-28 sm:p-4"
+                className="order-card flex min-h-20 flex-col rounded-xl border-2 border-zenith-border bg-white p-2.5 text-left hover:border-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold sm:min-h-[5.5rem] sm:p-3"
               >
                 <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">
                   {product.category.name}
@@ -236,7 +236,7 @@ export function NewOrderScreen({
           </div>
         </section>
 
-        <aside className="order-card order-basket rounded-3xl border border-zenith-border bg-white p-3">
+        <aside className="order-card order-basket rounded-xl border border-zenith-border bg-white p-3">
           <div className="order-basket-head mb-2">
             <h2 className="font-display text-xl leading-tight">Order</h2>
             <p className="text-sm font-semibold text-zenith-gold">Table {table?.name}</p>
@@ -251,14 +251,14 @@ export function NewOrderScreen({
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setQty(line.product.id, line.quantity - 1)}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-zenith-gold"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
                     >
                       <Minus size={16} />
                     </button>
                     <span className="w-6 text-center text-sm font-semibold">{line.quantity}</span>
                     <button
                       onClick={() => setQty(line.product.id, line.quantity + 1)}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-zenith-gold"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
                     >
                       <Plus size={16} />
                     </button>
@@ -292,7 +292,7 @@ export function NewOrderScreen({
               Clear order
             </Button>
             <div className="mt-2">
-              <Button className="w-full" disabled={cart.length === 0} onClick={() => setStep("review")}>
+              <Button className="pos-tap mt-2 h-12 w-full" disabled={cart.length === 0} onClick={() => setStep("review")}>
                 Review & submit
               </Button>
             </div>
@@ -305,7 +305,7 @@ export function NewOrderScreen({
           <span>Total</span>
           <span className="text-zenith-gold">{formatRwf(total)}</span>
         </div>
-        <Button className="mt-3 w-full" disabled={cart.length === 0} onClick={() => setStep("review")}>
+        <Button className="pos-tap mt-3 h-12 w-full" disabled={cart.length === 0} onClick={() => setStep("review")}>
           Review & submit
         </Button>
       </div>

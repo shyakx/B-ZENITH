@@ -20,10 +20,10 @@ export function AppNav({
         const active = isNavActive(pathname, item.href, hrefs);
         const className =
           variant === "sidebar"
-            ? `block rounded-2xl px-4 py-3 text-base font-semibold ${
+            ? `block rounded-xl px-3 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
                 active ? "bg-zenith-gold text-white" : "text-zenith-cream hover:bg-zenith-raised"
               }`
-            : `rounded-full px-4 py-2 text-sm font-semibold ${
+            : `rounded-full px-3 py-1.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
                 active ? "bg-zenith-gold text-white" : "text-zenith-cream"
               }`;
 

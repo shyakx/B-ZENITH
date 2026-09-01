@@ -11,7 +11,7 @@ export default async function BillsPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
-      <h1 className="font-display text-3xl text-zenith-gold">Orders / Bills</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">Orders / Bills</h1>
       <p className="mt-1 text-zenith-muted">Grouped by table. Each waiter order stays separate.</p>
 
       <div className="mt-6 space-y-4">
@@ -26,10 +26,10 @@ export default async function BillsPage() {
             <Link
               key={group.tableId}
               href={`/cashier/bills/${group.tableId}`}
-              className="block min-w-0 rounded-2xl border border-zenith-border bg-white p-5"
+              className="block min-w-0 rounded-xl border border-zenith-border bg-white p-4"
             >
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="font-display text-2xl text-zenith-gold">TABLE {group.tableName}</h2>
+                <h2 className="font-display text-xl text-zenith-gold">TABLE {group.tableName}</h2>
                 <PaymentBadge status={bill.status} />
               </div>
               <div className="space-y-2">

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { ROLE_HOME, type Permission, hasPermission, type Role } from "@/lib/auth/roles";
 import { readSessionToken, SESSION_COOKIE } from "@/lib/auth/session";
@@ -11,7 +12,7 @@ export type CurrentUser = {
   role: Role;
 };
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
@@ -27,7 +28,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!user || !user.active) return null;
 
   return { id: user.id, name: user.name, role: user.role };
-}
+});
 
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();

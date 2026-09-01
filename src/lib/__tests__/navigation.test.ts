@@ -28,14 +28,26 @@ describe("route-aware navigation", () => {
   it("keeps manager navigation short and operational", () => {
     expect(ROLE_NAV.MANAGER.map((item) => item.label)).toEqual([
       "Home",
-      "Orders",
-      "Inventory",
+      "Tables",
       "Products",
+      "Inventory",
+      "Receive Stock",
+      "Orders",
       "Reports",
       "Maison de Passage",
     ]);
+    expect(ROLE_NAV.MANAGER.map((item) => item.href)).toEqual([
+      "/manager",
+      "/manager/tables",
+      "/manager/products",
+      "/manager/inventory",
+      "/manager/purchases",
+      "/manager/orders",
+      "/manager/reports",
+      "/manager/maison",
+    ]);
     expect(ROLE_NAV.MANAGER.map((item) => item.href)).not.toContain("/manager/sales");
-    expect(ROLE_NAV.MANAGER.map((item) => item.href)).not.toContain("/manager/purchases");
+    expect(isNavActive("/manager/tables", "/manager/tables", ROLE_NAV.MANAGER.map((item) => item.href))).toBe(true);
     expect(isNavActive("/manager/orders/abc", "/manager/orders", ROLE_NAV.MANAGER.map((item) => item.href))).toBe(
       true,
     );
