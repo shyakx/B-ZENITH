@@ -14,13 +14,19 @@ export function EnsureKitchenStoresButton({ missing }: { missing: number }) {
 
   async function addStores() {
     setBusy(true);
-    const result = await ensureKitchenStoresAction();
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    setError("");
+    try {
+      const result = await ensureKitchenStoresAction();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Could not add kitchen stores. Refresh and try again.");
+    } finally {
+      setBusy(false);
     }
-    router.refresh();
   }
 
   return (

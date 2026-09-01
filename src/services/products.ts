@@ -202,38 +202,67 @@ export async function kitchenStoresStatus() {
   return { missing, total: KITCHEN_BASE_MATERIALS.length, present: KITCHEN_BASE_MATERIALS.length - missing.length };
 }
 
-export async function ensureKitchenStoreCatalog(userId: string) {
+export async function ensureKitchenStoreCatalog(_userId: string) {
+  const names = KITCHEN_BASE_MATERIALS.map((row) => row.name);
+  const [units, locations, existing] = await Promise.all([
+    prisma.unit.findMany(),
+    prisma.stockLocation.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.product.findMany({
+      where: { productType: ProductType.RAW_MATERIAL, name: { in: names } },
+      select: { id: true, name: true, stocks: { select: { locationId: true } } },
+    }),
+  ]);
+  const unitIds = Object.fromEntries(units.map((unit) => [unit.code, unit.id]));
+  const kitchen = locations.find((location) => location.code === LOCATION_CODES.KITCHEN);
+  if (!kitchen) throw new AppError("Kitchen stock location is not configured.");
+
+  const have = new Set(existing.map((row) => row.name));
+  const missing = KITCHEN_BASE_MATERIALS.filter((row) => !have.has(row.name));
+
   const category = await prisma.category.upsert({
     where: { name: KITCHEN_STORES_CATEGORY },
     create: { name: KITCHEN_STORES_CATEGORY, area: BusinessArea.OTHER, sortOrder: 10_000 },
     update: { area: BusinessArea.OTHER },
   });
-  const units = Object.fromEntries((await prisma.unit.findMany()).map((unit) => [unit.code, unit.id]));
-  const kitchen = await prisma.stockLocation.findUnique({ where: { code: LOCATION_CODES.KITCHEN } });
-  if (!kitchen) throw new AppError("Kitchen stock location is not configured.");
 
-  let created = 0;
-  for (const material of KITCHEN_BASE_MATERIALS) {
-    const already = await prisma.product.findFirst({
-      where: { name: material.name, productType: ProductType.RAW_MATERIAL },
-    });
-    if (already) continue;
+  const created =
+    missing.length === 0
+      ? []
+      : await prisma.product.createManyAndReturn({
+          data: missing.map((material, index) => ({
+            name: material.name,
+            categoryId: category.id,
+            sellingPrice: 0,
+            trackInventory: true,
+            active: true,
+            productType: ProductType.RAW_MATERIAL,
+            sellOnPos: false,
+            baseUnitId: unitIds[material.baseUnitCode] ?? unitIds.KG ?? unitIds.PIECE ?? null,
+            defaultStockLocationId: kitchen.id,
+            sortOrder: index,
+            stockQuantity: 0,
+          })),
+        });
 
-    await upsertProduct({
-      name: material.name,
-      categoryId: category.id,
-      sellingPrice: 0,
-      trackInventory: true,
-      active: true,
-      productType: ProductType.RAW_MATERIAL,
-      baseUnitId: units[material.baseUnitCode] ?? units.KG ?? units.PIECE ?? null,
-      defaultStockLocationId: kitchen.id,
-      userId,
-    });
-    created += 1;
+  const stockRows: { productId: string; locationId: string; quantity: number }[] = [];
+  for (const product of existing) {
+    const haveLocation = new Set(product.stocks.map((row) => row.locationId));
+    for (const location of locations) {
+      if (!haveLocation.has(location.id)) {
+        stockRows.push({ productId: product.id, locationId: location.id, quantity: 0 });
+      }
+    }
+  }
+  for (const product of created) {
+    for (const location of locations) {
+      stockRows.push({ productId: product.id, locationId: location.id, quantity: 0 });
+    }
+  }
+  if (stockRows.length > 0) {
+    await prisma.productStock.createMany({ data: stockRows, skipDuplicates: true });
   }
 
-  return { created, total: KITCHEN_BASE_MATERIALS.length };
+  return { created: created.length, total: KITCHEN_BASE_MATERIALS.length };
 }
 
 async function saveHowYouBuy(
