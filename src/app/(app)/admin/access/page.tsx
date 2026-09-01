@@ -62,14 +62,22 @@ const ACCESS: {
   },
   {
     role: "ADMIN",
-    can: ["Manage staff", "Assign non-owner roles", "Reset PINs", "Manage settings", "View audit log"],
+    can: [
+      "Manage staff",
+      "Create an Owner account",
+      "Assign waiter, cashier, manager, and admin roles",
+      "Reset PINs",
+      "Manage settings",
+      "View audit log",
+    ],
     cannot: [
       "Orders",
       "Payments",
       "Stock",
       "Products",
       "Daily business operations",
-      "Create or promote an owner once an owner exists",
+      "Promote existing staff to Owner",
+      "Change, deactivate, or delete an owner account",
     ],
   },
 ];

@@ -120,7 +120,7 @@ export async function createUser(input: {
     if (!canAssignRole(actor.role, role, { activeOwnerCount })) {
       throw new AppError(
         role === "OWNER"
-          ? "Only an owner can create an owner account."
+          ? "You are not allowed to create an owner account."
           : "You are not allowed to assign that role.",
       );
     }

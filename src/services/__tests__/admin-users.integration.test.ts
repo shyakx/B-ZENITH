@@ -324,7 +324,7 @@ describe.sequential("admin staff management against the database", () => {
     expect(isLiveStaffAccount(row)).toBe(false);
   });
 
-  it("blocks ADMIN from granting OWNER and protects the last active owner", async () => {
+  it("lets ADMIN create OWNER accounts but not manage or promote owners", async () => {
     const admin = await adminActor();
     const owner = await createUser({
       name: `Owner Guard ${Date.now()}`,
@@ -334,14 +334,14 @@ describe.sequential("admin staff management against the database", () => {
     });
     createdUserIds.push(owner.id);
 
-    await expect(
-      createUser({
-        name: `Blocked Owner ${Date.now()}`,
-        role: "OWNER",
-        pin: "5555",
-        actorId: admin.id,
-      }),
-    ).rejects.toThrow("Only an owner can create an owner account.");
+    const secondByAdmin = await createUser({
+      name: `Admin Owner ${Date.now()}`,
+      role: "OWNER",
+      pin: "5555",
+      actorId: admin.id,
+    });
+    createdUserIds.push(secondByAdmin.id);
+    expect(secondByAdmin.role).toBe("OWNER");
 
     const waiter = await createUser({
       name: `No Promote ${Date.now()}`,
@@ -360,6 +360,8 @@ describe.sequential("admin staff management against the database", () => {
     await expect(updateUser({ id: owner.id, active: false, actorId: admin.id })).rejects.toThrow(
       "Only an owner can change an owner account.",
     );
+
+    await deleteStaff({ id: secondByAdmin.id, actorId: owner.id });
 
     await expect(deleteStaff({ id: owner.id, actorId: owner.id })).rejects.toThrow(
       /last active owner cannot be deleted/i,

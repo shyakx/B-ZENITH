@@ -4,18 +4,15 @@ import type { Role } from "@/lib/auth/roles";
  * Staff-role policy.
  *
  * OWNER owns the business and may create, promote, demote, and delete OWNER accounts.
- * ADMIN manages WAITER / CASHIER / MANAGER / ADMIN. ADMIN must not grant OWNER once
- * an owner exists. Bootstrap: if there is no active owner, ADMIN may create the first
- * OWNER so the business can appoint one without being locked out.
+ * ADMIN may create OWNER accounts and manage WAITER / CASHIER / MANAGER / ADMIN.
+ * ADMIN must not promote existing staff to OWNER, or change / delete an OWNER account.
  */
-export const ADMIN_ASSIGNABLE_ROLES: Role[] = ["ADMIN", "MANAGER", "CASHIER", "WAITER"];
+export const ADMIN_ASSIGNABLE_ROLES: Role[] = ["OWNER", "ADMIN", "MANAGER", "CASHIER", "WAITER"];
 export const OWNER_ASSIGNABLE_ROLES: Role[] = ["OWNER", "ADMIN", "MANAGER", "CASHIER", "WAITER"];
 
-export function assignableRoles(actorRole: Role, activeOwnerCount: number): Role[] {
+export function assignableRoles(actorRole: Role, _activeOwnerCount = 0): Role[] {
   if (actorRole === "OWNER") return [...OWNER_ASSIGNABLE_ROLES];
-  if (actorRole === "ADMIN") {
-    return activeOwnerCount === 0 ? ["OWNER", ...ADMIN_ASSIGNABLE_ROLES] : [...ADMIN_ASSIGNABLE_ROLES];
-  }
+  if (actorRole === "ADMIN") return [...ADMIN_ASSIGNABLE_ROLES];
   return [];
 }
 
@@ -26,11 +23,7 @@ export function canAssignRole(
 ): boolean {
   if (targetRole === "OWNER") {
     if (actorRole === "OWNER") return true;
-    return (
-      actorRole === "ADMIN" &&
-      options.activeOwnerCount === 0 &&
-      options.currentRole === undefined
-    );
+    return actorRole === "ADMIN" && options.currentRole === undefined;
   }
 
   if (options.currentRole === "OWNER") {
@@ -78,8 +71,10 @@ export function staffActionFlags(
     activeOwnerCount,
   });
 
+  const roles = assignableRoles(actor.role, activeOwnerCount);
+
   return {
-    assignableRoles: assignableRoles(actor.role, activeOwnerCount),
+    assignableRoles: actor.role === "ADMIN" ? roles.filter((role) => role !== "OWNER") : roles,
     canResetPin: !ownerLocked,
     canChangeActive: !isSelf && !ownerLocked && !lastOwner,
     canDelete: !isSelf && !ownerLocked && !lastOwner,

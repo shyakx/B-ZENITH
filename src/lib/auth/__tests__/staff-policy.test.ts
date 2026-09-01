@@ -9,20 +9,15 @@ import {
 } from "@/lib/auth/staff-policy";
 
 describe("owner staff policy", () => {
-  it("lets only OWNER assign OWNER once an owner exists", () => {
+  it("lets ADMIN create OWNER accounts without promoting existing staff", () => {
     expect(canAssignRole("OWNER", "OWNER", { activeOwnerCount: 1 })).toBe(true);
-    expect(canAssignRole("ADMIN", "OWNER", { activeOwnerCount: 1 })).toBe(false);
+    expect(canAssignRole("ADMIN", "OWNER", { activeOwnerCount: 1 })).toBe(true);
+    expect(canAssignRole("ADMIN", "OWNER", { activeOwnerCount: 0 })).toBe(true);
     expect(canAssignRole("ADMIN", "OWNER", { activeOwnerCount: 1, currentRole: "WAITER" })).toBe(false);
     expect(canAssignRole("MANAGER", "OWNER", { activeOwnerCount: 0 })).toBe(false);
     expect(canAssignRole("ADMIN", "WAITER", { activeOwnerCount: 1 })).toBe(true);
-    expect(assignableRoles("ADMIN", 1)).not.toContain("OWNER");
+    expect(assignableRoles("ADMIN", 1)).toContain("OWNER");
     expect(assignableRoles("OWNER", 1)).toContain("OWNER");
-  });
-
-  it("lets ADMIN create the first OWNER only, not promote existing staff", () => {
-    expect(canAssignRole("ADMIN", "OWNER", { activeOwnerCount: 0 })).toBe(true);
-    expect(canAssignRole("ADMIN", "OWNER", { activeOwnerCount: 0, currentRole: "WAITER" })).toBe(false);
-    expect(assignableRoles("ADMIN", 0)).toContain("OWNER");
   });
 
   it("blocks ADMIN from changing OWNER accounts", () => {
@@ -53,5 +48,14 @@ describe("owner staff policy", () => {
     );
     expect(flags.canDelete).toBe(false);
     expect(flags.canChangeActive).toBe(false);
+    expect(flags.assignableRoles).toContain("OWNER");
+
+    const adminFlags = staffActionFlags(
+      { id: "admin", role: "ADMIN" },
+      { id: "waiter", role: "WAITER", active: true },
+      1,
+    );
+    expect(adminFlags.assignableRoles).not.toContain("OWNER");
+    expect(assignableRoles("ADMIN", 1)).toContain("OWNER");
   });
 });
