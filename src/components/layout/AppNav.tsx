@@ -87,9 +87,9 @@ export function AppNav({
             title={`${item.label} — ${item.hint}`}
           >
             <Icon size={18} className="shrink-0" />
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold leading-tight">{item.label}</span>
-              <span className={`mt-0.5 block text-[11px] leading-snug ${active ? "text-white/85" : "text-zenith-muted"}`}>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold leading-snug">{item.label}</span>
+              <span className={`mt-0.5 block text-[13px] font-medium leading-snug ${active ? "text-white/85" : "text-zenith-muted"}`}>
                 {item.hint}
               </span>
             </span>

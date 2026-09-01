@@ -10,7 +10,7 @@ export function PageHeader({
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="font-display text-2xl text-zenith-gold">{title}</h1>
+        <h1 className="text-xl font-semibold text-zenith-gold">{title}</h1>
         {subtitle ? <p className="mt-1 text-sm text-zenith-muted">{subtitle}</p> : null}
       </div>
       {action}

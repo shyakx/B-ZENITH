@@ -48,8 +48,8 @@ export function AppShell({
             <Logo size={36} />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-base font-semibold">{user.name}</div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-zenith-gold">
+            <div className="truncate text-[15px] font-semibold">{user.name}</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-zenith-gold">
               {roleLabel(user.role)}
             </div>
           </div>

@@ -6,8 +6,8 @@ import { listUsers } from "@/services/users";
 function CountCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-zenith-border bg-white p-3">
-      <div className="text-2xl font-semibold text-zenith-gold">{value}</div>
-      <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label}</div>
+      <div className="text-xl font-semibold text-zenith-gold">{value}</div>
+      <div className="mt-1 text-xs font-medium text-zenith-muted">{label}</div>
     </div>
   );
 }
@@ -18,14 +18,14 @@ export default async function AdminHomePage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
-      <h1 className="font-display text-2xl text-zenith-gold">System Control</h1>
+      <h1 className="text-xl font-semibold text-zenith-gold">System Control</h1>
       <div className="mt-2">
         <VisibleDate />
       </div>
       <p className="mt-3 text-sm">Manage the people who use B-ZENITH. Daily sales stay with Cashier and Manager.</p>
 
       <section className="mt-6">
-        <h2 className="font-display text-xl">Staff</h2>
+        <h2 className="text-base font-semibold">Staff</h2>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <CountCard label="Staff" value={counts.staff} />
           <CountCard label="Active Staff" value={counts.active} />
@@ -34,7 +34,7 @@ export default async function AdminHomePage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="font-display text-xl">Access</h2>
+        <h2 className="text-base font-semibold">Access</h2>
         <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <CountCard label="Admins" value={counts.admins} />
           <CountCard label="Managers" value={counts.managers} />

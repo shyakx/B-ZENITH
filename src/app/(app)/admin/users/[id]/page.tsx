@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/current-user";
+import { roleLabel } from "@/lib/auth/roles";
 import { auditActionLabel, auditAffected } from "@/lib/admin-audit";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { StaffActions } from "@/components/admin/UserForms";
@@ -26,9 +27,10 @@ export default async function StaffDetailPage({
       </Link>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl text-zenith-gold">{user.name}</h1>
-          <p className="mt-1 text-sm font-semibold uppercase tracking-wider">{user.role}</p>
-          <p className="mt-1 text-sm">Created {formatDate(user.createdAt)}</p>
+          <h1 className="text-xl font-semibold text-zenith-gold">{user.name}</h1>
+          <p className="mt-1 text-sm text-zenith-muted">
+            {roleLabel(user.role)} · Created {formatDate(user.createdAt)}
+          </p>
         </div>
         <Badge
           className={
@@ -46,7 +48,7 @@ export default async function StaffDetailPage({
       </div>
 
       <section className="mt-8">
-        <h2 className="font-display text-2xl">Recent activity</h2>
+        <h2 className="text-base font-semibold">Recent activity</h2>
         {logs.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-zenith-border bg-white px-4 py-6">
             No staff activity recorded yet.

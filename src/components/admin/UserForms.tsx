@@ -159,7 +159,7 @@ export function StaffActions({
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-zenith-border bg-white p-4">
-        <h3 className="font-display text-xl">Change role</h3>
+        <h3 className="text-base font-semibold">Change role</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
           <Select
             value={role}
@@ -204,7 +204,7 @@ export function StaffActions({
       </section>
 
       <section className="rounded-2xl border border-zenith-border bg-white p-4">
-        <h3 className="font-display text-xl">Reset PIN</h3>
+        <h3 className="text-base font-semibold">Reset PIN</h3>
         {confirm === "pin" ? (
           <div className="mt-3 space-y-3">
             <p className="font-semibold">Reset PIN for {user.name}?</p>
@@ -251,7 +251,7 @@ export function StaffActions({
       </section>
 
       <section className="rounded-2xl border border-zenith-border bg-white p-4">
-        <h3 className="font-display text-xl">{user.active ? "Deactivate" : "Activate"}</h3>
+        <h3 className="text-base font-semibold">{user.active ? "Deactivate" : "Activate"}</h3>
         {confirm === "active" ? (
           <div className="mt-3 space-y-3">
             {user.active ? (

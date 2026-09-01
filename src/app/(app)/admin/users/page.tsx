@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
+import { roleLabel } from "@/lib/auth/roles";
 import { formatDate } from "@/lib/dates";
 import { CreateUserForm } from "@/components/admin/UserForms";
 import { Badge } from "@/components/ui/Badge";
@@ -11,28 +12,31 @@ export default async function StaffPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
-      <h1 className="font-display text-2xl text-zenith-gold">Staff</h1>
-      <p className="mt-2 text-sm">Create an account, give the person a temporary PIN, then they log in as usual.</p>
+      <h1 className="text-xl font-semibold text-zenith-gold">Staff</h1>
+      <p className="mt-1 text-sm text-zenith-muted">
+        Create an account, give the person a temporary PIN, then they log in as usual.
+      </p>
 
-      <section className="mt-6 rounded-2xl border border-zenith-border bg-white p-5">
-        <h2 className="mb-4 font-display text-2xl">Create staff</h2>
+      <section className="mt-5 rounded-xl border border-zenith-border bg-white p-4">
+        <h2 className="mb-3 text-base font-semibold">Create staff</h2>
         <CreateUserForm />
       </section>
 
-      <section className="mt-8">
-        <h2 className="font-display text-2xl">People</h2>
-        <div className="mt-3 grid gap-3">
+      <section className="mt-6">
+        <h2 className="text-base font-semibold">People</h2>
+        <div className="mt-2 grid gap-2">
           {users.map((user) => (
             <Link
               key={user.id}
               href={`/admin/users/${user.id}`}
-              className="block min-w-0 rounded-2xl border border-zenith-border bg-white p-4"
+              className="block min-w-0 rounded-xl border border-zenith-border bg-white px-3 py-2.5 hover:border-zenith-gold"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="font-display text-2xl text-zenith-gold">{user.name}</div>
-                  <div className="mt-1 text-sm font-semibold uppercase tracking-wider">{user.role}</div>
-                  <div className="mt-1 text-sm">{formatDate(user.createdAt)}</div>
+                  <div className="truncate text-base font-semibold text-zenith-gold">{user.name}</div>
+                  <div className="mt-0.5 truncate text-sm text-zenith-muted">
+                    {roleLabel(user.role)} · {formatDate(user.createdAt)}
+                  </div>
                 </div>
                 <Badge
                   className={

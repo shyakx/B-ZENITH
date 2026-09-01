@@ -29,7 +29,7 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-zenith-muted">{label}</span>
       {children}
     </label>
   );

@@ -13,7 +13,7 @@ export default async function AuditPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
-      <h1 className="font-display text-2xl text-zenith-gold">Audit</h1>
+      <h1 className="text-xl font-semibold text-zenith-gold">Audit</h1>
       <p className="mt-2 text-sm">Who changed the system, and what they changed.</p>
 
       {logs.length === 0 ? (
@@ -22,7 +22,7 @@ export default async function AuditPage() {
         <div className="mt-6 grid gap-3">
           {logs.map((log) => (
             <article key={log.id} className="min-w-0 rounded-2xl border border-zenith-border bg-white p-4">
-              <div className="font-display text-xl text-zenith-gold">{auditActionLabel(log.action)}</div>
+              <div className="text-base font-semibold text-zenith-gold">{auditActionLabel(log.action)}</div>
               <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Date and time</dt>

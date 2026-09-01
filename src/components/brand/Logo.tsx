@@ -21,8 +21,8 @@ export function Logo({ size = 56, showWordmark = false, className = "" }: LogoPr
       />
       {showWordmark ? (
         <div className="min-w-0 leading-tight">
-          <div className="text-lg font-semibold tracking-[0.12em] text-zenith-gold">B-ZENITH</div>
-          <div className="text-[10px] uppercase tracking-[0.12em] text-zenith-muted">
+          <div className="text-[15px] font-semibold tracking-wide text-zenith-gold">B-ZENITH</div>
+          <div className="text-[11px] font-medium uppercase tracking-wide text-zenith-muted">
             Bar · Cafe · Kitchen
           </div>
         </div>

@@ -55,13 +55,13 @@ export default async function AccessPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
-      <h1 className="font-display text-2xl text-zenith-gold">Access</h1>
+      <h1 className="text-xl font-semibold text-zenith-gold">Access</h1>
       <p className="mt-2 text-sm">These four roles are fixed. Assign people. Do not invent extra roles.</p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {ACCESS.map((item) => (
           <section key={item.role} className="rounded-2xl border border-zenith-border bg-white p-5">
-            <h2 className="font-display text-2xl text-zenith-gold">{item.role}</h2>
+            <h2 className="text-base font-semibold text-zenith-gold">{item.role}</h2>
             <div className="mt-3 text-sm">
               <div className="font-semibold">Can</div>
               <ul className="mt-1 list-disc space-y-1 pl-5">
@@ -81,7 +81,7 @@ export default async function AccessPage() {
       </div>
 
       <section className="mt-8 rounded-2xl border border-zenith-border bg-white p-5">
-        <h2 className="mb-3 font-display text-2xl">Current assignments</h2>
+        <h2 className="mb-3 text-base font-semibold">Current assignments</h2>
         <div className="space-y-2">
           {users.map((user) => (
             <div key={user.id} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">

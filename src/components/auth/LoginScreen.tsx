@@ -20,7 +20,7 @@ function StaffFace({ person }: { person: Staff }) {
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold leading-tight">{person.name}</span>
-        <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-zenith-gold">
+        <span className="block text-xs font-medium text-zenith-gold">
           {roleLabel(person.role)}
         </span>
       </span>
@@ -96,7 +96,7 @@ export function LoginScreen({
       <div className="w-full max-w-3xl rounded-2xl border border-zenith-border bg-white/95 p-4 shadow-sm md:p-6">
         <div className="mb-4 flex flex-col items-center text-center">
           <Logo size={64} />
-          <h1 className="mt-2 text-2xl font-semibold tracking-[0.18em] text-zenith-gold">B-ZENITH</h1>
+          <h1 className="mt-2 text-xl font-semibold tracking-wide text-zenith-gold">B-ZENITH</h1>
           <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zenith-muted">
             Staff login
           </p>
