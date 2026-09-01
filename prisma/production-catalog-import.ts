@@ -23,26 +23,6 @@
  * (Neon project quiet-feather-99399801). Intended production target is
  * b-zenith-app-db / shiny-thunder-16809110 / neondb — only after explicit approval.
  */
- *
- * NEVER:
- * - delete / deleteMany / truncate
- * - prisma migrate reset / prisma db push
- * - modify users, tables, orders, payments, credits, purchases, movements, audit
- * - modify OrderSequence values
- * - overwrite existing Settings
- * - reset stockQuantity on an existing product
- *
- * NEW products are created with stockQuantity = 0.
- * EXISTING products keep their current stockQuantity.
- *
- * Authorization:
- *   PRODUCTION_CATALOG_IMPORT_CONFIRM=YES   required for writes
- *   PRODUCTION_CATALOG_DRY_RUN=YES          inspect only, zero writes
- *
- * Do not run this against the old Vercel production database
- * (Neon project quiet-feather-99399801). Intended production target is
- * b-zenith-app-db / shiny-thunder-16809110 / neondb — only after explicit approval.
- */
 
 import { Prisma, PrismaClient } from "@prisma/client";
 import {
