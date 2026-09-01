@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "@/actions/auth";
-import { roleLabel, type Role } from "@/lib/auth/roles";
+import { ROLE_HOME, roleLabel, type Role } from "@/lib/auth/roles";
 import { Logo } from "@/components/brand/Logo";
 import { PoweredByCloudSync } from "@/components/brand/PoweredByCloudSync";
 import { Button } from "@/components/ui/Button";
@@ -14,9 +14,11 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "←"];
 
 export function LoginScreen({
   staff,
+  currentUser,
   showDevHelp,
 }: {
   staff: Staff[];
+  currentUser: { name: string; role: Role } | null;
   showDevHelp: boolean;
 }) {
   const router = useRouter();
@@ -41,15 +43,21 @@ export function LoginScreen({
   async function submit() {
     if (!selected) return;
     setBusy(true);
-    const result = await loginAction({ userId: selected.id, pin });
-    setBusy(false);
-    if (!result.ok) {
-      setError(result.error);
-      setPin("");
-      return;
+    setError("");
+    try {
+      const result = await loginAction({ userId: selected.id, pin });
+      if (!result.ok) {
+        setError(result.error);
+        setPin("");
+        return;
+      }
+      router.push(result.data.home);
+      router.refresh();
+    } catch {
+      setError("Could not sign in. Try again.");
+    } finally {
+      setBusy(false);
     }
-    router.push(result.data.home);
-    router.refresh();
   }
 
   return (
@@ -67,6 +75,21 @@ export function LoginScreen({
         {!selected ? (
           <div>
             <p className="mb-4 text-center text-base text-zenith-muted">Who is using this device?</p>
+            {currentUser ? (
+              <div className="mb-4 rounded-xl border border-zenith-gold bg-zenith-raised px-3 py-3 text-center text-sm">
+                <p>
+                  {currentUser.name} is signed in. Choose another person to switch.
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={() => router.push(ROLE_HOME[currentUser.role])}
+                >
+                  Continue as {currentUser.name}
+                </Button>
+              </div>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {staff.map((person) => (
                 <button

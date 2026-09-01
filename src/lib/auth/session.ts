@@ -20,7 +20,9 @@ export function sessionCookieOptions(maxAge = SESSION_MAX_AGE_SECONDS) {
 
 export function expireSessionCookie(store: {
   set: (name: string, value: string, options: ReturnType<typeof sessionCookieOptions>) => unknown;
+  delete?: (name: string) => unknown;
 }) {
+  store.delete?.(SESSION_COOKIE);
   store.set(SESSION_COOKIE, "", sessionCookieOptions(0));
 }
 
