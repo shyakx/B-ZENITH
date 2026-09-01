@@ -23,7 +23,7 @@ export function AppShell({
         <div className="min-w-0 shrink-0 border-b border-zenith-border px-3 py-3">
           <Logo size={40} showWordmark />
         </div>
-        <nav className="app-sidebar-nav space-y-0.5 p-2">
+        <nav className="app-sidebar-nav p-2">
           <Suspense fallback={null}>
             <AppNav items={items} variant="sidebar" />
           </Suspense>

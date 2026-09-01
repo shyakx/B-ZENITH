@@ -65,7 +65,7 @@ export function normalizePath(pathname: string): string {
 
 export function isPublicPath(pathname: string): boolean {
   const path = normalizePath(pathname);
-  return path === "/login" || path === "/lock";
+  return path === "/login" || path === "/lock" || path === "/manifest.webmanifest";
 }
 
 export function hasPermission(role: Role, permission: Permission): boolean {

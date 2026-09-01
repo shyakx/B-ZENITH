@@ -16,7 +16,7 @@
   --color-zenith-danger: #b42318;
   --color-zenith-warning: #9a6b12;
   --font-sans: var(--font-dm-sans);
-  --font-display: var(--font-playfair);
+  --font-display: var(--font-dm-sans);
 }
 
 html,
@@ -30,6 +30,10 @@ body {
 
 body {
   font-family: var(--font-dm-sans), sans-serif;
+}
+
+.font-display {
+  font-weight: 600;
 }
 
 .brand-pattern {
@@ -59,8 +63,8 @@ body {
 
 .app-sidebar {
   display: none;
-  width: 14.5rem;
-  max-width: 14.5rem;
+  width: 16rem;
+  max-width: 16rem;
   min-width: 0;
   height: 100%;
   max-height: 100%;
@@ -68,11 +72,19 @@ body {
 }
 
 .app-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.app-sidebar-nav a {
+  flex: 1 1 0;
+  min-height: 2.75rem;
 }
 
 .app-sidebar-lock {

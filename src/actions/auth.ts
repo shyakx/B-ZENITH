@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { ROLE_HOME } from "@/lib/auth/roles";
 import { verifyPin } from "@/lib/auth/pin";
 import { expireSessionCookie, sessionCookieOptions, signSession, SESSION_COOKIE } from "@/lib/auth/session";
@@ -35,6 +35,7 @@ export async function loginAction(input: {
 
     return ok({ home: ROLE_HOME[user.role] });
   } catch (error) {
+    unstable_rethrow(error);
     return fail(error);
   }
 }
@@ -54,6 +55,7 @@ export async function changeOwnPinAction(input: {
     await changeOwnPin({ userId: user.id, pin: input.pin, confirmPin: input.confirmPin });
     return ok(undefined);
   } catch (error) {
+    unstable_rethrow(error);
     return fail(error);
   }
 }

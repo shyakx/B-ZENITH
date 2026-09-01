@@ -34,6 +34,7 @@ describe("authentication and authorization", () => {
     expect(canAccessPath("ADMIN", "/cashier/bills")).toBe(false);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/login/")).toBe(true);
+    expect(isPublicPath("/manifest.webmanifest")).toBe(true);
     expect(isPublicPath("/admin")).toBe(false);
     expect(isRole("ADMIN")).toBe(true);
     expect(isRole("admin")).toBe(false);

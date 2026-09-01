@@ -9,8 +9,15 @@ export class AppError extends Error {
 }
 
 export function toErrorMessage(error: unknown): string {
+  if (typeof error === "string") {
+    const message = error.trim();
+    if (message) return message;
+  }
   if (error instanceof AppError) return error.message;
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message) return message;
+  }
   return "Something went wrong.";
 }
 

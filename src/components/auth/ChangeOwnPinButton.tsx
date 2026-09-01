@@ -84,7 +84,7 @@ export function ChangeOwnPinButton({ compact = false }: { compact?: boolean }) {
           <div className="w-full max-w-sm rounded-2xl border border-zenith-border bg-white p-4 shadow-lg">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-display text-xl text-zenith-gold">Change my PIN</h2>
+                <h2 className="text-xl font-semibold text-zenith-gold">Change my PIN</h2>
                 <p className="mt-1 text-sm text-zenith-muted">
                   {step === "new" ? "Enter a new 4 to 6 digit PIN." : "Enter the same PIN again to confirm."}
                 </p>

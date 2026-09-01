@@ -15,7 +15,7 @@ type Staff = { id: string; name: string; role: Role };
 function StaffFace({ person }: { person: Staff }) {
   return (
     <span className="flex min-w-0 items-center gap-2.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zenith-gold font-display text-sm tracking-wide text-white">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zenith-gold text-sm font-semibold tracking-wide text-white">
         {staffInitials(person.name)}
       </span>
       <span className="min-w-0">
@@ -96,7 +96,7 @@ export function LoginScreen({
       <div className="w-full max-w-3xl rounded-2xl border border-zenith-border bg-white/95 p-4 shadow-sm md:p-6">
         <div className="mb-4 flex flex-col items-center text-center">
           <Logo size={64} />
-          <h1 className="mt-2 font-display text-2xl tracking-[0.18em] text-zenith-gold">B-ZENITH</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-[0.18em] text-zenith-gold">B-ZENITH</h1>
           <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zenith-muted">
             Staff login
           </p>
@@ -124,7 +124,7 @@ export function LoginScreen({
             <div className="space-y-3">
               {groups.map((group) => (
                 <section key={group.role}>
-                  <h2 className="mb-1.5 font-display text-sm tracking-wide text-zenith-gold">
+                  <h2 className="mb-1.5 text-sm font-semibold tracking-wide text-zenith-gold">
                     {roleLabel(group.role)}
                   </h2>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
