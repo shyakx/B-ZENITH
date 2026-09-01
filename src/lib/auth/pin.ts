@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 
 const PIN_PATTERN = /^\d{4,6}$/;
@@ -16,4 +17,9 @@ export async function hashPin(pin: string): Promise<string> {
 export async function verifyPin(pin: string, pinHash: string): Promise<boolean> {
   if (!isValidPin(pin)) return false;
   return bcrypt.compare(pin, pinHash);
+}
+
+/** Replace a deleted account's PIN so no 4–6 digit login can succeed. */
+export async function retirePinHash(): Promise<string> {
+  return bcrypt.hash(randomBytes(32).toString("hex"), 10);
 }

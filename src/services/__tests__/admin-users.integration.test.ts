@@ -1,21 +1,76 @@
 import { loadEnvConfig } from "@next/env";
+import { PaymentMethod } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
+import { isLiveStaffAccount } from "@/lib/auth/staff-account";
 import { verifyPin } from "@/lib/auth/pin";
 import { prisma } from "@/lib/prisma";
-import { changeOwnPin, changePin, createUser, listStaffForLogin, updateUser } from "@/services/users";
+import { createOrder } from "@/services/orders";
+import { recordPayment } from "@/services/payments";
+import { salesSummary } from "@/services/reports";
+import {
+  changeOwnPin,
+  changePin,
+  countActiveOwners,
+  createUser,
+  deleteStaff,
+  listStaffForLogin,
+  listUsers,
+  updateUser,
+} from "@/services/users";
+import { cleanupInventoryArtifacts, createIsolatedPosProduct } from "./inventory-helpers";
 
 loadEnvConfig(process.cwd());
 
 const createdUserIds: string[] = [];
+const createdTableIds: string[] = [];
+const createdProductIds: string[] = [];
+const createdCategoryIds: string[] = [];
 
 afterAll(async () => {
   if (createdUserIds.length > 0) {
+    const orders = await prisma.order.findMany({
+      where: { waiterId: { in: createdUserIds } },
+      select: { id: true, orderNumber: true },
+    });
+    const orderIds = orders.map((order) => order.id);
+    const numbers = orders.map((order) => String(order.orderNumber));
+    await prisma.payment.deleteMany({
+      where: {
+        OR: [{ cashierId: { in: createdUserIds } }, { orderId: { in: orderIds } }],
+      },
+    });
+    await prisma.creditRecord.deleteMany({
+      where: {
+        OR: [
+          { recordedById: { in: createdUserIds } },
+          { settledById: { in: createdUserIds } },
+          { orderId: { in: orderIds } },
+        ],
+      },
+    });
+    await prisma.inventoryMovement.deleteMany({
+      where: {
+        OR: [{ userId: { in: createdUserIds } }, { reference: { in: numbers } }],
+      },
+    });
+    await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
+    await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
     await prisma.auditLog.deleteMany({
       where: {
         OR: [{ entityId: { in: createdUserIds } }, { userId: { in: createdUserIds } }],
       },
     });
     await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
+  }
+  if (createdTableIds.length > 0) {
+    await prisma.serviceTable.deleteMany({ where: { id: { in: createdTableIds } } });
+  }
+  if (createdProductIds.length > 0) {
+    await cleanupInventoryArtifacts(createdProductIds);
+    await prisma.product.deleteMany({ where: { id: { in: createdProductIds } } });
+  }
+  if (createdCategoryIds.length > 0) {
+    await prisma.category.deleteMany({ where: { id: { in: createdCategoryIds } } });
   }
   await prisma.$disconnect();
 });
@@ -26,7 +81,7 @@ async function adminActor() {
   return admin;
 }
 
-describe("admin staff management against the database", () => {
+describe.sequential("admin staff management against the database", () => {
   it("creates staff, rejects invalid records, and never returns a PIN", async () => {
     const admin = await adminActor();
 
@@ -175,5 +230,202 @@ describe("admin staff management against the database", () => {
     expect(await verifyPin("5555", after!.pinHash)).toBe(false);
     expect(await verifyPin("8899", after!.pinHash)).toBe(true);
     expect(JSON.stringify(after)).not.toMatch(/8899|5555/);
+  });
+
+  it("deletes the login identity and keeps orders, payments, stock, and audit", async () => {
+    const admin = await adminActor();
+    const cashier = await prisma.user.findFirst({ where: { role: "CASHIER", active: true } });
+    if (!cashier) throw new Error("Seed data is required (an active Cashier).");
+
+    const waiter = await createUser({
+      name: `Delete History ${Date.now()}`,
+      role: "WAITER",
+      pin: "5555",
+      actorId: admin.id,
+    });
+    createdUserIds.push(waiter.id);
+
+    const isolated = await createIsolatedPosProduct({ sellingPrice: 1500, barQuantity: 20 });
+    createdProductIds.push(isolated.product.id);
+    createdCategoryIds.push(isolated.category.id);
+    const table = await prisma.serviceTable.create({
+      data: { name: `TEST-DEL-${Date.now()}`, sortOrder: 9101 },
+    });
+    createdTableIds.push(table.id);
+
+    const order = await createOrder({
+      waiterId: waiter.id,
+      tableId: table.id,
+      items: [{ productId: isolated.product.id, quantity: 1 }],
+      idempotencyKey: `test-delete-history-${Date.now()}`,
+    });
+    await recordPayment({
+      orderId: order.id,
+      amount: 1500,
+      method: PaymentMethod.CASH,
+      cashierId: cashier.id,
+      idempotencyKey: `test-delete-pay-${Date.now()}`,
+    });
+
+    const ordersBefore = await prisma.order.count({ where: { waiterId: waiter.id } });
+    const paymentsBefore = await prisma.payment.count({ where: { orderId: order.id } });
+    const movesBefore = await prisma.inventoryMovement.count({
+      where: { OR: [{ userId: waiter.id }, { reference: String(order.orderNumber) }] },
+    });
+    expect(ordersBefore).toBe(1);
+    expect(paymentsBefore).toBe(1);
+    expect(movesBefore).toBeGreaterThan(0);
+
+    await deleteStaff({ id: waiter.id, actorId: admin.id });
+
+    const row = await prisma.user.findUnique({ where: { id: waiter.id } });
+    expect(row?.deletedAt).toBeTruthy();
+    expect(row?.active).toBe(false);
+    expect(await verifyPin("5555", row!.pinHash)).toBe(false);
+    expect(await listStaffForLogin().then((staff) => staff.find((user) => user.id === waiter.id))).toBeUndefined();
+    expect(await listUsers().then((staff) => staff.find((user) => user.id === waiter.id))).toBeUndefined();
+
+    expect(await prisma.order.count({ where: { id: order.id, waiterId: waiter.id } })).toBe(1);
+    expect(await prisma.payment.count({ where: { orderId: order.id } })).toBe(1);
+    expect(
+      await prisma.inventoryMovement.count({
+        where: { OR: [{ userId: waiter.id }, { reference: String(order.orderNumber) }] },
+      }),
+    ).toBe(movesBefore);
+
+    const deletedAudit = await prisma.auditLog.findFirst({
+      where: { action: "USER_DELETED", entityId: waiter.id, userId: admin.id },
+    });
+    expect(deletedAudit).toBeTruthy();
+    expect(JSON.stringify(deletedAudit)).toMatch(/WAITER/);
+    expect(JSON.stringify(deletedAudit)).not.toMatch(/5555/);
+    expect(deletedAudit?.userId).toBe(admin.id);
+
+    await expect(updateUser({ id: waiter.id, active: true, actorId: admin.id })).rejects.toThrow(
+      "Staff member not found.",
+    );
+    await expect(changePin({ id: waiter.id, pin: "8888", actorId: admin.id })).rejects.toThrow(
+      "Staff member not found.",
+    );
+
+    const attributed = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: { waiter: { select: { id: true, name: true, deletedAt: true } } },
+    });
+    expect(attributed?.waiter.id).toBe(waiter.id);
+    expect(attributed?.waiter.name).toBe(waiter.name);
+    expect(attributed?.waiter.deletedAt).toBeTruthy();
+
+    const summary = await salesSummary(
+      new Date(order.createdAt.getTime() - 60_000),
+      new Date(order.createdAt.getTime() + 60_000),
+    );
+    expect(summary.waiters.some((person) => person.name === waiter.name)).toBe(true);
+    expect(isLiveStaffAccount(row)).toBe(false);
+  });
+
+  it("blocks ADMIN from granting OWNER and protects the last active owner", async () => {
+    const admin = await adminActor();
+    const owner = await createUser({
+      name: `Owner Guard ${Date.now()}`,
+      role: "OWNER",
+      pin: "5555",
+      actorId: admin.id,
+    });
+    createdUserIds.push(owner.id);
+
+    await expect(
+      createUser({
+        name: `Blocked Owner ${Date.now()}`,
+        role: "OWNER",
+        pin: "5555",
+        actorId: admin.id,
+      }),
+    ).rejects.toThrow("Only an owner can create an owner account.");
+
+    const waiter = await createUser({
+      name: `No Promote ${Date.now()}`,
+      role: "WAITER",
+      pin: "5555",
+      actorId: admin.id,
+    });
+    createdUserIds.push(waiter.id);
+    await expect(
+      updateUser({ id: waiter.id, role: "OWNER", actorId: admin.id }),
+    ).rejects.toThrow("Only an owner can create, promote, or demote an owner account.");
+
+    await expect(deleteStaff({ id: owner.id, actorId: admin.id })).rejects.toThrow(
+      "Only an owner can delete an owner account.",
+    );
+    await expect(updateUser({ id: owner.id, active: false, actorId: admin.id })).rejects.toThrow(
+      "Only an owner can change an owner account.",
+    );
+
+    await expect(deleteStaff({ id: owner.id, actorId: owner.id })).rejects.toThrow(
+      /last active owner cannot be deleted/i,
+    );
+    await expect(updateUser({ id: owner.id, active: false, actorId: owner.id })).rejects.toThrow(
+      /last active owner cannot be deactivated/i,
+    );
+    await expect(updateUser({ id: owner.id, role: "ADMIN", actorId: owner.id })).rejects.toThrow(
+      /last active owner cannot have their role changed/i,
+    );
+
+    const second = await createUser({
+      name: `Owner Two ${Date.now()}`,
+      role: "OWNER",
+      pin: "5555",
+      actorId: owner.id,
+    });
+    createdUserIds.push(second.id);
+
+    await deleteStaff({ id: second.id, actorId: owner.id });
+    const secondRow = await prisma.user.findUnique({ where: { id: second.id } });
+    expect(secondRow?.deletedAt).toBeTruthy();
+
+    await expect(deleteStaff({ id: owner.id, actorId: owner.id })).rejects.toThrow(
+      /last active owner cannot be deleted/i,
+    );
+    await expect(updateUser({ id: owner.id, active: false, actorId: owner.id })).rejects.toThrow(
+      /last active owner cannot be deactivated/i,
+    );
+  });
+
+  it("keeps at least one active owner when two owners are deleted at once", async () => {
+    const admin = await adminActor();
+    const existingA = await prisma.user.findFirst({
+      where: { id: { in: createdUserIds }, role: "OWNER", active: true, deletedAt: null },
+      select: { id: true },
+    });
+    const ownerA =
+      existingA ??
+      (await createUser({
+        name: `Owner Race A ${Date.now()}`,
+        role: "OWNER",
+        pin: "5555",
+        actorId: admin.id,
+      }));
+    if (!existingA) createdUserIds.push(ownerA.id);
+
+    const ownerB = await createUser({
+      name: `Owner Race B ${Date.now()}`,
+      role: "OWNER",
+      pin: "5555",
+      actorId: ownerA.id,
+    });
+    createdUserIds.push(ownerB.id);
+
+    const results = await Promise.allSettled([
+      deleteStaff({ id: ownerA.id, actorId: ownerB.id }),
+      deleteStaff({ id: ownerB.id, actorId: ownerA.id }),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(await countActiveOwners()).toBe(1);
+
+    const remaining = await prisma.user.findMany({
+      where: { id: { in: [ownerA.id, ownerB.id] }, role: "OWNER", active: true, deletedAt: null },
+    });
+    expect(remaining).toHaveLength(1);
   });
 });

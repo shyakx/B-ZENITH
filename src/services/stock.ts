@@ -1,5 +1,5 @@
 import { LocationKind, MovementType, Prisma, PrismaClient, ProductType } from "@prisma/client";
-import { hasPermission } from "@/lib/auth/roles";
+import { hasPermission, isRole } from "@/lib/auth/roles";
 import { LOCATION_CODES, WAREHOUSE_CODE } from "@/lib/domain/locations";
 import { AppError } from "@/lib/errors";
 
@@ -13,8 +13,8 @@ export function rethrowDomain(error: unknown): never {
 
 export async function requireInventoryManager(tx: Db, userId: string) {
   const user = await tx.user.findUnique({ where: { id: userId } });
-  if (!user || !user.active) throw new AppError("User not found.");
-  if (!hasPermission(user.role, "manageInventory")) {
+  if (!user || !user.active || user.deletedAt) throw new AppError("User not found.");
+  if (!isRole(user.role) || !hasPermission(user.role, "manageInventory")) {
     throw new AppError("You are not allowed to manage inventory.");
   }
   return user;

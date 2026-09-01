@@ -2,7 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { changePinAction, createUserAction, updateUserAction } from "@/actions/users";
+import {
+  changePinAction,
+  createUserAction,
+  deleteStaffAction,
+  updateUserAction,
+} from "@/actions/users";
 import { ROLES, roleLabel, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Input";
@@ -11,10 +16,25 @@ function isStaffRole(value: string): value is Role {
   return (ROLES as readonly string[]).includes(value);
 }
 
-export function CreateUserForm() {
+function RoleOptions({ roles }: { roles: Role[] }) {
+  return (
+    <>
+      {roles.map((item) => (
+        <option key={item} value={item}>
+          {roleLabel(item)}
+        </option>
+      ))}
+    </>
+  );
+}
+
+export function CreateUserForm({ assignableRoles }: { assignableRoles: Role[] }) {
   const router = useRouter();
+  const defaultRole: Role = assignableRoles.includes("WAITER")
+    ? "WAITER"
+    : (assignableRoles[0] ?? "WAITER");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<Role>("WAITER");
+  const [role, setRole] = useState<Role>(defaultRole);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -32,7 +52,7 @@ export function CreateUserForm() {
       return;
     }
     setName("");
-    setRole("WAITER");
+    setRole(defaultRole);
     setPin("");
     setSuccess(true);
     router.refresh();
@@ -57,11 +77,7 @@ export function CreateUserForm() {
             if (isStaffRole(event.target.value)) setRole(event.target.value);
           }}
         >
-          {ROLES.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
+          <RoleOptions roles={assignableRoles} />
         </Select>
       </Field>
       <Field label="Temporary PIN">
@@ -75,7 +91,7 @@ export function CreateUserForm() {
         />
       </Field>
       <div className="flex items-end">
-        <Button className="w-full" disabled={busy}>
+        <Button className="w-full" disabled={busy || assignableRoles.length === 0}>
           {busy ? "Creating…" : "Create staff"}
         </Button>
       </div>
@@ -91,13 +107,22 @@ export function CreateUserForm() {
 
 export function StaffActions({
   user,
+  assignableRoles,
+  canResetPin,
+  canChangeActive,
+  canDelete,
 }: {
   user: { id: string; name: string; role: Role; active: boolean };
+  assignableRoles: Role[];
+  canResetPin: boolean;
+  canChangeActive: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
+  const roleOptions = ROLES.filter((item) => item === user.role || assignableRoles.includes(item));
   const [role, setRole] = useState<Role>(user.role);
   const [pin, setPin] = useState("");
-  const [confirm, setConfirm] = useState<"role" | "pin" | "active" | null>(null);
+  const [confirm, setConfirm] = useState<"role" | "pin" | "active" | "delete" | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -156,6 +181,19 @@ export function StaffActions({
     router.refresh();
   }
 
+  async function confirmDelete() {
+    setBusy(true);
+    resetFeedback();
+    const result = await deleteStaffAction({ id: user.id });
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    router.push("/admin/users");
+    router.refresh();
+  }
+
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-zenith-border bg-white p-4">
@@ -168,11 +206,7 @@ export function StaffActions({
               if (isStaffRole(event.target.value)) setRole(event.target.value);
             }}
           >
-            {ROLES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
+            <RoleOptions roles={roleOptions} />
           </Select>
           {confirm === "role" ? (
             <div className="sm:col-span-2 space-y-3">
@@ -203,90 +237,131 @@ export function StaffActions({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zenith-border bg-white p-4">
-        <h3 className="text-base font-semibold">Reset PIN</h3>
-        {confirm === "pin" ? (
-          <div className="mt-3 space-y-3">
-            <p className="font-semibold">Reset PIN for {user.name}?</p>
-            <p className="text-sm">
-              The current PIN will stop working and the new temporary PIN will be used for the next
-              login.
-            </p>
-            <Field label="New temporary PIN">
-              <Input
-                inputMode="numeric"
-                autoComplete="off"
-                value={pin}
-                onChange={(event) => setPin(event.target.value)}
-              />
-            </Field>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => {
-                  setConfirm(null);
-                  setPin("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button disabled={busy || pin.length === 0} onClick={resetPin}>
-                {busy ? "Saving…" : "Reset PIN"}
-              </Button>
+      {canResetPin ? (
+        <section className="rounded-2xl border border-zenith-border bg-white p-4">
+          <h3 className="text-base font-semibold">Reset PIN</h3>
+          {confirm === "pin" ? (
+            <div className="mt-3 space-y-3">
+              <p className="font-semibold">Reset PIN for {user.name}?</p>
+              <p className="text-sm">
+                The current PIN will stop working and the new temporary PIN will be used for the next
+                login.
+              </p>
+              <Field label="New temporary PIN">
+                <Input
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={pin}
+                  onChange={(event) => setPin(event.target.value)}
+                />
+              </Field>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setConfirm(null);
+                    setPin("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button disabled={busy || pin.length === 0} onClick={resetPin}>
+                  {busy ? "Saving…" : "Reset PIN"}
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <Button
-            className="mt-3"
-            variant="secondary"
-            onClick={() => {
-              resetFeedback();
-              setConfirm("pin");
-            }}
-          >
-            Reset PIN
-          </Button>
-        )}
-      </section>
+          ) : (
+            <Button
+              className="mt-3"
+              variant="secondary"
+              onClick={() => {
+                resetFeedback();
+                setConfirm("pin");
+              }}
+            >
+              Reset PIN
+            </Button>
+          )}
+        </section>
+      ) : null}
 
-      <section className="rounded-2xl border border-zenith-border bg-white p-4">
-        <h3 className="text-base font-semibold">{user.active ? "Deactivate" : "Activate"}</h3>
-        {confirm === "active" ? (
-          <div className="mt-3 space-y-3">
-            {user.active ? (
-              <>
-                <p className="font-semibold">Deactivate {user.name}?</p>
-                <p className="text-sm">{user.name} will no longer be able to log in.</p>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold">Activate {user.name}?</p>
-                <p className="text-sm">{user.name} will be able to log in again.</p>
-              </>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <Button variant="secondary" disabled={busy} onClick={() => setConfirm(null)}>
-                Cancel
-              </Button>
-              <Button variant={user.active ? "danger" : "primary"} disabled={busy} onClick={toggleActive}>
-                {busy ? "Saving…" : user.active ? "Deactivate" : "Activate"}
-              </Button>
+      {canChangeActive ? (
+        <section className="rounded-2xl border border-zenith-border bg-white p-4">
+          <h3 className="text-base font-semibold">{user.active ? "Deactivate" : "Activate"}</h3>
+          {confirm === "active" ? (
+            <div className="mt-3 space-y-3">
+              {user.active ? (
+                <>
+                  <p className="font-semibold">Deactivate {user.name}?</p>
+                  <p className="text-sm">
+                    {user.name} will no longer be able to log in. The account stays in staff records
+                    and can be activated again.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">Activate {user.name}?</p>
+                  <p className="text-sm">{user.name} will be able to log in again.</p>
+                </>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <Button variant="secondary" disabled={busy} onClick={() => setConfirm(null)}>
+                  Cancel
+                </Button>
+                <Button variant={user.active ? "danger" : "primary"} disabled={busy} onClick={toggleActive}>
+                  {busy ? "Saving…" : user.active ? "Deactivate" : "Activate"}
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <Button
-            className="mt-3"
-            variant={user.active ? "danger" : "primary"}
-            onClick={() => {
-              resetFeedback();
-              setConfirm("active");
-            }}
-          >
-            {user.active ? "Deactivate" : "Activate"}
-          </Button>
-        )}
-      </section>
+          ) : (
+            <Button
+              className="mt-3"
+              variant={user.active ? "danger" : "primary"}
+              onClick={() => {
+                resetFeedback();
+                setConfirm("active");
+              }}
+            >
+              {user.active ? "Deactivate" : "Activate"}
+            </Button>
+          )}
+        </section>
+      ) : null}
+
+      {canDelete ? (
+        <section className="rounded-2xl border border-zenith-border bg-white p-4">
+          <h3 className="text-base font-semibold">Delete staff</h3>
+          {confirm === "delete" ? (
+            <div className="mt-3 space-y-3">
+              <p className="font-semibold">Delete this staff account permanently?</p>
+              <p className="text-sm">
+                The staff account will no longer be able to log in. Historical business records will
+                be preserved.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="secondary" disabled={busy} onClick={() => setConfirm(null)}>
+                  Cancel
+                </Button>
+                <Button variant="danger" disabled={busy} onClick={confirmDelete}>
+                  {busy ? "Deleting…" : "Delete permanently"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              className="mt-3"
+              variant="danger"
+              onClick={() => {
+                resetFeedback();
+                setConfirm("delete");
+              }}
+            >
+              Delete staff
+            </Button>
+          )}
+        </section>
+      ) : null}
 
       {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
       {message ? <p className="text-sm font-semibold text-zenith-success">{message}</p> : null}

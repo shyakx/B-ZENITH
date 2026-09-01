@@ -3,19 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeftRight,
   Banknote,
   BarChart3,
   BedDouble,
   Boxes,
+  ClipboardCheck,
   ClipboardList,
   ClipboardPlus,
   Clock,
   Home,
   LayoutGrid,
+  MapPin,
   Package,
   ScrollText,
   Settings,
   Shield,
+  SlidersHorizontal,
+  Store,
   Truck,
   Users,
   type LucideIcon,
@@ -23,6 +28,7 @@ import {
 import { groupNavItems, isNavActive, type NavItem } from "@/lib/navigation";
 
 const NAV_ICONS: Record<string, LucideIcon> = {
+  "/owner": Home,
   "/waiter": Home,
   "/waiter/orders/new": ClipboardPlus,
   "/waiter/orders": ClipboardList,
@@ -35,6 +41,11 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/manager/products": Package,
   "/manager/inventory": Boxes,
   "/manager/purchases": Truck,
+  "/manager/inventory/transfer": ArrowLeftRight,
+  "/manager/inventory/count": ClipboardCheck,
+  "/manager/inventory/adjust": SlidersHorizontal,
+  "/manager/inventory/suppliers": Store,
+  "/manager/inventory/locations": MapPin,
   "/manager/orders": ClipboardList,
   "/manager/reports": BarChart3,
   "/manager/maison": BedDouble,

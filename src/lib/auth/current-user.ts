@@ -2,7 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { ROLE_HOME, type Permission, hasPermission, type Role } from "@/lib/auth/roles";
+import { ROLE_HOME, type Permission, hasPermission, satisfiesRoleGate, type Role } from "@/lib/auth/roles";
+import { isLiveStaffAccount } from "@/lib/auth/staff-account";
 import { readSessionToken, SESSION_COOKIE } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 
@@ -22,10 +23,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, role: true, active: true },
+    select: { id: true, name: true, role: true, active: true, deletedAt: true },
   });
 
-  if (!user || !user.active) return null;
+  if (!isLiveStaffAccount(user)) return null;
 
   return { id: user.id, name: user.name, role: user.role };
 });
@@ -38,7 +39,7 @@ export async function requireUser(): Promise<CurrentUser> {
 
 export async function requireRole(...roles: Role[]): Promise<CurrentUser> {
   const user = await requireUser();
-  if (!roles.includes(user.role)) {
+  if (!satisfiesRoleGate(user.role, roles)) {
     redirect(ROLE_HOME[user.role]);
   }
   return user;

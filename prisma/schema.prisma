@@ -7,11 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// OWNER owns the business and has full operational visibility.
+/// ADMIN manages staff, PINs, settings, and audit — not daily floor operations.
 enum Role {
   WAITER
   CASHIER
   MANAGER
   ADMIN
+  OWNER
 }
 
 enum BusinessArea {
@@ -70,13 +73,15 @@ enum UnitFamily {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   pinHash   String
   role      Role
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  active    Boolean   @default(true)
+  /// Set when the login identity is permanently removed. Business history keeps this row.
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   waiterOrders      Order[]              @relation("WaiterOrders")
   payments          Payment[]

@@ -5,6 +5,7 @@ import { staffControlCounts } from "@/lib/admin-control";
 describe("admin system control counts", () => {
   it("summarizes staff status and role assignments", () => {
     const counts = staffControlCounts([
+      { role: "OWNER", active: true },
       { role: "ADMIN", active: true },
       { role: "MANAGER", active: true },
       { role: "CASHIER", active: false },
@@ -13,10 +14,11 @@ describe("admin system control counts", () => {
     ]);
 
     expect(counts).toEqual({
-      staff: 5,
-      active: 3,
+      staff: 6,
+      active: 4,
       inactive: 2,
       admins: 1,
+      owners: 1,
       managers: 1,
       cashiers: 1,
       waiters: 2,
@@ -31,6 +33,7 @@ describe("admin audit labels", () => {
     expect(auditActionLabel("PIN_CHANGED")).toBe("Reset PIN");
     expect(auditActionLabel("USER_ACTIVATED")).toBe("Activated staff");
     expect(auditActionLabel("USER_DEACTIVATED")).toBe("Deactivated staff");
+    expect(auditActionLabel("USER_DELETED")).toBe("Deleted staff");
     expect(auditActionLabel("SETTINGS_CHANGED")).toBe("Changed settings");
     expect(auditAffected({ entity: "User", entityId: "1", after: { name: "John", role: "WAITER" } })).toBe(
       "John · WAITER",

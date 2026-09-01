@@ -39,7 +39,7 @@ const CONFIRM_VALUE = "YES";
 const DRY_RUN_VALUE = "YES";
 const BLOCKED_HOST_MARKERS = ["quiet-feather-99399801"];
 const LEGACY_TABLE_NAMES = ["Sale", "Table", "Account", "Session", "VerificationToken"];
-const LEGACY_ROLE_LABELS = ["OWNER", "BILLIARD"];
+const LEGACY_ROLE_LABELS = ["BILLIARD"];
 
 type SafeConnectionMeta = {
   provider: string;
@@ -146,7 +146,7 @@ async function assertNotLegacySchema() {
   `);
   if (legacyRoles.length > 0) {
     throw new Error(
-      "Refusing to run against a legacy Role enum (OWNER/BILLIARD). The old database must remain untouched.",
+      "Refusing to run against a legacy Role enum (BILLIARD). The old database must remain untouched.",
     );
   }
 }

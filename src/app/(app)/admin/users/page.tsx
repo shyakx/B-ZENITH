@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
+import { assignableRoles } from "@/lib/auth/staff-policy";
 import { roleLabel } from "@/lib/auth/roles";
 import { formatDate } from "@/lib/dates";
 import { CreateUserForm } from "@/components/admin/UserForms";
 import { Badge } from "@/components/ui/Badge";
-import { listUsers } from "@/services/users";
+import { countActiveOwners, listUsers } from "@/services/users";
 
 export default async function StaffPage() {
-  await requireRole("ADMIN");
-  const users = await listUsers();
+  const actor = await requireRole("ADMIN");
+  const [users, ownerCount] = await Promise.all([listUsers(), countActiveOwners()]);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
@@ -19,7 +20,7 @@ export default async function StaffPage() {
 
       <section className="mt-5 rounded-xl border border-zenith-border bg-white p-4">
         <h2 className="mb-3 text-base font-semibold">Create staff</h2>
-        <CreateUserForm />
+        <CreateUserForm assignableRoles={assignableRoles(actor.role, ownerCount)} />
       </section>
 
       <section className="mt-6">

@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { ROLE_HOME } from "@/lib/auth/roles";
+import { isLiveStaffAccount } from "@/lib/auth/staff-account";
 import { verifyPin } from "@/lib/auth/pin";
 import { expireSessionCookie, sessionCookieOptions, signSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { fail, ok, type ActionResult } from "@/lib/errors";
@@ -16,7 +17,7 @@ export async function loginAction(input: {
 }): Promise<ActionResult<{ home: string }>> {
   try {
     const user = await prisma.user.findUnique({ where: { id: input.userId } });
-    if (!user || !user.active) {
+    if (!isLiveStaffAccount(user)) {
       return fail("Staff member not found.");
     }
     const valid = await verifyPin(input.pin, user.pinHash);

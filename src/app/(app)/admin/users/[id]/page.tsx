@@ -1,24 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/current-user";
+import { staffActionFlags } from "@/lib/auth/staff-policy";
 import { roleLabel } from "@/lib/auth/roles";
 import { auditActionLabel, auditAffected } from "@/lib/admin-audit";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { StaffActions } from "@/components/admin/UserForms";
 import { Badge } from "@/components/ui/Badge";
-import { getUserById, listUserAudit } from "@/services/users";
+import { countActiveOwners, getUserById, listUserAudit } from "@/services/users";
 
 export default async function StaffDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRole("ADMIN");
+  const actor = await requireRole("ADMIN");
   const { id } = await params;
   const user = await getUserById(id);
   if (!user) notFound();
 
-  const logs = await listUserAudit(user.id);
+  const [logs, ownerCount] = await Promise.all([listUserAudit(user.id), countActiveOwners()]);
+  const flags = staffActionFlags(actor, user, ownerCount);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl">
@@ -44,7 +46,7 @@ export default async function StaffDetailPage({
       </div>
 
       <div className="mt-6">
-        <StaffActions user={user} />
+        <StaffActions user={user} {...flags} />
       </div>
 
       <section className="mt-8">

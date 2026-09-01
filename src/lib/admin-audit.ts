@@ -6,6 +6,7 @@ const ACTION_LABELS: Record<string, string> = {
   PIN_CHANGED: "Reset PIN",
   USER_ACTIVATED: "Activated staff",
   USER_DEACTIVATED: "Deactivated staff",
+  USER_DELETED: "Deleted staff",
   SETTINGS_CHANGED: "Changed settings",
 };
 

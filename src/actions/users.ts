@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/current-user";
 import { fail, ok, type ActionResult } from "@/lib/errors";
-import { changePin, createUser, updateUser } from "@/services/users";
+import { changePin, createUser, deleteStaff, updateUser } from "@/services/users";
 
 function revalidateStaff(id?: string) {
   revalidatePath("/admin");
   revalidatePath("/admin/users");
   revalidatePath("/admin/access");
   revalidatePath("/admin/audit");
+  revalidatePath("/owner");
   if (id) revalidatePath(`/admin/users/${id}`);
 }
 
@@ -51,6 +52,17 @@ export async function changePinAction(input: {
   try {
     const actor = await requirePermission("manageUsers");
     await changePin({ ...input, actorId: actor.id });
+    revalidateStaff(input.id);
+    return ok(undefined);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function deleteStaffAction(input: { id: string }): Promise<ActionResult> {
+  try {
+    const actor = await requirePermission("manageUsers");
+    await deleteStaff({ id: input.id, actorId: actor.id });
     revalidateStaff(input.id);
     return ok(undefined);
   } catch (error) {

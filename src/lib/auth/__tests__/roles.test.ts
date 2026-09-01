@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccessPath, hasPermission, isPublicPath, isRole } from "@/lib/auth/roles";
+import { canAccessPath, hasPermission, isPublicPath, isRole, PERMISSIONS, satisfiesRoleGate } from "@/lib/auth/roles";
 import { isValidPin } from "@/lib/auth/pin";
 
 describe("authentication and authorization", () => {
@@ -37,7 +37,46 @@ describe("authentication and authorization", () => {
     expect(isPublicPath("/manifest.webmanifest")).toBe(true);
     expect(isPublicPath("/admin")).toBe(false);
     expect(isRole("ADMIN")).toBe(true);
+    expect(isRole("OWNER")).toBe(true);
     expect(isRole("admin")).toBe(false);
+    expect(isRole("owner")).toBe(false);
+  });
+
+  it("gives OWNER every business path and permission without changing other roles", () => {
+    expect(canAccessPath("OWNER", "/owner")).toBe(true);
+    expect(canAccessPath("OWNER", "/waiter/orders/new")).toBe(true);
+    expect(canAccessPath("OWNER", "/manager/tables")).toBe(true);
+    expect(canAccessPath("OWNER", "/cashier/bills")).toBe(true);
+    expect(canAccessPath("OWNER", "/cashier/outstanding")).toBe(true);
+    expect(canAccessPath("OWNER", "/manager/products")).toBe(true);
+    expect(canAccessPath("OWNER", "/manager/inventory")).toBe(true);
+    expect(canAccessPath("OWNER", "/manager/purchases")).toBe(true);
+    expect(canAccessPath("OWNER", "/manager/reports")).toBe(true);
+    expect(canAccessPath("OWNER", "/manager/maison")).toBe(true);
+    expect(canAccessPath("OWNER", "/admin/users")).toBe(true);
+    expect(canAccessPath("OWNER", "/admin/settings")).toBe(true);
+    expect(canAccessPath("OWNER", "/admin/audit")).toBe(true);
+    expect(canAccessPath("OWNER", "/print/order/1")).toBe(true);
+
+    expect(canAccessPath("ADMIN", "/owner")).toBe(false);
+    expect(canAccessPath("ADMIN", "/manager/tables")).toBe(false);
+    expect(canAccessPath("ADMIN", "/cashier/bills")).toBe(false);
+    expect(canAccessPath("MANAGER", "/owner")).toBe(false);
+    expect(canAccessPath("MANAGER", "/admin/users")).toBe(false);
+    expect(canAccessPath("CASHIER", "/owner")).toBe(false);
+    expect(canAccessPath("WAITER", "/owner")).toBe(false);
+    expect(canAccessPath("WAITER", "/admin/users")).toBe(false);
+
+    expect(satisfiesRoleGate("OWNER", ["WAITER"])).toBe(true);
+    expect(satisfiesRoleGate("OWNER", ["CASHIER"])).toBe(true);
+    expect(satisfiesRoleGate("OWNER", ["MANAGER"])).toBe(true);
+    expect(satisfiesRoleGate("OWNER", ["ADMIN"])).toBe(true);
+    expect(satisfiesRoleGate("ADMIN", ["OWNER"])).toBe(false);
+    expect(satisfiesRoleGate("MANAGER", ["OWNER"])).toBe(false);
+    expect(satisfiesRoleGate("CASHIER", ["OWNER"])).toBe(false);
+    expect(satisfiesRoleGate("WAITER", ["OWNER"])).toBe(false);
+    expect(satisfiesRoleGate("ADMIN", ["ADMIN"])).toBe(true);
+    expect(satisfiesRoleGate("WAITER", ["CASHIER"])).toBe(false);
   });
 
   it("blocks restricted operations by role", () => {
@@ -76,5 +115,19 @@ describe("authentication and authorization", () => {
     expect(hasPermission("MANAGER", "manageUsers")).toBe(false);
     expect(hasPermission("MANAGER", "manageSettings")).toBe(false);
     expect(hasPermission("MANAGER", "viewAudit")).toBe(false);
+    expect(hasPermission("OWNER", "createOrder")).toBe(true);
+    expect(hasPermission("OWNER", "recordPayment")).toBe(true);
+    expect(hasPermission("OWNER", "payLater")).toBe(true);
+    expect(hasPermission("OWNER", "printFacture")).toBe(true);
+    expect(hasPermission("OWNER", "manageProducts")).toBe(true);
+    expect(hasPermission("OWNER", "manageInventory")).toBe(true);
+    expect(hasPermission("OWNER", "viewReports")).toBe(true);
+    expect(hasPermission("OWNER", "manageMaison")).toBe(true);
+    expect(hasPermission("OWNER", "manageUsers")).toBe(true);
+    expect(hasPermission("OWNER", "manageSettings")).toBe(true);
+    expect(hasPermission("OWNER", "viewAudit")).toBe(true);
+    expect(hasPermission("ADMIN", "createOrder")).toBe(false);
+    expect(hasPermission("MANAGER", "manageUsers")).toBe(false);
+    expect(PERMISSIONS.every((permission) => hasPermission("OWNER", permission))).toBe(true);
   });
 });
