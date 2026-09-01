@@ -34,7 +34,7 @@ describe("route-aware navigation", () => {
       "Receive Stock",
       "Orders",
       "Reports",
-      "Maison de Passage",
+      "Maison",
     ]);
     expect(ROLE_NAV.MANAGER.map((item) => item.href)).toEqual([
       "/manager",
@@ -47,6 +47,7 @@ describe("route-aware navigation", () => {
       "/manager/maison",
     ]);
     expect(ROLE_NAV.MANAGER.map((item) => item.href)).not.toContain("/manager/sales");
+    expect(ROLE_NAV.MANAGER.every((item) => item.hint.length > 0)).toBe(true);
     expect(isNavActive("/manager/tables", "/manager/tables", ROLE_NAV.MANAGER.map((item) => item.href))).toBe(true);
     expect(isNavActive("/manager/orders/abc", "/manager/orders", ROLE_NAV.MANAGER.map((item) => item.href))).toBe(
       true,

@@ -5,6 +5,7 @@ import { roleLabel, type Role } from "@/lib/auth/roles";
 import { ROLE_NAV } from "@/lib/navigation";
 import { Logo } from "@/components/brand/Logo";
 import { PoweredByCloudSync } from "@/components/brand/PoweredByCloudSync";
+import { ChangeOwnPinButton } from "@/components/auth/ChangeOwnPinButton";
 import { AppNav } from "@/components/layout/AppNav";
 
 export function AppShell({
@@ -29,12 +30,15 @@ export function AppShell({
         </nav>
         <div className="app-sidebar-lock border-t border-zenith-border p-3">
           <PoweredByCloudSync className="mb-2 text-center" />
-          <form action={lockAction}>
-            <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border-2 border-zenith-gold px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold">
-              <Lock size={15} />
-              Lock / Switch user
-            </button>
-          </form>
+          <div className="grid gap-2">
+            <ChangeOwnPinButton />
+            <form action={lockAction}>
+              <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border-2 border-zenith-gold px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold">
+                <Lock size={15} />
+                Lock / Switch user
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
 
@@ -49,12 +53,15 @@ export function AppShell({
               {roleLabel(user.role)}
             </div>
           </div>
-          <form action={lockAction} className="md:hidden">
-            <button className="inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-zenith-gold px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold">
-              <Lock size={15} />
-              Lock
-            </button>
-          </form>
+          <div className="flex items-center gap-2 md:hidden">
+            <ChangeOwnPinButton compact />
+            <form action={lockAction}>
+              <button className="inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-zenith-gold px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold">
+                <Lock size={15} />
+                Lock
+              </button>
+            </form>
+          </div>
         </header>
 
         <nav className="flex min-w-0 shrink-0 flex-wrap gap-1.5 border-b border-zenith-border bg-zenith-surface px-3 py-2 md:hidden">

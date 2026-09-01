@@ -7,6 +7,8 @@ import { verifyPin } from "@/lib/auth/pin";
 import { expireSessionCookie, sessionCookieOptions, signSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { fail, ok, type ActionResult } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth/current-user";
+import { changeOwnPin } from "@/services/users";
 
 export async function loginAction(input: {
   userId: string;
@@ -41,4 +43,17 @@ export async function lockAction() {
   const jar = await cookies();
   expireSessionCookie(jar);
   redirect("/login");
+}
+
+export async function changeOwnPinAction(input: {
+  pin: string;
+  confirmPin: string;
+}): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    await changeOwnPin({ userId: user.id, pin: input.pin, confirmPin: input.confirmPin });
+    return ok(undefined);
+  } catch (error) {
+    return fail(error);
+  }
 }

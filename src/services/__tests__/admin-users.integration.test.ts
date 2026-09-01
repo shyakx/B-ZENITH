@@ -2,7 +2,7 @@ import { loadEnvConfig } from "@next/env";
 import { afterAll, describe, expect, it } from "vitest";
 import { verifyPin } from "@/lib/auth/pin";
 import { prisma } from "@/lib/prisma";
-import { changePin, createUser, listStaffForLogin, updateUser } from "@/services/users";
+import { changeOwnPin, changePin, createUser, listStaffForLogin, updateUser } from "@/services/users";
 
 loadEnvConfig(process.cwd());
 
@@ -154,5 +154,26 @@ describe("admin staff management against the database", () => {
         actorId: admin.id,
       }),
     ).rejects.toThrow("You cannot deactivate your own account.");
+  });
+
+  it("lets staff set their own PIN and then sign in with it", async () => {
+    const admin = await adminActor();
+    const created = await createUser({
+      name: `Own Pin ${Date.now()}`,
+      role: "WAITER",
+      pin: "5555",
+      actorId: admin.id,
+    });
+    createdUserIds.push(created.id);
+
+    await expect(
+      changeOwnPin({ userId: created.id, pin: "8899", confirmPin: "8800" }),
+    ).rejects.toThrow(/must match/);
+
+    await changeOwnPin({ userId: created.id, pin: "8899", confirmPin: "8899" });
+    const after = await prisma.user.findUnique({ where: { id: created.id } });
+    expect(await verifyPin("5555", after!.pinHash)).toBe(false);
+    expect(await verifyPin("8899", after!.pinHash)).toBe(true);
+    expect(JSON.stringify(after)).not.toMatch(/8899|5555/);
   });
 });

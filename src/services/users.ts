@@ -162,3 +162,8 @@ export async function changePin(input: { id: string; pin: string; actorId: strin
     after: { name: user.name },
   });
 }
+
+export async function changeOwnPin(input: { userId: string; pin: string; confirmPin: string }) {
+  if (input.pin !== input.confirmPin) throw new AppError("Both PINs must match.");
+  await changePin({ id: input.userId, pin: input.pin, actorId: input.userId });
+}

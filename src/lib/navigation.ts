@@ -3,6 +3,7 @@ import type { Role } from "@/lib/auth/roles";
 export type NavItem = {
   href: string;
   label: string;
+  hint: string;
 };
 
 function normalizeNavPath(pathname: string): string {
@@ -24,31 +25,31 @@ export function isNavActive(pathname: string, href: string, items: readonly stri
 
 export const ROLE_NAV: Record<Role, NavItem[]> = {
   WAITER: [
-    { href: "/waiter", label: "Home" },
-    { href: "/waiter/orders/new", label: "New Order" },
-    { href: "/waiter/orders", label: "My Orders" },
+    { href: "/waiter", label: "Home", hint: "Today's work" },
+    { href: "/waiter/orders/new", label: "New Order", hint: "Take a table order" },
+    { href: "/waiter/orders", label: "My Orders", hint: "Orders I opened" },
   ],
   CASHIER: [
-    { href: "/cashier", label: "Home" },
-    { href: "/cashier/bills", label: "Orders / Bills" },
-    { href: "/cashier/outstanding", label: "Outstanding" },
-    { href: "/cashier/payments", label: "Payments" },
+    { href: "/cashier", label: "Home", hint: "Money today" },
+    { href: "/cashier/bills", label: "Orders / Bills", hint: "Bills waiting to pay" },
+    { href: "/cashier/outstanding", label: "Outstanding", hint: "Pay later and unpaid" },
+    { href: "/cashier/payments", label: "Payments", hint: "Cash already taken" },
   ],
   MANAGER: [
-    { href: "/manager", label: "Home" },
-    { href: "/manager/tables", label: "Tables" },
-    { href: "/manager/products", label: "Products" },
-    { href: "/manager/inventory", label: "Inventory" },
-    { href: "/manager/purchases", label: "Receive Stock" },
-    { href: "/manager/orders", label: "Orders" },
-    { href: "/manager/reports", label: "Reports" },
-    { href: "/manager/maison", label: "Maison de Passage" },
+    { href: "/manager", label: "Home", hint: "Day overview" },
+    { href: "/manager/tables", label: "Tables", hint: "Open and close tables" },
+    { href: "/manager/products", label: "Products", hint: "Menu and prices" },
+    { href: "/manager/inventory", label: "Inventory", hint: "Stock rooms and moves" },
+    { href: "/manager/purchases", label: "Receive Stock", hint: "Buy into Main Stock" },
+    { href: "/manager/orders", label: "Orders", hint: "Every table order" },
+    { href: "/manager/reports", label: "Reports", hint: "Sales and stock value" },
+    { href: "/manager/maison", label: "Maison", hint: "Guest stay records" },
   ],
   ADMIN: [
-    { href: "/admin", label: "Home" },
-    { href: "/admin/users", label: "Staff" },
-    { href: "/admin/access", label: "Access" },
-    { href: "/admin/settings", label: "Settings" },
-    { href: "/admin/audit", label: "Audit" },
+    { href: "/admin", label: "Home", hint: "Staff overview" },
+    { href: "/admin/users", label: "Staff", hint: "People, roles, PINs" },
+    { href: "/admin/access", label: "Access", hint: "What each role can do" },
+    { href: "/admin/settings", label: "Settings", hint: "Facture details" },
+    { href: "/admin/audit", label: "Audit", hint: "Who changed what" },
   ],
 };
