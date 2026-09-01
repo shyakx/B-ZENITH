@@ -7,7 +7,13 @@ import { PinKeypad } from "@/components/auth/PinKeypad";
 import { Button } from "@/components/ui/Button";
 import { nextPinValue } from "@/lib/domain/pin-input";
 
-export function ChangeOwnPinButton({ compact = false }: { compact?: boolean }) {
+export function ChangeOwnPinButton({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"new" | "confirm">("new");
   const [pin, setPin] = useState("");
@@ -72,9 +78,12 @@ export function ChangeOwnPinButton({ compact = false }: { compact?: boolean }) {
           reset();
           setOpen(true);
         }}
-        className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border-2 border-zenith-border px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
-          compact ? "" : "w-full"
-        }`}
+        className={
+          className ??
+          `inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border-2 border-zenith-border px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
+            compact ? "" : "w-full"
+          }`
+        }
       >
         <KeyRound size={15} />
         {compact ? "PIN" : "Change my PIN"}

@@ -4,7 +4,27 @@ export type NavItem = {
   href: string;
   label: string;
   hint: string;
+  group?: string;
 };
+
+export type NavGroup = {
+  label: string | null;
+  items: NavItem[];
+};
+
+export function groupNavItems(items: readonly NavItem[]): NavGroup[] {
+  const groups: NavGroup[] = [];
+  for (const item of items) {
+    const label = item.group ?? null;
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) {
+      last.items.push(item);
+    } else {
+      groups.push({ label, items: [item] });
+    }
+  }
+  return groups;
+}
 
 function normalizeNavPath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
@@ -36,20 +56,20 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
     { href: "/cashier/payments", label: "Payments", hint: "Cash already taken" },
   ],
   MANAGER: [
-    { href: "/manager", label: "Home", hint: "Day overview" },
-    { href: "/manager/tables", label: "Tables", hint: "Open and close tables" },
+    { href: "/manager", label: "Home", hint: "Day overview", group: "Operations" },
+    { href: "/manager/tables", label: "Tables", hint: "Open and close tables", group: "Operations" },
     { href: "/manager/products", label: "Products", hint: "Menu and prices" },
-    { href: "/manager/inventory", label: "Inventory", hint: "Stock rooms and moves" },
-    { href: "/manager/purchases", label: "Receive Stock", hint: "Buy into Main Stock" },
+    { href: "/manager/inventory", label: "Inventory", hint: "Stock rooms and moves", group: "Inventory" },
+    { href: "/manager/purchases", label: "Receive Stock", hint: "Buy into Main Stock", group: "Inventory" },
     { href: "/manager/orders", label: "Orders", hint: "Every table order" },
-    { href: "/manager/reports", label: "Reports", hint: "Sales and stock value" },
-    { href: "/manager/maison", label: "Maison", hint: "Guest stay records" },
+    { href: "/manager/reports", label: "Reports", hint: "Sales and stock value", group: "Reports" },
+    { href: "/manager/maison", label: "Maison", hint: "Guest stay records", group: "Reports" },
   ],
   ADMIN: [
     { href: "/admin", label: "Home", hint: "Staff overview" },
-    { href: "/admin/users", label: "Staff", hint: "People, roles, PINs" },
-    { href: "/admin/access", label: "Access", hint: "What each role can do" },
-    { href: "/admin/settings", label: "Settings", hint: "Facture details" },
-    { href: "/admin/audit", label: "Audit", hint: "Who changed what" },
+    { href: "/admin/users", label: "Staff", hint: "People, roles, PINs", group: "People" },
+    { href: "/admin/access", label: "Access", hint: "What each role can do", group: "People" },
+    { href: "/admin/settings", label: "Settings", hint: "Facture details", group: "System" },
+    { href: "/admin/audit", label: "Audit", hint: "Who changed what", group: "System" },
   ],
 };

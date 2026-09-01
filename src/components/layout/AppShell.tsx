@@ -19,22 +19,28 @@ export function AppShell({
 
   return (
     <div className="app-shell bg-zenith-bg text-zenith-cream">
-      <aside className="app-sidebar border-r border-zenith-border bg-white">
-        <div className="min-w-0 shrink-0 border-b border-zenith-border px-3 py-3">
-          <Logo size={40} showWordmark />
+      <aside className="app-sidebar">
+        <div className="app-sidebar-brand">
+          <Logo size={32} />
+          <div className="min-w-0">
+            <div className="app-sidebar-wordmark">B-ZENITH</div>
+            <div className="app-sidebar-role">{roleLabel(user.role)}</div>
+          </div>
         </div>
-        <nav className="app-sidebar-nav p-2">
+
+        <nav className="app-sidebar-nav">
           <Suspense fallback={null}>
             <AppNav items={items} variant="sidebar" />
           </Suspense>
         </nav>
-        <div className="app-sidebar-lock border-t border-zenith-border p-3">
-          <PoweredByCloudSync className="mb-2 text-center" />
-          <div className="grid gap-2">
-            <ChangeOwnPinButton />
+
+        <div className="app-sidebar-session">
+          <PoweredByCloudSync className="mb-2.5 text-center" />
+          <div className="app-session-actions">
+            <ChangeOwnPinButton className="app-session-btn" />
             <form action={lockAction}>
-              <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border-2 border-zenith-gold px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold">
-                <Lock size={15} />
+              <button type="submit" className="app-session-btn">
+                <Lock size={15} strokeWidth={2} />
                 Lock / Switch user
               </button>
             </form>
@@ -56,7 +62,10 @@ export function AppShell({
           <div className="flex items-center gap-2 md:hidden">
             <ChangeOwnPinButton compact />
             <form action={lockAction}>
-              <button className="inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-zenith-gold px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold">
+              <button
+                type="submit"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-zenith-gold px-3 py-2 text-sm font-semibold text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
+              >
                 <Lock size={15} />
                 Lock
               </button>
@@ -64,7 +73,7 @@ export function AppShell({
           </div>
         </header>
 
-        <nav className="flex min-w-0 shrink-0 flex-wrap gap-1.5 border-b border-zenith-border bg-zenith-surface px-3 py-2 md:hidden">
+        <nav className="app-mobile-nav md:hidden">
           <Suspense fallback={null}>
             <AppNav items={items} variant="mobile" />
           </Suspense>

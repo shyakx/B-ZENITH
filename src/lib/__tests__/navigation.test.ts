@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNavActive, ROLE_NAV } from "@/lib/navigation";
+import { groupNavItems, isNavActive, ROLE_NAV } from "@/lib/navigation";
 
 const waiter = ROLE_NAV.WAITER.map((item) => item.href);
 const cashier = ROLE_NAV.CASHIER.map((item) => item.href);
@@ -89,5 +89,28 @@ describe("route-aware navigation", () => {
     expect(isNavActive("/cashier/outstanding", "/cashier/outstanding", cashier)).toBe(true);
     expect(isNavActive("/cashier/outstanding", "/cashier", cashier)).toBe(false);
     expect(isNavActive("/cashier/payments", "/cashier/payments", cashier)).toBe(true);
+  });
+
+  it("groups manager and admin links without changing destinations", () => {
+    expect(ROLE_NAV.WAITER.every((item) => !item.group)).toBe(true);
+    expect(ROLE_NAV.CASHIER.every((item) => !item.group)).toBe(true);
+
+    const manager = groupNavItems(ROLE_NAV.MANAGER);
+    expect(manager.flatMap((group) => group.items.map((item) => item.href))).toEqual(
+      ROLE_NAV.MANAGER.map((item) => item.href),
+    );
+    expect(manager.map((group) => group.label)).toEqual([
+      "Operations",
+      null,
+      "Inventory",
+      null,
+      "Reports",
+    ]);
+
+    const admin = groupNavItems(ROLE_NAV.ADMIN);
+    expect(admin.flatMap((group) => group.items.map((item) => item.href))).toEqual(
+      ROLE_NAV.ADMIN.map((item) => item.href),
+    );
+    expect(admin.map((group) => group.label)).toEqual([null, "People", "System"]);
   });
 });

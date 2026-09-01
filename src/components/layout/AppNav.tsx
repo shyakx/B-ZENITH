@@ -20,7 +20,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { isNavActive, type NavItem } from "@/lib/navigation";
+import { groupNavItems, isNavActive, type NavItem } from "@/lib/navigation";
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/waiter": Home,
@@ -45,6 +45,46 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/audit": ScrollText,
 };
 
+function NavLink({
+  item,
+  active,
+  variant,
+}: {
+  item: NavItem;
+  active: boolean;
+  variant: "sidebar" | "mobile";
+}) {
+  const Icon = NAV_ICONS[item.href] ?? Home;
+
+  if (variant === "mobile") {
+    return (
+      <Link
+        href={item.href}
+        className={`app-mobile-nav-item ${active ? "is-active" : ""}`}
+        aria-current={active ? "page" : undefined}
+      >
+        <Icon size={14} strokeWidth={2} />
+        {item.label}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={item.href}
+      className={`app-nav-item ${active ? "is-active" : ""}`}
+      aria-current={active ? "page" : undefined}
+      title={`${item.label} — ${item.hint}`}
+    >
+      <Icon size={18} strokeWidth={1.9} className="app-nav-icon" />
+      <span className="app-nav-copy">
+        <span className="app-nav-label">{item.label}</span>
+        <span className="app-nav-hint">{item.hint}</span>
+      </span>
+    </Link>
+  );
+}
+
 export function AppNav({
   items,
   variant,
@@ -55,47 +95,38 @@ export function AppNav({
   const pathname = usePathname() ?? "";
   const hrefs = items.map((item) => item.href);
 
+  if (variant === "mobile") {
+    return (
+      <>
+        {items.map((item) => (
+          <NavLink
+            key={item.href}
+            item={item}
+            active={isNavActive(pathname, item.href, hrefs)}
+            variant="mobile"
+          />
+        ))}
+      </>
+    );
+  }
+
+  const groups = groupNavItems(items);
+
   return (
     <>
-      {items.map((item) => {
-        const active = isNavActive(pathname, item.href, hrefs);
-        const Icon = NAV_ICONS[item.href] ?? Home;
-        if (variant === "mobile") {
-          return (
-            <Link
+      {groups.map((group, index) => (
+        <div key={`${group.label ?? "nav"}-${index}`} className="app-nav-group">
+          {group.label ? <p className="app-nav-group-label">{group.label}</p> : null}
+          {group.items.map((item) => (
+            <NavLink
               key={item.href}
-              href={item.href}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
-                active ? "bg-zenith-gold text-white" : "text-zenith-cream"
-              }`}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon size={14} />
-              {item.label}
-            </Link>
-          );
-        }
-
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
-              active ? "bg-zenith-gold text-white" : "text-zenith-cream hover:bg-zenith-raised"
-            }`}
-            aria-current={active ? "page" : undefined}
-            title={`${item.label} — ${item.hint}`}
-          >
-            <Icon size={18} className="shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold leading-snug">{item.label}</span>
-              <span className={`mt-0.5 block text-[13px] font-medium leading-snug ${active ? "text-white/85" : "text-zenith-muted"}`}>
-                {item.hint}
-              </span>
-            </span>
-          </Link>
-        );
-      })}
+              item={item}
+              active={isNavActive(pathname, item.href, hrefs)}
+              variant="sidebar"
+            />
+          ))}
+        </div>
+      ))}
     </>
   );
 }
