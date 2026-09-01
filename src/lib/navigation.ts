@@ -52,7 +52,7 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
   CASHIER: [
     { href: "/cashier", label: "Home", hint: "Money today" },
     { href: "/cashier/bills", label: "Orders / Bills", hint: "Bills waiting to pay" },
-    { href: "/cashier/outstanding", label: "Outstanding", hint: "Pay later and unpaid" },
+    { href: "/cashier/outstanding", label: "Outstanding", hint: "Customer credit / pay later" },
     { href: "/cashier/payments", label: "Payments", hint: "Cash already taken" },
   ],
   MANAGER: [
@@ -77,7 +77,7 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
     { href: "/waiter/orders/new", label: "POS / Orders", hint: "Take a table order", group: "Business" },
     { href: "/manager/tables", label: "Tables", hint: "Open and close tables", group: "Business" },
     { href: "/cashier/bills", label: "Bills / Payments", hint: "Bills waiting to pay", group: "Business" },
-    { href: "/cashier/outstanding", label: "Outstanding", hint: "Pay later and unpaid", group: "Business" },
+    { href: "/cashier/outstanding", label: "Outstanding", hint: "Customer credit / pay later", group: "Business" },
     { href: "/manager/products", label: "Products", hint: "Menu and prices", group: "Catalog" },
     { href: "/manager/inventory", label: "Inventory", hint: "Stock rooms and moves", group: "Inventory" },
     { href: "/manager/purchases", label: "Receive Stock", hint: "Buy into Main Stock", group: "Inventory" },

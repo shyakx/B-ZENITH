@@ -12,7 +12,9 @@ export default async function OutstandingPage() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Outstanding</h1>
-      <p className="mt-1 text-zenith-muted">Pay later bills still owed to B-ZENITH.</p>
+      <p className="mt-1 text-zenith-muted">
+        Customer credit (pay later). Open unpaid and partial bills stay on Orders / Bills.
+      </p>
 
       <div className="mt-6 space-y-3">
         {credits.length === 0 ? (

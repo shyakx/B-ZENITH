@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
 import { combinedBill } from "@/lib/domain/payments";
 import { PaymentPanel } from "@/components/cashier/PaymentPanel";
+import { PaymentHistoryList } from "@/components/payments/PaymentHistoryList";
 import { PaymentBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { getCurrentTableBill } from "@/services/orders";
@@ -86,6 +87,12 @@ export default async function TableBillPage({
                       <div className="text-lg font-semibold text-zenith-gold">{formatRwf(due)}</div>
                     </div>
                   </div>
+
+                  {order.payments.length > 0 ? (
+                    <div className="mt-3 border-t border-zenith-border pt-3">
+                      <PaymentHistoryList payments={order.payments} />
+                    </div>
+                  ) : null}
 
                   <div className="mt-4 border-t border-zenith-border pt-4">
                     <PaymentPanel

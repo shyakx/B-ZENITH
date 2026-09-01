@@ -1,5 +1,6 @@
 import { formatRwf } from "@/lib/domain/money";
 import { formatDateTime } from "@/lib/dates";
+import { paymentHistoryRows } from "@/lib/domain/payment-history";
 import type { BusinessSettings } from "@/lib/settings";
 import type { OrderWithDetails } from "@/services/orders";
 
@@ -12,6 +13,7 @@ export function FactureDocument({
 }) {
   const total = orders.reduce((sum, order) => sum + order.total, 0);
   const paid = orders.reduce((sum, order) => sum + order.paidAmount, 0);
+  const history = paymentHistoryRows(orders.flatMap((order) => order.payments));
   const waiters = [...new Set(orders.map((order) => order.waiter.name))].join(", ");
   const table = orders[0]?.table.name ?? "-";
   const status =
@@ -102,8 +104,39 @@ export function FactureDocument({
           <span>Total</span>
           <span>{formatRwf(total)}</span>
         </div>
+      </div>
+
+      {history.length > 0 ? (
+        <table className="mb-3 mt-3 w-full text-sm">
+          <thead>
+            <tr className="border-b border-black text-left text-xs uppercase tracking-wider">
+              <th className="py-1.5" colSpan={4}>
+                Payment history
+              </th>
+            </tr>
+            <tr className="border-b border-black text-left text-xs">
+              <th className="py-1">Date</th>
+              <th>Time</th>
+              <th>Method</th>
+              <th className="text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((row) => (
+              <tr key={row.key}>
+                <td className="py-1">{row.date}</td>
+                <td>{row.time}</td>
+                <td>{row.method}</td>
+                <td className="text-right">{formatRwf(row.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+
+      <div className="space-y-1 text-sm">
         <div className="flex justify-between">
-          <span>Paid</span>
+          <span>Total paid</span>
           <span>{formatRwf(paid)}</span>
         </div>
         <div className="flex justify-between">
