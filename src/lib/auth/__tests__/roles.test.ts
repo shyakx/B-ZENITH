@@ -14,9 +14,9 @@ describe("authentication and authorization", () => {
     expect(canAccessPath("MANAGER", "/manager/products")).toBe(true);
     expect(canAccessPath("MANAGER", "/manager/inventory")).toBe(true);
     expect(canAccessPath("MANAGER", "/manager/reports")).toBe(true);
-    expect(canAccessPath("ADMIN", "/manager/tables")).toBe(false);
-    expect(canAccessPath("ADMIN", "/manager/products")).toBe(false);
-    expect(canAccessPath("ADMIN", "/manager/inventory")).toBe(false);
+    expect(canAccessPath("ADMIN", "/manager/tables")).toBe(true);
+    expect(canAccessPath("ADMIN", "/manager/products")).toBe(true);
+    expect(canAccessPath("ADMIN", "/manager/inventory")).toBe(true);
     expect(canAccessPath("WAITER", "/manager/tables")).toBe(false);
     expect(canAccessPath("CASHIER", "/manager/tables")).toBe(false);
     expect(canAccessPath("CASHIER", "/manager/products")).toBe(false);
@@ -31,7 +31,7 @@ describe("authentication and authorization", () => {
     expect(canAccessPath("ADMIN", "/admin")).toBe(true);
     expect(canAccessPath("ADMIN", "/admin/audit")).toBe(true);
     expect(canAccessPath("ADMIN", "/admin/")).toBe(true);
-    expect(canAccessPath("ADMIN", "/cashier/bills")).toBe(false);
+    expect(canAccessPath("ADMIN", "/cashier/bills")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/login/")).toBe(true);
     expect(isPublicPath("/manifest.webmanifest")).toBe(true);
@@ -58,9 +58,10 @@ describe("authentication and authorization", () => {
     expect(canAccessPath("OWNER", "/admin/audit")).toBe(true);
     expect(canAccessPath("OWNER", "/print/order/1")).toBe(true);
 
-    expect(canAccessPath("ADMIN", "/owner")).toBe(false);
-    expect(canAccessPath("ADMIN", "/manager/tables")).toBe(false);
-    expect(canAccessPath("ADMIN", "/cashier/bills")).toBe(false);
+    expect(canAccessPath("ADMIN", "/owner")).toBe(true);
+    expect(canAccessPath("ADMIN", "/manager/tables")).toBe(true);
+    expect(canAccessPath("ADMIN", "/cashier/bills")).toBe(true);
+    expect(canAccessPath("ADMIN", "/print/order/1")).toBe(true);
     expect(canAccessPath("MANAGER", "/owner")).toBe(false);
     expect(canAccessPath("MANAGER", "/admin/users")).toBe(false);
     expect(canAccessPath("CASHIER", "/owner")).toBe(false);
@@ -71,7 +72,9 @@ describe("authentication and authorization", () => {
     expect(satisfiesRoleGate("OWNER", ["CASHIER"])).toBe(true);
     expect(satisfiesRoleGate("OWNER", ["MANAGER"])).toBe(true);
     expect(satisfiesRoleGate("OWNER", ["ADMIN"])).toBe(true);
-    expect(satisfiesRoleGate("ADMIN", ["OWNER"])).toBe(false);
+    expect(satisfiesRoleGate("ADMIN", ["OWNER"])).toBe(true);
+    expect(satisfiesRoleGate("ADMIN", ["WAITER"])).toBe(true);
+    expect(satisfiesRoleGate("ADMIN", ["CASHIER"])).toBe(true);
     expect(satisfiesRoleGate("MANAGER", ["OWNER"])).toBe(false);
     expect(satisfiesRoleGate("CASHIER", ["OWNER"])).toBe(false);
     expect(satisfiesRoleGate("WAITER", ["OWNER"])).toBe(false);
@@ -102,12 +105,12 @@ describe("authentication and authorization", () => {
     expect(hasPermission("WAITER", "viewAllOrders")).toBe(false);
     expect(hasPermission("WAITER", "viewOwnOrders")).toBe(true);
     expect(hasPermission("ADMIN", "manageUsers")).toBe(true);
-    expect(hasPermission("ADMIN", "manageProducts")).toBe(false);
-    expect(hasPermission("ADMIN", "manageInventory")).toBe(false);
+    expect(hasPermission("ADMIN", "manageProducts")).toBe(true);
+    expect(hasPermission("ADMIN", "manageInventory")).toBe(true);
     expect(hasPermission("WAITER", "manageProducts")).toBe(false);
     expect(hasPermission("ADMIN", "manageSettings")).toBe(true);
     expect(hasPermission("ADMIN", "viewAudit")).toBe(true);
-    expect(hasPermission("ADMIN", "recordPayment")).toBe(false);
+    expect(hasPermission("ADMIN", "recordPayment")).toBe(true);
     expect(hasPermission("WAITER", "manageUsers")).toBe(false);
     expect(hasPermission("WAITER", "manageSettings")).toBe(false);
     expect(hasPermission("CASHIER", "manageUsers")).toBe(false);
@@ -126,7 +129,8 @@ describe("authentication and authorization", () => {
     expect(hasPermission("OWNER", "manageUsers")).toBe(true);
     expect(hasPermission("OWNER", "manageSettings")).toBe(true);
     expect(hasPermission("OWNER", "viewAudit")).toBe(true);
-    expect(hasPermission("ADMIN", "createOrder")).toBe(false);
+    expect(hasPermission("ADMIN", "createOrder")).toBe(true);
+    expect(PERMISSIONS.every((permission) => hasPermission("ADMIN", permission))).toBe(true);
     expect(hasPermission("MANAGER", "manageUsers")).toBe(false);
     expect(PERMISSIONS.every((permission) => hasPermission("OWNER", permission))).toBe(true);
   });

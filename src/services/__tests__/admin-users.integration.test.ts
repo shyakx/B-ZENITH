@@ -324,7 +324,7 @@ describe.sequential("admin staff management against the database", () => {
     expect(isLiveStaffAccount(row)).toBe(false);
   });
 
-  it("lets ADMIN create OWNER accounts but not manage or promote owners", async () => {
+  it("lets ADMIN create, promote, and delete OWNER accounts without losing the last owner", async () => {
     const admin = await adminActor();
     const owner = await createUser({
       name: `Owner Guard ${Date.now()}`,
@@ -350,19 +350,25 @@ describe.sequential("admin staff management against the database", () => {
       actorId: admin.id,
     });
     createdUserIds.push(waiter.id);
-    await expect(
-      updateUser({ id: waiter.id, role: "OWNER", actorId: admin.id }),
-    ).rejects.toThrow("Only an owner can create, promote, or demote an owner account.");
+    const promoted = await updateUser({ id: waiter.id, role: "OWNER", actorId: admin.id });
+    expect(promoted.role).toBe("OWNER");
+    const demoted = await updateUser({ id: waiter.id, role: "WAITER", actorId: admin.id });
+    expect(demoted.role).toBe("WAITER");
 
-    await expect(deleteStaff({ id: owner.id, actorId: admin.id })).rejects.toThrow(
-      "Only an owner can delete an owner account.",
+    await deleteStaff({ id: secondByAdmin.id, actorId: admin.id });
+    const deletedByAdmin = await prisma.user.findUnique({ where: { id: secondByAdmin.id } });
+    expect(deletedByAdmin?.deletedAt).toBeTruthy();
+
+    await expect(deleteStaff({ id: admin.id, actorId: owner.id })).rejects.toThrow(
+      "An owner cannot delete an admin account.",
     );
     await expect(updateUser({ id: owner.id, active: false, actorId: admin.id })).rejects.toThrow(
-      "Only an owner can change an owner account.",
+      /last active owner cannot be deactivated/i,
     );
 
-    await deleteStaff({ id: secondByAdmin.id, actorId: owner.id });
-
+    await expect(deleteStaff({ id: owner.id, actorId: admin.id })).rejects.toThrow(
+      /last active owner cannot be deleted/i,
+    );
     await expect(deleteStaff({ id: owner.id, actorId: owner.id })).rejects.toThrow(
       /last active owner cannot be deleted/i,
     );

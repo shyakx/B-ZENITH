@@ -4,6 +4,7 @@ import { hashPin, isValidPin, retirePinHash } from "@/lib/auth/pin";
 import { isRole } from "@/lib/auth/roles";
 import {
   canAssignRole,
+  canDeleteStaffAccount,
   canManageOwnerAccount,
   isLastActiveOwner,
   lastOwnerGuardMessage,
@@ -174,7 +175,7 @@ export async function updateUser(input: {
     });
 
     if (!canManageOwnerAccount(actor.role, current.role) && (role !== current.role || active !== current.active)) {
-      throw new AppError("Only an owner can change an owner account.");
+      throw new AppError("You are not allowed to change this staff account.");
     }
 
     if (lastOwner && current.role === "OWNER" && role !== "OWNER") {
@@ -190,11 +191,7 @@ export async function updateUser(input: {
     }
 
     if (role !== current.role && !canAssignRole(actor.role, role, { activeOwnerCount, currentRole: current.role })) {
-      throw new AppError(
-        role === "OWNER" || current.role === "OWNER"
-          ? "Only an owner can create, promote, or demote an owner account."
-          : "You are not allowed to assign that role.",
-      );
+      throw new AppError("You are not allowed to assign that role.");
     }
 
     const updated = await db.user.update({
@@ -251,7 +248,7 @@ export async function changePin(input: { id: string; pin: string; actorId: strin
   });
   if (!user) throw new AppError("Staff member not found.");
   if (!canManageOwnerAccount(actor.role, user.role)) {
-    throw new AppError("Only an owner can reset an owner PIN.");
+    throw new AppError("You are not allowed to reset this PIN.");
   }
 
   await prisma.user.update({
@@ -283,8 +280,12 @@ export async function deleteStaff(input: { id: string; actorId: string }) {
       select: { id: true, name: true, role: true, active: true },
     });
     if (!current) throw new AppError("Staff member not found.");
-    if (!canManageOwnerAccount(actor.role, current.role)) {
-      throw new AppError("Only an owner can delete an owner account.");
+    if (!canDeleteStaffAccount(actor.role, current.role)) {
+      throw new AppError(
+        actor.role === "OWNER" && current.role === "ADMIN"
+          ? "An owner cannot delete an admin account."
+          : "You are not allowed to delete this staff account.",
+      );
     }
 
     const activeOwnerCount = await countActiveOwnersFrom(db);

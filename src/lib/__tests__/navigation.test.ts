@@ -55,9 +55,24 @@ describe("route-aware navigation", () => {
     expect(isNavActive("/manager/orders/abc", "/manager", ROLE_NAV.MANAGER.map((item) => item.href))).toBe(false);
   });
 
-  it("keeps admin navigation to system screens only", () => {
+  it("gives ADMIN the same business pages as OWNER plus system home", () => {
     expect(ROLE_NAV.ADMIN.map((item) => item.label)).toEqual([
       "Home",
+      "Business today",
+      "POS / Orders",
+      "Tables",
+      "Bills / Payments",
+      "Outstanding",
+      "Products",
+      "Inventory",
+      "Receive Stock",
+      "Transfers",
+      "Counts",
+      "Adjustments",
+      "Suppliers",
+      "Locations",
+      "Reports",
+      "Maison",
       "Staff",
       "Access",
       "Settings",
@@ -65,14 +80,29 @@ describe("route-aware navigation", () => {
     ]);
     expect(ROLE_NAV.ADMIN.map((item) => item.href)).toEqual([
       "/admin",
+      "/owner",
+      "/waiter/orders/new",
+      "/manager/tables",
+      "/cashier/bills",
+      "/cashier/outstanding",
+      "/manager/products",
+      "/manager/inventory",
+      "/manager/purchases",
+      "/manager/inventory/transfer",
+      "/manager/inventory/count",
+      "/manager/inventory/adjust",
+      "/manager/inventory/suppliers",
+      "/manager/inventory/locations",
+      "/manager/reports",
+      "/manager/maison",
       "/admin/users",
       "/admin/access",
       "/admin/settings",
       "/admin/audit",
     ]);
-    expect(ROLE_NAV.ADMIN.map((item) => item.href)).not.toContain("/cashier");
-    expect(ROLE_NAV.ADMIN.map((item) => item.href)).not.toContain("/manager");
-    expect(ROLE_NAV.ADMIN.map((item) => item.href)).not.toContain("/waiter");
+    expect(ROLE_NAV.OWNER.every((item) => ROLE_NAV.ADMIN.some((link) => link.href === item.href))).toBe(
+      true,
+    );
     const admin = ROLE_NAV.ADMIN.map((item) => item.href);
     expect(isNavActive("/admin/users/abc", "/admin/users", admin)).toBe(true);
     expect(isNavActive("/admin/users/abc", "/admin", admin)).toBe(false);
@@ -111,7 +141,14 @@ describe("route-aware navigation", () => {
     expect(admin.flatMap((group) => group.items.map((item) => item.href))).toEqual(
       ROLE_NAV.ADMIN.map((item) => item.href),
     );
-    expect(admin.map((group) => group.label)).toEqual([null, "People", "System"]);
+    expect(admin.map((group) => group.label)).toEqual([
+      "Business",
+      "Catalog",
+      "Inventory",
+      "Reports",
+      "Maison",
+      "Administration",
+    ]);
   });
 
   it("gives OWNER a full-business sidebar without replacing other role menus", () => {
@@ -157,7 +194,7 @@ describe("route-aware navigation", () => {
       "/admin/settings",
       "/admin/audit",
     ]);
-    expect(ROLE_NAV.ADMIN.map((item) => item.href)).not.toContain("/owner");
+    expect(ROLE_NAV.ADMIN.map((item) => item.href)).toContain("/owner");
     expect(ROLE_NAV.MANAGER.map((item) => item.href)).not.toContain("/owner");
     expect(ROLE_NAV.WAITER.map((item) => item.href)).not.toContain("/admin/users");
 

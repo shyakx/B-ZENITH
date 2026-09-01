@@ -589,17 +589,20 @@ describe("phase 2 location inventory", () => {
     await expect(
       transferStock({ toLocationId: bar.id, userId: cashier.id, idempotencyKey: `p-c-${product.id}`, lines: line }),
     ).rejects.toThrow(/not allowed to manage inventory/);
-    await expect(
-      transferStock({ toLocationId: bar.id, userId: admin.id, idempotencyKey: `p-a-${product.id}`, lines: line }),
-    ).rejects.toThrow(/not allowed to manage inventory/);
+    await transferStock({
+      toLocationId: bar.id,
+      userId: admin.id,
+      idempotencyKey: `p-a-${product.id}`,
+      lines: line,
+    });
     await transferStock({
       toLocationId: bar.id,
       userId: manager.id,
       idempotencyKey: `p-m-${product.id}`,
       lines: line,
     });
-    expect(await stockAt(product.id, "BAR")).toBe(1);
-    expect(hasPermission("ADMIN", "manageInventory")).toBe(false);
+    expect(await stockAt(product.id, "BAR")).toBe(2);
+    expect(hasPermission("ADMIN", "manageInventory")).toBe(true);
     expect(hasPermission("MANAGER", "manageInventory")).toBe(true);
   });
 

@@ -3,16 +3,15 @@ import type { Role } from "@/lib/auth/roles";
 /**
  * Staff-role policy.
  *
- * OWNER owns the business and may create, promote, demote, and delete OWNER accounts.
- * ADMIN may create OWNER accounts and manage WAITER / CASHIER / MANAGER / ADMIN.
- * ADMIN must not promote existing staff to OWNER, or change / delete an OWNER account.
+ * OWNER and ADMIN have the same staff-management power, except:
+ * OWNER must not delete an ADMIN account, and the last active OWNER cannot be
+ * deleted, deactivated, or demoted.
  */
 export const ADMIN_ASSIGNABLE_ROLES: Role[] = ["OWNER", "ADMIN", "MANAGER", "CASHIER", "WAITER"];
 export const OWNER_ASSIGNABLE_ROLES: Role[] = ["OWNER", "ADMIN", "MANAGER", "CASHIER", "WAITER"];
 
 export function assignableRoles(actorRole: Role, _activeOwnerCount = 0): Role[] {
-  if (actorRole === "OWNER") return [...OWNER_ASSIGNABLE_ROLES];
-  if (actorRole === "ADMIN") return [...ADMIN_ASSIGNABLE_ROLES];
+  if (actorRole === "OWNER" || actorRole === "ADMIN") return [...OWNER_ASSIGNABLE_ROLES];
   return [];
 }
 
@@ -21,15 +20,6 @@ export function canAssignRole(
   targetRole: Role,
   options: { activeOwnerCount: number; currentRole?: Role } = { activeOwnerCount: 0 },
 ): boolean {
-  if (targetRole === "OWNER") {
-    if (actorRole === "OWNER") return true;
-    return actorRole === "ADMIN" && options.currentRole === undefined;
-  }
-
-  if (options.currentRole === "OWNER") {
-    return actorRole === "OWNER";
-  }
-
   return assignableRoles(actorRole, options.activeOwnerCount).includes(targetRole);
 }
 
@@ -55,7 +45,13 @@ export function lastOwnerGuardMessage(action: "deactivate" | "delete" | "demote"
 
 export function canManageOwnerAccount(actorRole: Role, targetRole: Role): boolean {
   if (targetRole !== "OWNER") return true;
-  return actorRole === "OWNER";
+  return actorRole === "OWNER" || actorRole === "ADMIN";
+}
+
+export function canDeleteStaffAccount(actorRole: Role, targetRole: Role): boolean {
+  if (actorRole !== "OWNER" && actorRole !== "ADMIN") return false;
+  if (actorRole === "OWNER" && targetRole === "ADMIN") return false;
+  return true;
 }
 
 export function staffActionFlags(
@@ -74,9 +70,9 @@ export function staffActionFlags(
   const roles = assignableRoles(actor.role, activeOwnerCount);
 
   return {
-    assignableRoles: actor.role === "ADMIN" ? roles.filter((role) => role !== "OWNER") : roles,
+    assignableRoles: roles,
     canResetPin: !ownerLocked,
     canChangeActive: !isSelf && !ownerLocked && !lastOwner,
-    canDelete: !isSelf && !ownerLocked && !lastOwner,
+    canDelete: !isSelf && canDeleteStaffAccount(actor.role, user.role) && !lastOwner,
   };
 }

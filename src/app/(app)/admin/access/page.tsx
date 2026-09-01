@@ -18,7 +18,7 @@ const ACCESS: {
       "View reports and Maison",
       "Manage staff, roles, settings, and audit",
     ],
-    cannot: ["Leave the business without an active owner"],
+    cannot: ["Leave the business without an active owner", "Delete an Admin account"],
   },
   {
     role: "WAITER",
@@ -63,22 +63,13 @@ const ACCESS: {
   {
     role: "ADMIN",
     can: [
-      "Manage staff",
-      "Create an Owner account",
-      "Assign waiter, cashier, manager, and admin roles",
-      "Reset PINs",
-      "Manage settings",
-      "View audit log",
+      "See the entire business",
+      "Open every Owner page",
+      "Take orders, bills, payments, inventory, and reports",
+      "Manage staff, roles, PINs, settings, and audit",
+      "Create, promote, and delete Owner accounts",
     ],
-    cannot: [
-      "Orders",
-      "Payments",
-      "Stock",
-      "Products",
-      "Daily business operations",
-      "Promote existing staff to Owner",
-      "Change, deactivate, or delete an owner account",
-    ],
+    cannot: ["Delete the last active owner"],
   },
 ];
 
@@ -90,8 +81,7 @@ export default async function AccessPage() {
     <div className="mx-auto w-full min-w-0 max-w-4xl">
       <h1 className="text-xl font-semibold text-zenith-gold">Access</h1>
       <p className="mt-2 text-sm">
-        These five roles are fixed. Owner sees the whole business. Admin manages people and system
-        settings, not daily floor work.
+        These five roles are fixed. Owner and Admin both see and operate the whole business.
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

@@ -23,8 +23,7 @@ export default async function AdminHomePage() {
         <VisibleDate />
       </div>
       <p className="mt-3 text-sm">
-        Manage the people who use B-ZENITH. Daily floor work stays with Waiter, Cashier, and Manager.
-        The owner can see the whole business.
+        Manage the people who use B-ZENITH. Admin can also open the same business pages as Owner.
       </p>
 
       <section className="mt-6">

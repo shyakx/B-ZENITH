@@ -3,7 +3,7 @@ export type Role = (typeof ROLES)[number];
 
 /**
  * OWNER owns the business: full operational visibility and staff administration.
- * ADMIN is staff-control only (people, PINs, settings, audit) and is not a floor operator.
+ * ADMIN sees the same business pages as OWNER, and also manages people and settings.
  * MANAGER runs catalog, inventory, reports, and Maison — not payments or staff.
  * CASHIER takes payments. WAITER takes orders.
  */
@@ -74,11 +74,15 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "viewReports",
     "manageMaison",
   ],
-  ADMIN: ["manageUsers", "manageSettings", "viewAudit"],
+  ADMIN: [...PERMISSIONS],
   OWNER: [...PERMISSIONS],
 };
 
-const OWNER_PATH_PREFIXES = ["/owner", "/waiter", "/cashier", "/manager", "/admin"] as const;
+const FULL_ACCESS_PATH_PREFIXES = ["/owner", "/waiter", "/cashier", "/manager", "/admin"] as const;
+
+export function isFullAccessRole(role: Role): boolean {
+  return role === "OWNER" || role === "ADMIN";
+}
 
 export function isRole(value: string): value is Role {
   return (ROLES as readonly string[]).includes(value);
@@ -101,12 +105,11 @@ export function hasPermission(role: Role, permission: Permission): boolean {
 }
 
 /**
- * OWNER may enter specialist screens because the owner operates the whole business.
- * Other roles must match the page gate. ADMIN still cannot open waiter/cashier/manager
- * URLs — that stays in canAccessPath.
+ * OWNER and ADMIN may enter specialist screens because both operate the whole business.
+ * Other roles must match the page gate.
  */
 export function satisfiesRoleGate(userRole: Role, allowed: readonly Role[]): boolean {
-  return userRole === "OWNER" || allowed.includes(userRole);
+  return isFullAccessRole(userRole) || allowed.includes(userRole);
 }
 
 export function canAccessPath(role: Role, pathname: string): boolean {
@@ -115,8 +118,8 @@ export function canAccessPath(role: Role, pathname: string): boolean {
     return true;
   }
 
-  if (role === "OWNER") {
-    if (OWNER_PATH_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) {
+  if (isFullAccessRole(role)) {
+    if (FULL_ACCESS_PATH_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) {
       return true;
     }
     return path.startsWith("/print/");
