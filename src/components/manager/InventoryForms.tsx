@@ -30,6 +30,7 @@ type ProductOption = {
   kitchen?: number;
   cafe?: number;
   total?: number;
+  productType?: string;
   baseUnit?: { id: string; code: string; name: string } | null;
   packs?: ProductPackOption[];
 };
@@ -60,6 +61,12 @@ function unitsForProduct(product?: ProductOption) {
   return [...units.values()];
 }
 
+function productOptionLabel(product: ProductOption, available?: (product: ProductOption) => number) {
+  const unit = product.baseUnit ? ` · ${unitLabel(product.baseUnit.name)}` : "";
+  const qty = available ? ` (${available(product)} in Main Stock)` : "";
+  return `${product.name}${unit}${qty}`;
+}
+
 function ProductSelect({
   products,
   value,
@@ -71,6 +78,10 @@ function ProductSelect({
   onChange?: (id: string) => void;
   available?: (product: ProductOption) => number;
 }) {
+  const kitchen = products.filter((product) => product.productType === "RAW_MATERIAL");
+  const other = products.filter((product) => product.productType !== "RAW_MATERIAL");
+  const grouped = kitchen.length > 0 && other.length > 0;
+
   return (
     <Select
       name="productId"
@@ -79,12 +90,30 @@ function ProductSelect({
       onChange={onChange ? (event) => onChange(event.target.value) : undefined}
     >
       <option value="">Choose product</option>
-      {products.map((product) => (
-        <option key={product.id} value={product.id}>
-          {product.name}
-          {available ? ` (${available(product)} in Main Stock)` : ""}
-        </option>
-      ))}
+      {grouped ? (
+        <>
+          <optgroup label="Bar / packaged">
+            {other.map((product) => (
+              <option key={product.id} value={product.id}>
+                {productOptionLabel(product, available)}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Kitchen stores">
+            {kitchen.map((product) => (
+              <option key={product.id} value={product.id}>
+                {productOptionLabel(product, available)}
+              </option>
+            ))}
+          </optgroup>
+        </>
+      ) : (
+        products.map((product) => (
+          <option key={product.id} value={product.id}>
+            {productOptionLabel(product, available)}
+          </option>
+        ))
+      )}
     </Select>
   );
 }

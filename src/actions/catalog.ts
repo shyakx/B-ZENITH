@@ -4,7 +4,7 @@ import { BusinessArea, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/current-user";
 import { fail, ok, type ActionResult } from "@/lib/errors";
-import { upsertCategory, upsertProduct, upsertTable } from "@/services/products";
+import { upsertCategory, upsertProduct, upsertTable, ensureKitchenStoreCatalog } from "@/services/products";
 
 export async function saveProductAction(input: {
   id?: string;
@@ -57,6 +57,21 @@ export async function saveTableAction(input: {
     revalidatePath("/manager/tables");
     revalidatePath("/manager/products");
     return ok({ id: table.id });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function ensureKitchenStoresAction(): Promise<ActionResult<{ created: number; total: number }>> {
+  try {
+    const user = await requirePermission("manageProducts");
+    const result = await ensureKitchenStoreCatalog(user.id);
+    revalidatePath("/manager/products");
+    revalidatePath("/manager/inventory");
+    revalidatePath("/manager/inventory/locations");
+    revalidatePath("/manager/purchases");
+    revalidatePath("/manager/inventory/transfer");
+    return ok(result);
   } catch (error) {
     return fail(error);
   }

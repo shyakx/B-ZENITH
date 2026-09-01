@@ -1,8 +1,28 @@
 /**
  * PRODUCTION CATALOG IMPORT — NON-DESTRUCTIVE
  *
- * Imports the approved 39 categories and 246 products into a NEW production
- * database. Development opening-stock quantities are never imported.
+ * Imports the approved menu catalog plus Kitchen Stores materials into a NEW
+ * production database. Development opening-stock quantities are never imported.
+ *
+ * NEVER:
+ * - delete / deleteMany / truncate
+ * - prisma migrate reset / prisma db push
+ * - modify users, tables, orders, payments, credits, purchases, movements, audit
+ * - modify OrderSequence values
+ * - overwrite existing Settings
+ * - reset stockQuantity on an existing product
+ *
+ * NEW products are created with stockQuantity = 0.
+ * EXISTING products keep their current stockQuantity.
+ *
+ * Authorization:
+ *   PRODUCTION_CATALOG_IMPORT_CONFIRM=YES   required for writes
+ *   PRODUCTION_CATALOG_DRY_RUN=YES          inspect only, zero writes
+ *
+ * Do not run this against the old Vercel production database
+ * (Neon project quiet-feather-99399801). Intended production target is
+ * b-zenith-app-db / shiny-thunder-16809110 / neondb — only after explicit approval.
+ */
  *
  * NEVER:
  * - delete / deleteMany / truncate
@@ -228,6 +248,10 @@ async function planCatalogChanges() {
 async function importCatalog(tx: Prisma.TransactionClient): Promise<CatalogCounts> {
   const counts: CatalogCounts = { created: 0, updated: 0, preserved: 0 };
   const categoryIds: Record<string, string> = {};
+  const units = Object.fromEntries((await tx.unit.findMany()).map((unit) => [unit.code, unit.id]));
+  const locations = Object.fromEntries(
+    (await tx.stockLocation.findMany()).map((location) => [location.code, location.id]),
+  );
 
   for (const [index, category] of CATALOG_CATEGORIES.entries()) {
     const row = await tx.category.upsert({
@@ -250,10 +274,20 @@ async function importCatalog(tx: Prisma.TransactionClient): Promise<CatalogCount
     if (!categoryId) {
       throw new Error(`Approved category "${product.categoryName}" was not found after upsert.`);
     }
+    const baseUnitId = units[product.baseUnitCode] ?? null;
+    const defaultStockLocationId = product.defaultLocationCode
+      ? (locations[product.defaultLocationCode] ?? null)
+      : null;
+    const typeFields = {
+      productType: product.productType,
+      sellOnPos: product.sellOnPos,
+      baseUnitId,
+      defaultStockLocationId,
+    };
 
     const existing = await findProductInCategory(tx, categoryId, product.name);
     if (!existing) {
-      await tx.product.create({
+      const created = await tx.product.create({
         data: {
           name: product.name,
           categoryId,
@@ -262,8 +296,12 @@ async function importCatalog(tx: Prisma.TransactionClient): Promise<CatalogCount
           active: product.active,
           sortOrder: product.sortOrder,
           stockQuantity: 0,
+          ...typeFields,
         },
       });
+      if (product.trackInventory) {
+        await ensureZeroStocks(tx, created.id, locations);
+      }
       counts.created += 1;
       continue;
     }
@@ -277,13 +315,31 @@ async function importCatalog(tx: Prisma.TransactionClient): Promise<CatalogCount
         trackInventory: product.trackInventory,
         active: product.active,
         sortOrder: product.sortOrder,
+        ...typeFields,
       },
     });
+    if (product.trackInventory) {
+      await ensureZeroStocks(tx, existing.id, locations);
+    }
     counts.updated += 1;
     counts.preserved += 1;
   }
 
   return counts;
+}
+
+async function ensureZeroStocks(
+  tx: Prisma.TransactionClient,
+  productId: string,
+  locations: Record<string, string>,
+) {
+  for (const locationId of Object.values(locations)) {
+    await tx.productStock.upsert({
+      where: { productId_locationId: { productId, locationId } },
+      create: { productId, locationId, quantity: 0 },
+      update: {},
+    });
+  }
 }
 
 async function verifyAfterImport(

@@ -35,7 +35,7 @@ export default async function StockByLocationPage() {
                   <td className="py-2 pr-2 font-semibold">{product.name}</td>
                   <td className="py-2 pr-2">
                     {product.productType === "RAW_MATERIAL"
-                      ? "Material"
+                      ? "Kitchen stores"
                       : product.productType === "PACKAGED_GOOD"
                         ? "Packaged"
                         : "Menu"}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ProductType } from "@prisma/client";
+import { EnsureKitchenStoresButton } from "@/components/manager/EnsureKitchenStoresButton";
 import { ProductEditor } from "@/components/manager/ProductForm";
 
 type CatalogItem = {
@@ -36,11 +37,13 @@ export function ProductCatalog({
   categories,
   locations,
   units,
+  kitchenMissing = 0,
 }: {
   items: CatalogItem[];
   categories: { id: string; name: string }[];
   locations: { id: string; code: string; name: string }[];
   units: { id: string; code: string; name: string }[];
+  kitchenMissing?: number;
 }) {
   const [tab, setTab] = useState<"menu" | "materials">("menu");
   const menu = items.filter((item) => item.productType !== ProductType.RAW_MATERIAL);
@@ -69,7 +72,11 @@ export function ProductCatalog({
           Inventory Materials
         </button>
       </div>
-      <div className="grid min-w-0 gap-2">
+      {tab === "materials" ? <EnsureKitchenStoresButton missing={kitchenMissing} /> : null}
+      <div className={`grid min-w-0 gap-2 ${tab === "materials" && kitchenMissing > 0 ? "mt-3" : ""}`}>
+        {tab === "materials" && visible.length === 0 && kitchenMissing === 0 ? (
+          <p className="text-sm text-zenith-muted">No inventory materials yet.</p>
+        ) : null}
         {visible.map((product) => (
           <article key={product.id} className="min-w-0 rounded-xl border border-zenith-border bg-white p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">

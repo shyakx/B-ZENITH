@@ -6,15 +6,16 @@ import { CategoryForm, CategoryRow, ProductEditor, ProductForm } from "@/compone
 import { ProductCatalog } from "@/components/manager/ProductCatalog";
 import { Card } from "@/components/ui/Card";
 import { listLocations, listUnits } from "@/services/inventory";
-import { listAllProducts, listCategories } from "@/services/products";
+import { kitchenStoresStatus, listAllProducts, listCategories } from "@/services/products";
 
 export default async function ProductsPage() {
   await requireRole("MANAGER");
-  const [products, categories, locations, units] = await Promise.all([
+  const [products, categories, locations, units, kitchen] = await Promise.all([
     listAllProducts(),
     listCategories(),
     listLocations(),
     listUnits(),
+    kitchenStoresStatus(),
   ]);
 
   const items = products.map((product) => {
@@ -94,6 +95,7 @@ export default async function ProductsPage() {
         categories={categories}
         locations={locations}
         units={units}
+        kitchenMissing={kitchen.missing.length}
       />
     </div>
   );

@@ -2,8 +2,9 @@ import { loadEnvConfig } from "@next/env";
 import { BusinessArea, MovementType, PaymentStatus, ProductType } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 import { hasPermission } from "@/lib/auth/roles";
+import { KITCHEN_STORES_CATEGORY } from "@/lib/domain/kitchen-stores";
 import { prisma } from "@/lib/prisma";
-import { listPosCatalog, upsertProduct } from "@/services/products";
+import { listPosCatalog, upsertProduct, ensureKitchenStoreCatalog } from "@/services/products";
 import { cancelOrder, createOrder } from "@/services/orders";
 import {
   adjustStock,
@@ -689,5 +690,52 @@ describe("phase 2 location inventory", () => {
     ).rejects.toThrow(/not active/);
     expect(await stockAt(product.id, "MAIN")).toBe(0);
     expect(await prisma.stockReceipt.count({ where: { idempotencyKey: `inactive-${product.id}` } })).toBe(0);
+  });
+
+  it("adds kitchen stores off POS and can receive them into Main Stock", async () => {
+    const { manager } = await staff();
+    const categoryBefore = await prisma.category.findUnique({ where: { name: KITCHEN_STORES_CATEGORY } });
+    const beforeIds = new Set(
+      (
+        await prisma.product.findMany({
+          where: { productType: ProductType.RAW_MATERIAL },
+          select: { id: true },
+        })
+      ).map((row) => row.id),
+    );
+
+    await ensureKitchenStoreCatalog(manager.id);
+    const rice = await prisma.product.findFirst({
+      where: { name: "Rice", productType: ProductType.RAW_MATERIAL },
+      include: { baseUnit: true, defaultStockLocation: true },
+    });
+    expect(rice).toBeTruthy();
+    expect(rice?.sellOnPos).toBe(false);
+    expect(rice?.trackInventory).toBe(true);
+    expect(rice?.baseUnit?.code).toBe("KG");
+    expect(rice?.defaultStockLocation?.code).toBe("KITCHEN");
+    expect(await stockAt(rice!.id, "MAIN")).toBe(0);
+    expect(await stockAt(rice!.id, "KITCHEN")).toBe(0);
+
+    const catalog = await listPosCatalog();
+    expect(catalog.products.some((row) => row.id === rice!.id)).toBe(false);
+
+    const charcoal = await prisma.product.findFirst({
+      where: { name: "Charcoal", productType: ProductType.RAW_MATERIAL },
+    });
+    expect(charcoal).toBeTruthy();
+
+    const again = await ensureKitchenStoreCatalog(manager.id);
+    expect(again.created).toBe(0);
+
+    const created = await prisma.product.findMany({
+      where: { productType: ProductType.RAW_MATERIAL },
+      select: { id: true },
+    });
+    createdProductIds.push(...created.filter((row) => !beforeIds.has(row.id)).map((row) => row.id));
+    if (!categoryBefore) {
+      const category = await prisma.category.findUnique({ where: { name: KITCHEN_STORES_CATEGORY } });
+      if (category) createdCategoryIds.push(category.id);
+    }
   });
 });

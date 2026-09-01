@@ -29,8 +29,8 @@ describe("tracked product base units", () => {
     expect(trackedProductBaseUnitCode("Petit Skol Malt")).toBe("BOTTLE");
   });
 
-  it("classifies the 48 tracked catalog products", () => {
-    const tracked = flattenCatalogProducts().filter((product) => product.trackInventory);
+  it("classifies the 48 tracked drink products", () => {
+    const tracked = flattenCatalogProducts().filter((product) => product.productType === "PACKAGED_GOOD");
     const namesFor = (unit: "SHOT" | "GLASS" | "BOTTLE") =>
       tracked.filter((product) => trackedProductBaseUnitCode(product.name) === unit).map((product) => product.name);
     expect(tracked).toHaveLength(48);

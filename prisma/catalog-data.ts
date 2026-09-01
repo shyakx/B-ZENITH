@@ -1,8 +1,18 @@
-import { BusinessArea } from "@prisma/client";
+import { BusinessArea, ProductType } from "@prisma/client";
+import {
+  KITCHEN_BASE_MATERIALS,
+  KITCHEN_STORES_CATEGORY,
+  type KitchenBaseUnitCode,
+} from "../src/lib/domain/kitchen-stores";
 
-export const EXPECTED_CATEGORY_COUNT = 39;
-export const EXPECTED_PRODUCT_COUNT = 246;
-export const EXPECTED_TRACKED_PRODUCT_COUNT = 48;
+export { KITCHEN_BASE_MATERIALS, KITCHEN_STORES_CATEGORY };
+
+export const EXPECTED_MENU_PRODUCT_COUNT = 246;
+export const EXPECTED_PACKAGED_TRACKED_COUNT = 48;
+export const EXPECTED_KITCHEN_MATERIAL_COUNT = KITCHEN_BASE_MATERIALS.length;
+export const EXPECTED_CATEGORY_COUNT = 40;
+export const EXPECTED_PRODUCT_COUNT = EXPECTED_MENU_PRODUCT_COUNT + EXPECTED_KITCHEN_MATERIAL_COUNT;
+export const EXPECTED_TRACKED_PRODUCT_COUNT = EXPECTED_PACKAGED_TRACKED_COUNT + EXPECTED_KITCHEN_MATERIAL_COUNT;
 export const EXPECTED_UNTRACKED_PRODUCT_COUNT = 198;
 
 export type CatalogCategory = {
@@ -53,6 +63,7 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
   { name: "Wine", area: BusinessArea.BAR },
   { name: "Champagne", area: BusinessArea.BAR },
   { name: "Cocktails", area: BusinessArea.BAR },
+  { name: KITCHEN_STORES_CATEGORY, area: BusinessArea.OTHER },
 ];
 
 export const CATALOG_PRODUCTS_BY_CATEGORY: Record<string, CatalogProductTuple[]> = {
@@ -380,6 +391,9 @@ export const CATALOG_PRODUCTS_BY_CATEGORY: Record<string, CatalogProductTuple[]>
   ],
 };
 
+export type CatalogBaseUnitCode = "BOTTLE" | "SHOT" | "GLASS" | "PIECE" | KitchenBaseUnitCode;
+export type CatalogLocationCode = "BAR" | "KITCHEN" | "CAFE";
+
 export type FlattenedCatalogProduct = {
   categoryName: string;
   name: string;
@@ -388,6 +402,10 @@ export type FlattenedCatalogProduct = {
   active: true;
   sortOrder: number;
   developmentStockQuantity: number;
+  productType: ProductType;
+  sellOnPos: boolean;
+  baseUnitCode: CatalogBaseUnitCode;
+  defaultLocationCode: CatalogLocationCode | null;
 };
 
 /** Matches the location-inventory migration: Shot / Glass SKUs, otherwise Bottle. */
@@ -400,6 +418,24 @@ export function trackedProductBaseUnitCode(name: string): "SHOT" | "GLASS" | "BO
 export function flattenCatalogProducts(): FlattenedCatalogProduct[] {
   const products: FlattenedCatalogProduct[] = [];
   for (const category of CATALOG_CATEGORIES) {
+    if (category.name === KITCHEN_STORES_CATEGORY) {
+      for (const [index, material] of KITCHEN_BASE_MATERIALS.entries()) {
+        products.push({
+          categoryName: KITCHEN_STORES_CATEGORY,
+          name: material.name,
+          sellingPrice: 0,
+          trackInventory: true,
+          active: true,
+          sortOrder: index,
+          developmentStockQuantity: 0,
+          productType: ProductType.RAW_MATERIAL,
+          sellOnPos: false,
+          baseUnitCode: material.baseUnitCode,
+          defaultLocationCode: "KITCHEN",
+        });
+      }
+      continue;
+    }
     const rows = CATALOG_PRODUCTS_BY_CATEGORY[category.name];
     if (!rows) {
       throw new Error(`Catalog is missing products for category ${category.name}.`);
@@ -413,6 +449,10 @@ export function flattenCatalogProducts(): FlattenedCatalogProduct[] {
         active: true,
         sortOrder: index,
         developmentStockQuantity: stock,
+        productType: track ? ProductType.PACKAGED_GOOD : ProductType.MENU_ITEM,
+        sellOnPos: true,
+        baseUnitCode: track ? trackedProductBaseUnitCode(name) : "PIECE",
+        defaultLocationCode: track ? "BAR" : null,
       });
     }
   }
@@ -447,5 +487,9 @@ export function assertCatalogIntegrity() {
   const untracked = products.length - tracked;
   if (untracked !== EXPECTED_UNTRACKED_PRODUCT_COUNT) {
     throw new Error(`Expected ${EXPECTED_UNTRACKED_PRODUCT_COUNT} untracked products, found ${untracked}.`);
+  }
+  const kitchen = products.filter((product) => product.productType === ProductType.RAW_MATERIAL);
+  if (kitchen.length !== EXPECTED_KITCHEN_MATERIAL_COUNT) {
+    throw new Error(`Expected ${EXPECTED_KITCHEN_MATERIAL_COUNT} kitchen materials, found ${kitchen.length}.`);
   }
 }

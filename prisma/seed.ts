@@ -12,7 +12,6 @@ import {
   CATALOG_CATEGORIES,
   assertCatalogIntegrity,
   flattenCatalogProducts,
-  trackedProductBaseUnitCode,
 } from "./catalog-data";
 
 const prisma = new PrismaClient();
@@ -85,7 +84,7 @@ async function main() {
     categoryIds[category.name] = row.id;
   }
 
-  const [main, bar, kitchen, cafe, bottle, shot, glass, piece] = await Promise.all([
+  const [main, bar, kitchen, cafe, bottle, shot, glass, piece, kg, litre] = await Promise.all([
     prisma.stockLocation.findUnique({ where: { code: "MAIN" } }),
     prisma.stockLocation.findUnique({ where: { code: "BAR" } }),
     prisma.stockLocation.findUnique({ where: { code: "KITCHEN" } }),
@@ -94,12 +93,22 @@ async function main() {
     prisma.unit.findUnique({ where: { code: "SHOT" } }),
     prisma.unit.findUnique({ where: { code: "GLASS" } }),
     prisma.unit.findUnique({ where: { code: "PIECE" } }),
+    prisma.unit.findUnique({ where: { code: "KG" } }),
+    prisma.unit.findUnique({ where: { code: "L" } }),
   ]);
-  if (!main || !bar || !kitchen || !cafe || !bottle || !shot || !glass || !piece) {
+  if (!main || !bar || !kitchen || !cafe || !bottle || !shot || !glass || !piece || !kg || !litre) {
     throw new Error("Run the location inventory migration before seeding (MAIN/BAR/KITCHEN/CAFE and units).");
   }
 
-  const trackedUnits = { BOTTLE: bottle.id, SHOT: shot.id, GLASS: glass.id };
+  const unitIds = {
+    BOTTLE: bottle.id,
+    SHOT: shot.id,
+    GLASS: glass.id,
+    PIECE: piece.id,
+    KG: kg.id,
+    L: litre.id,
+  };
+  const locationIds = { BAR: bar.id, KITCHEN: kitchen.id, CAFE: cafe.id };
 
   for (const product of flattenCatalogProducts()) {
     const categoryId = categoryIds[product.categoryName];
@@ -111,10 +120,10 @@ async function main() {
         sellingPrice: product.sellingPrice,
         trackInventory: product.trackInventory,
         stockQuantity: product.developmentStockQuantity,
-        productType: product.trackInventory ? "PACKAGED_GOOD" : "MENU_ITEM",
-        sellOnPos: true,
-        baseUnitId: product.trackInventory ? trackedUnits[trackedProductBaseUnitCode(product.name)] : piece.id,
-        defaultStockLocationId: product.trackInventory ? bar.id : null,
+        productType: product.productType,
+        sellOnPos: product.sellOnPos,
+        baseUnitId: unitIds[product.baseUnitCode],
+        defaultStockLocationId: product.defaultLocationCode ? locationIds[product.defaultLocationCode] : null,
         sortOrder: product.sortOrder,
       },
     });

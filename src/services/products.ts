@@ -1,6 +1,7 @@
 import { BusinessArea, OrderStatus, PaymentStatus, ProductType } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import { LOCATION_CODES } from "@/lib/domain/locations";
+import { KITCHEN_BASE_MATERIALS, KITCHEN_STORES_CATEGORY } from "@/lib/domain/kitchen-stores";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { ensureTrackedProductStocks, sellOnPosForType, syncCompatibilityStock } from "@/services/stock";
@@ -78,7 +79,7 @@ export async function listAllProducts() {
 }
 
 async function defaultUnitId(productType: ProductType) {
-  const code = productType === ProductType.PACKAGED_GOOD ? "BOTTLE" : "PIECE";
+  const code = productType === ProductType.PACKAGED_GOOD ? "BOTTLE" : productType === ProductType.RAW_MATERIAL ? "KG" : "PIECE";
   const unit = await prisma.unit.findUnique({ where: { code } });
   return unit?.id ?? null;
 }
@@ -189,6 +190,50 @@ export async function upsertProduct(input: {
   }
   await saveHowYouBuy(created.id, baseUnitId, input.purchaseUnitId, input.purchaseContains);
   return created;
+}
+
+export async function kitchenStoresStatus() {
+  const existing = await prisma.product.findMany({
+    where: { productType: ProductType.RAW_MATERIAL, name: { in: KITCHEN_BASE_MATERIALS.map((row) => row.name) } },
+    select: { name: true },
+  });
+  const have = new Set(existing.map((row) => row.name));
+  const missing = KITCHEN_BASE_MATERIALS.filter((row) => !have.has(row.name)).map((row) => row.name);
+  return { missing, total: KITCHEN_BASE_MATERIALS.length, present: KITCHEN_BASE_MATERIALS.length - missing.length };
+}
+
+export async function ensureKitchenStoreCatalog(userId: string) {
+  const category = await prisma.category.upsert({
+    where: { name: KITCHEN_STORES_CATEGORY },
+    create: { name: KITCHEN_STORES_CATEGORY, area: BusinessArea.OTHER, sortOrder: 10_000 },
+    update: { area: BusinessArea.OTHER },
+  });
+  const units = Object.fromEntries((await prisma.unit.findMany()).map((unit) => [unit.code, unit.id]));
+  const kitchen = await prisma.stockLocation.findUnique({ where: { code: LOCATION_CODES.KITCHEN } });
+  if (!kitchen) throw new AppError("Kitchen stock location is not configured.");
+
+  let created = 0;
+  for (const material of KITCHEN_BASE_MATERIALS) {
+    const already = await prisma.product.findFirst({
+      where: { name: material.name, productType: ProductType.RAW_MATERIAL },
+    });
+    if (already) continue;
+
+    await upsertProduct({
+      name: material.name,
+      categoryId: category.id,
+      sellingPrice: 0,
+      trackInventory: true,
+      active: true,
+      productType: ProductType.RAW_MATERIAL,
+      baseUnitId: units[material.baseUnitCode] ?? units.KG ?? units.PIECE ?? null,
+      defaultStockLocationId: kitchen.id,
+      userId,
+    });
+    created += 1;
+  }
+
+  return { created, total: KITCHEN_BASE_MATERIALS.length };
 }
 
 async function saveHowYouBuy(
