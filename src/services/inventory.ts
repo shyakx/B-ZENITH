@@ -1,4 +1,4 @@
-import { MovementType, Prisma, ProductType } from "@prisma/client";
+import { MovementType, Prisma, ProductType, type InventoryMovement } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import { LOCATION_CODES } from "@/lib/domain/locations";
 import {
@@ -26,6 +26,47 @@ import {
 } from "@/services/stock";
 
 type Tx = Prisma.TransactionClient;
+
+/** Per-request key for waste/count/adjust retries. Uniqueness is enforced by InventoryMovement.idempotencyKey. */
+function requireMutationKey(key: string, kind: "waste" | "count" | "adjustment") {
+  if (!key.trim()) throw new AppError(`Missing ${kind} key. Please try again.`);
+}
+
+async function replayMovementByKey(db: Tx | typeof prisma, idempotencyKey: string) {
+  return db.inventoryMovement.findUnique({ where: { idempotencyKey } });
+}
+
+function uniqueConstraintFields(error: Prisma.PrismaClientKnownRequestError) {
+  const target = error.meta?.target;
+  if (typeof target === "string") return [target];
+  if (Array.isArray(target)) return target.map((field) => String(field));
+  return [];
+}
+
+function isMovementIdempotencyConflict(error: unknown) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return false;
+  }
+  const fields = uniqueConstraintFields(error);
+  if (fields.length === 0) return true;
+  return fields.some((field) => field.includes("idempotencyKey"));
+}
+
+/** Replay only the InventoryMovement.idempotencyKey unique conflict, outside the aborted transaction. */
+async function withUniqueMovementReplay(
+  idempotencyKey: string,
+  run: () => Promise<InventoryMovement>,
+): Promise<InventoryMovement> {
+  try {
+    return await run();
+  } catch (error) {
+    if (isMovementIdempotencyConflict(error)) {
+      const replayed = await replayMovementByKey(prisma, idempotencyKey);
+      if (replayed) return replayed;
+    }
+    throw error;
+  }
+}
 
 async function requireTrackedProduct(tx: Tx | typeof prisma, productId: string) {
   const product = await tx.product.findUnique({
@@ -371,51 +412,62 @@ export async function recordWaste(input: {
   quantity: number;
   reason: string;
   userId: string;
+  idempotencyKey: string;
 }) {
   const reason = input.reason.trim();
   if (reason.length < 2) throw new AppError("Give a short reason for waste.");
-  return prisma.$transaction(async (tx) => {
-    await requireInventoryManager(tx, input.userId);
-    const product = await requireTrackedProduct(tx, input.productId);
-    await ensureTrackedProductStocks(tx, product.id);
-    const location = await tx.stockLocation.findUnique({ where: { id: input.locationId } });
-    if (!location || !location.active) throw new AppError("Please choose where the stock is located.");
-    await lockProductStockForUpdate(tx, product.id, location.id);
-    const stock = await tx.productStock.findUnique({
-      where: { productId_locationId: { productId: product.id, locationId: location.id } },
-    });
-    if (!stock) throw new AppError("Stock record not found.");
-    let next: number;
-    try {
-      next = nextStockAfterWaste(stock.quantity, input.quantity);
-    } catch (error) {
-      if (error instanceof Error && /cannot exceed/.test(error.message)) {
-        throw new AppError(
-          `Not enough ${product.name} in ${location.name}. Available: ${stock.quantity}.`,
-        );
+  requireMutationKey(input.idempotencyKey, "waste");
+
+  return withUniqueMovementReplay(input.idempotencyKey, () =>
+    prisma.$transaction(async (tx) => {
+      await requireInventoryManager(tx, input.userId);
+      const replay = await replayMovementByKey(tx, input.idempotencyKey);
+      if (replay) return replay;
+
+      const product = await requireTrackedProduct(tx, input.productId);
+      await ensureTrackedProductStocks(tx, product.id);
+      const location = await tx.stockLocation.findUnique({ where: { id: input.locationId } });
+      if (!location || !location.active) throw new AppError("Please choose where the stock is located.");
+      await lockProductStockForUpdate(tx, product.id, location.id);
+      const lockedReplay = await replayMovementByKey(tx, input.idempotencyKey);
+      if (lockedReplay) return lockedReplay;
+      const stock = await tx.productStock.findUnique({
+        where: { productId_locationId: { productId: product.id, locationId: location.id } },
+      });
+      if (!stock) throw new AppError("Stock record not found.");
+      let next: number;
+      try {
+        next = nextStockAfterWaste(stock.quantity, input.quantity);
+      } catch (error) {
+        if (error instanceof Error && /cannot exceed/.test(error.message)) {
+          throw new AppError(
+            `Not enough ${product.name} in ${location.name}. Available: ${stock.quantity}.`,
+          );
+        }
+        rethrowDomain(error);
       }
-      rethrowDomain(error);
-    }
-    const movement = await applyStockChange(tx, {
-      productId: product.id,
-      locationId: location.id,
-      next,
-      delta: -input.quantity,
-      type: MovementType.WASTE,
-      userId: input.userId,
-      reason,
-    });
-    await writeAudit({
-      tx,
-      userId: input.userId,
-      action: "STOCK_WASTE",
-      entity: "InventoryMovement",
-      entityId: movement.id,
-      before: { quantity: stock.quantity, location: location.code },
-      after: { quantity: next, reason },
-    });
-    return movement;
-  });
+      const movement = await applyStockChange(tx, {
+        productId: product.id,
+        locationId: location.id,
+        next,
+        delta: -input.quantity,
+        type: MovementType.WASTE,
+        userId: input.userId,
+        reason,
+        idempotencyKey: input.idempotencyKey,
+      });
+      await writeAudit({
+        tx,
+        userId: input.userId,
+        action: "STOCK_WASTE",
+        entity: "InventoryMovement",
+        entityId: movement.id,
+        before: { quantity: stock.quantity, location: location.code },
+        after: { quantity: next, reason },
+      });
+      return movement;
+    }),
+  );
 }
 
 export async function adjustStock(input: {
@@ -424,51 +476,62 @@ export async function adjustStock(input: {
   delta: number;
   reason: string;
   userId: string;
+  idempotencyKey: string;
 }) {
   const reason = input.reason.trim();
   if (reason.length < 2) throw new AppError("Give a short reason for the adjustment.");
-  return prisma.$transaction(async (tx) => {
-    await requireInventoryManager(tx, input.userId);
-    const product = await requireTrackedProduct(tx, input.productId);
-    await ensureTrackedProductStocks(tx, product.id);
-    const location = await tx.stockLocation.findUnique({ where: { id: input.locationId } });
-    if (!location || !location.active) throw new AppError("Please choose where the stock is located.");
-    await lockProductStockForUpdate(tx, product.id, location.id);
-    const stock = await tx.productStock.findUnique({
-      where: { productId_locationId: { productId: product.id, locationId: location.id } },
-    });
-    if (!stock) throw new AppError("Stock record not found.");
-    let next: number;
-    try {
-      next = nextStockAfterAdjustment(stock.quantity, input.delta);
-    } catch (error) {
-      if (error instanceof Error && /negative/.test(error.message)) {
-        throw new AppError(
-          `That change would take ${product.name} below zero in ${location.name}. Available: ${stock.quantity}.`,
-        );
+  requireMutationKey(input.idempotencyKey, "adjustment");
+
+  return withUniqueMovementReplay(input.idempotencyKey, () =>
+    prisma.$transaction(async (tx) => {
+      await requireInventoryManager(tx, input.userId);
+      const replay = await replayMovementByKey(tx, input.idempotencyKey);
+      if (replay) return replay;
+
+      const product = await requireTrackedProduct(tx, input.productId);
+      await ensureTrackedProductStocks(tx, product.id);
+      const location = await tx.stockLocation.findUnique({ where: { id: input.locationId } });
+      if (!location || !location.active) throw new AppError("Please choose where the stock is located.");
+      await lockProductStockForUpdate(tx, product.id, location.id);
+      const lockedReplay = await replayMovementByKey(tx, input.idempotencyKey);
+      if (lockedReplay) return lockedReplay;
+      const stock = await tx.productStock.findUnique({
+        where: { productId_locationId: { productId: product.id, locationId: location.id } },
+      });
+      if (!stock) throw new AppError("Stock record not found.");
+      let next: number;
+      try {
+        next = nextStockAfterAdjustment(stock.quantity, input.delta);
+      } catch (error) {
+        if (error instanceof Error && /negative/.test(error.message)) {
+          throw new AppError(
+            `That change would take ${product.name} below zero in ${location.name}. Available: ${stock.quantity}.`,
+          );
+        }
+        rethrowDomain(error);
       }
-      rethrowDomain(error);
-    }
-    const movement = await applyStockChange(tx, {
-      productId: product.id,
-      locationId: location.id,
-      next,
-      delta: input.delta,
-      type: MovementType.ADJUSTMENT,
-      userId: input.userId,
-      reason,
-    });
-    await writeAudit({
-      tx,
-      userId: input.userId,
-      action: "STOCK_ADJUSTED",
-      entity: "InventoryMovement",
-      entityId: movement.id,
-      before: { quantity: stock.quantity, location: location.code },
-      after: { quantity: next, delta: input.delta, reason },
-    });
-    return movement;
-  });
+      const movement = await applyStockChange(tx, {
+        productId: product.id,
+        locationId: location.id,
+        next,
+        delta: input.delta,
+        type: MovementType.ADJUSTMENT,
+        userId: input.userId,
+        reason,
+        idempotencyKey: input.idempotencyKey,
+      });
+      await writeAudit({
+        tx,
+        userId: input.userId,
+        action: "STOCK_ADJUSTED",
+        entity: "InventoryMovement",
+        entityId: movement.id,
+        before: { quantity: stock.quantity, location: location.code },
+        after: { quantity: next, delta: input.delta, reason },
+      });
+      return movement;
+    }),
+  );
 }
 
 export async function countStock(input: {
@@ -476,48 +539,59 @@ export async function countStock(input: {
   locationId: string;
   counted: number;
   userId: string;
+  idempotencyKey: string;
 }) {
-  return prisma.$transaction(async (tx) => {
-    await requireInventoryManager(tx, input.userId);
-    const product = await requireTrackedProduct(tx, input.productId);
-    await ensureTrackedProductStocks(tx, product.id);
-    const location = await tx.stockLocation.findUnique({ where: { id: input.locationId } });
-    if (!location || !location.active) throw new AppError("Please choose where the stock is located.");
-    await lockProductStockForUpdate(tx, product.id, location.id);
-    const stock = await tx.productStock.findUnique({
-      where: { productId_locationId: { productId: product.id, locationId: location.id } },
-    });
-    if (!stock) throw new AppError("Stock record not found.");
-    let next: number;
-    try {
-      next = nextStockAfterCount(input.counted).next;
-    } catch (error) {
-      if (error instanceof Error && /negative/.test(error.message)) {
-        throw new AppError("The counted quantity cannot be below zero.");
+  requireMutationKey(input.idempotencyKey, "count");
+
+  return withUniqueMovementReplay(input.idempotencyKey, () =>
+    prisma.$transaction(async (tx) => {
+      await requireInventoryManager(tx, input.userId);
+      const replay = await replayMovementByKey(tx, input.idempotencyKey);
+      if (replay) return replay;
+
+      const product = await requireTrackedProduct(tx, input.productId);
+      await ensureTrackedProductStocks(tx, product.id);
+      const location = await tx.stockLocation.findUnique({ where: { id: input.locationId } });
+      if (!location || !location.active) throw new AppError("Please choose where the stock is located.");
+      await lockProductStockForUpdate(tx, product.id, location.id);
+      const lockedReplay = await replayMovementByKey(tx, input.idempotencyKey);
+      if (lockedReplay) return lockedReplay;
+      const stock = await tx.productStock.findUnique({
+        where: { productId_locationId: { productId: product.id, locationId: location.id } },
+      });
+      if (!stock) throw new AppError("Stock record not found.");
+      let next: number;
+      try {
+        next = nextStockAfterCount(input.counted).next;
+      } catch (error) {
+        if (error instanceof Error && /negative/.test(error.message)) {
+          throw new AppError("The counted quantity cannot be below zero.");
+        }
+        rethrowDomain(error);
       }
-      rethrowDomain(error);
-    }
-    const delta = next - stock.quantity;
-    const movement = await applyStockChange(tx, {
-      productId: product.id,
-      locationId: location.id,
-      next,
-      delta,
-      type: MovementType.COUNT,
-      userId: input.userId,
-      reason: "Stock count",
-    });
-    await writeAudit({
-      tx,
-      userId: input.userId,
-      action: "STOCK_COUNTED",
-      entity: "InventoryMovement",
-      entityId: movement.id,
-      before: { quantity: stock.quantity, location: location.code },
-      after: { counted: next, delta },
-    });
-    return movement;
-  });
+      const delta = next - stock.quantity;
+      const movement = await applyStockChange(tx, {
+        productId: product.id,
+        locationId: location.id,
+        next,
+        delta,
+        type: MovementType.COUNT,
+        userId: input.userId,
+        reason: "Stock count",
+        idempotencyKey: input.idempotencyKey,
+      });
+      await writeAudit({
+        tx,
+        userId: input.userId,
+        action: "STOCK_COUNTED",
+        entity: "InventoryMovement",
+        entityId: movement.id,
+        before: { quantity: stock.quantity, location: location.code },
+        after: { counted: next, delta },
+      });
+      return movement;
+    }),
+  );
 }
 
 export async function upsertProductPack(input: {

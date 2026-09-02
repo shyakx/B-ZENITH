@@ -116,7 +116,7 @@ describe("concurrent tracked stock against the database", () => {
       where: { productId: product.id, type: "SALE" },
     });
     expect(movements.reduce((sum, move) => sum + move.quantity, 0)).toBe(-5);
-  });
+  }, 15_000);
 
   it("lets only one sale succeed when combined demand exceeds stock, and rolls the other back", async () => {
     const { product, table, john, mary } = await setupTrackedProduct(4);

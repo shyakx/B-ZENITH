@@ -328,6 +328,7 @@ describe("phase 2 location inventory", () => {
       quantity: 3,
       reason: "Spoiled potatoes",
       userId: manager.id,
+      idempotencyKey: `waste-pot-${potatoes.id}`,
     });
     expect(await stockAt(potatoes.id, "KITCHEN")).toBe(5);
     expect(await stockAt(potatoes.id, "MAIN")).toBe(12);
@@ -479,7 +480,13 @@ describe("phase 2 location inventory", () => {
     const product = await createTrackedDrink("CountWaste");
     const bar = await getLocationByCode(prisma, "BAR");
     await setStock(product.id, "BAR", 30);
-    await countStock({ productId: product.id, locationId: bar.id, counted: 25, userId: manager.id });
+    await countStock({
+      productId: product.id,
+      locationId: bar.id,
+      counted: 25,
+      userId: manager.id,
+      idempotencyKey: `count-${product.id}`,
+    });
     expect(await stockAt(product.id, "BAR")).toBe(25);
     const countMove = await prisma.inventoryMovement.findFirst({
       where: { productId: product.id, type: MovementType.COUNT },
@@ -487,7 +494,13 @@ describe("phase 2 location inventory", () => {
     });
     expect(countMove?.quantity).toBe(-5);
     await expect(
-      countStock({ productId: product.id, locationId: bar.id, counted: -1, userId: manager.id }),
+      countStock({
+        productId: product.id,
+        locationId: bar.id,
+        counted: -1,
+        userId: manager.id,
+        idempotencyKey: `count-neg-${product.id}`,
+      }),
     ).rejects.toThrow(/below zero/);
 
     await setStock(product.id, "BAR", 10);
@@ -497,6 +510,7 @@ describe("phase 2 location inventory", () => {
       quantity: 5,
       reason: "Broken bottles",
       userId: manager.id,
+      idempotencyKey: `waste-${product.id}`,
     });
     expect(await stockAt(product.id, "BAR")).toBe(5);
     await setStock(product.id, "BAR", 10);
@@ -507,6 +521,7 @@ describe("phase 2 location inventory", () => {
         quantity: 20,
         reason: "Too much waste",
         userId: manager.id,
+        idempotencyKey: `waste-over-${product.id}`,
       }),
     ).rejects.toThrow(/Not enough .* in Bar/);
     expect(await stockAt(product.id, "BAR")).toBe(10);
@@ -517,6 +532,7 @@ describe("phase 2 location inventory", () => {
       delta: 5,
       reason: "Found extra",
       userId: manager.id,
+      idempotencyKey: `adj-${product.id}`,
     });
     expect(await stockAt(product.id, "BAR")).toBe(15);
     await setStock(product.id, "BAR", 10);
@@ -527,6 +543,7 @@ describe("phase 2 location inventory", () => {
         delta: -20,
         reason: "Would go negative",
         userId: manager.id,
+        idempotencyKey: `adj-neg-${product.id}`,
       }),
     ).rejects.toThrow(/below zero/);
     expect(await stockAt(product.id, "BAR")).toBe(10);

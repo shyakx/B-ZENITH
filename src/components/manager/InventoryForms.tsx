@@ -362,6 +362,7 @@ export function WasteForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   async function action(formData: FormData) {
     const result = await recordWasteAction({
@@ -369,9 +370,11 @@ export function WasteForm({
       locationId: String(formData.get("locationId")),
       quantity: Number(formData.get("quantity")),
       reason: String(formData.get("reason") ?? ""),
+      idempotencyKey,
     });
     if (!result.ok) return setError(result.error);
     setError("");
+    setIdempotencyKey(crypto.randomUUID());
     router.refresh();
   }
 
@@ -404,6 +407,7 @@ export function AdjustForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   async function action(formData: FormData) {
     const quantity = Number(formData.get("quantity"));
@@ -413,9 +417,11 @@ export function AdjustForm({
       locationId: String(formData.get("locationId")),
       delta: direction === "decrease" ? -quantity : quantity,
       reason: String(formData.get("reason") ?? ""),
+      idempotencyKey,
     });
     if (!result.ok) return setError(result.error);
     setError("");
+    setIdempotencyKey(crypto.randomUUID());
     router.refresh();
   }
 
@@ -454,15 +460,18 @@ export function CountForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   async function action(formData: FormData) {
     const result = await countStockAction({
       productId: String(formData.get("productId")),
       locationId: String(formData.get("locationId")),
       counted: Number(formData.get("counted")),
+      idempotencyKey,
     });
     if (!result.ok) return setError(result.error);
     setError("");
+    setIdempotencyKey(crypto.randomUUID());
     router.refresh();
   }
 

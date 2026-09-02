@@ -92,6 +92,7 @@ export async function applyStockChange(
     receiptLineId?: string;
     orderId?: string;
     orderItemId?: string;
+    idempotencyKey?: string;
   },
 ) {
   await tx.productStock.update({
@@ -112,6 +113,7 @@ export async function applyStockChange(
       receiptLineId: input.receiptLineId,
       orderId: input.orderId,
       orderItemId: input.orderItemId,
+      idempotencyKey: input.idempotencyKey,
     },
   });
   await syncCompatibilityStock(tx, input.productId);

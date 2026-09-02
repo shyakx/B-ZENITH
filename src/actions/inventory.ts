@@ -65,6 +65,7 @@ export async function recordWasteAction(input: {
   locationId: string;
   quantity: number;
   reason: string;
+  idempotencyKey: string;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requirePermission("manageInventory");
@@ -81,6 +82,7 @@ export async function adjustStockAction(input: {
   locationId: string;
   delta: number;
   reason: string;
+  idempotencyKey: string;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requirePermission("manageInventory");
@@ -96,6 +98,7 @@ export async function countStockAction(input: {
   productId: string;
   locationId: string;
   counted: number;
+  idempotencyKey: string;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requirePermission("manageInventory");
