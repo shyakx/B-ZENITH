@@ -109,7 +109,7 @@ export default async function InventoryOverviewPage() {
           <EnsureKitchenStoresButton missing={kitchen.missing.length} />
         </div>
       ) : null}
-      <StockTable title="Kitchen stores" rows={materials} />
+      <StockTable title="Stock items" rows={materials} />
       <StockTable title="Bar and packaged" rows={packaged} />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card>

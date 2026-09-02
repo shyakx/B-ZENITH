@@ -55,7 +55,8 @@ export default async function ProductsPage() {
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Products</h1>
       <p className="mt-1 text-sm text-zenith-muted">
-        Menu products appear on POS. Inventory materials are received and used in the kitchen or cafe.
+        Menu products appear on POS. Stock items are tracked for business use but are not sold on POS.
+        Stock items include ingredients, cleaning supplies, packaging, and other items the business needs to track.
       </p>
 
       <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-2">

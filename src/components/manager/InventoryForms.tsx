@@ -99,7 +99,7 @@ function ProductSelect({
               </option>
             ))}
           </optgroup>
-          <optgroup label="Kitchen stores">
+          <optgroup label="Stock items">
             {kitchen.map((product) => (
               <option key={product.id} value={product.id}>
                 {productOptionLabel(product, available)}

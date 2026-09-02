@@ -69,13 +69,13 @@ export function ProductCatalog({
           }`}
           onClick={() => setTab("materials")}
         >
-          Inventory Materials
+          Stock items
         </button>
       </div>
       {tab === "materials" ? <EnsureKitchenStoresButton missing={kitchenMissing} /> : null}
       <div className={`grid min-w-0 gap-2 ${tab === "materials" && kitchenMissing > 0 ? "mt-3" : ""}`}>
         {tab === "materials" && visible.length === 0 && kitchenMissing === 0 ? (
-          <p className="text-sm text-zenith-muted">No inventory materials yet.</p>
+          <p className="text-sm text-zenith-muted">No stock items yet.</p>
         ) : null}
         {visible.map((product) => (
           <article key={product.id} className="min-w-0 rounded-xl border border-zenith-border bg-white p-3">

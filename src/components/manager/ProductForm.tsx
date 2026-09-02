@@ -40,6 +40,10 @@ export function ProductForm({
   const [purchaseUnitId, setPurchaseUnitId] = useState(product?.purchaseUnitId ?? product?.baseUnitId ?? "");
   const [contains, setContains] = useState(String(product?.purchaseContains ?? 1));
   const [stockUnitId, setStockUnitId] = useState(product?.baseUnitId ?? "");
+  const [productType, setProductType] = useState<ProductType>(product?.productType ?? ProductType.MENU_ITEM);
+  const [trackInventory, setTrackInventory] = useState(product?.trackInventory ?? false);
+  const [sellOnPos, setSellOnPos] = useState(product?.sellOnPos ?? true);
+  const isStockItem = productType === ProductType.RAW_MATERIAL;
 
   const purchaseUnit = units.find((unit) => unit.id === purchaseUnitId);
   const stockUnit = units.find((unit) => unit.id === stockUnitId);
@@ -89,13 +93,21 @@ export function ProductForm({
         </Select>
       </Field>
       <Field label="Product type">
-        <Select name="productType" defaultValue={product?.productType ?? "MENU_ITEM"}>
+        <Select
+          name="productType"
+          value={productType}
+          onChange={(event) => setProductType(event.target.value as ProductType)}
+        >
           <option value="MENU_ITEM">Menu product</option>
           <option value="PACKAGED_GOOD">Packaged good</option>
-          <option value="RAW_MATERIAL">Inventory material</option>
+          <option value="RAW_MATERIAL">Stock item (not sold)</option>
         </Select>
+        <span className="block text-xs font-normal normal-case tracking-normal text-zenith-muted">
+          Use this for things you count but do not sell: soap, tissue, detergent, rice, oil, charcoal, and other
+          supplies.
+        </span>
       </Field>
-      <Field label="Sold / used from">
+      <Field label="Used from">
         <Select name="defaultStockLocationId" defaultValue={product?.defaultStockLocationId ?? ""}>
           <option value="">None</option>
           {locations
@@ -106,17 +118,33 @@ export function ProductForm({
               </option>
             ))}
         </Select>
+        <span className="block text-xs font-normal normal-case tracking-normal text-zenith-muted">
+          Choose where this item is normally used.
+        </span>
       </Field>
       <Field label="Cost price (optional)">
         <Input name="costPrice" type="number" step="any" defaultValue={product?.costPrice ?? ""} />
       </Field>
       <div className="flex flex-wrap items-center gap-4 text-sm md:col-span-2">
+        {isStockItem ? <input type="hidden" name="trackInventory" value="on" /> : null}
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="trackInventory" defaultChecked={product?.trackInventory} />
+          <input
+            type="checkbox"
+            name={isStockItem ? undefined : "trackInventory"}
+            checked={isStockItem || trackInventory}
+            disabled={isStockItem}
+            onChange={(event) => setTrackInventory(event.target.checked)}
+          />
           Track stock
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="sellOnPos" defaultChecked={product?.sellOnPos ?? true} />
+          <input
+            type="checkbox"
+            name={isStockItem ? undefined : "sellOnPos"}
+            checked={isStockItem ? false : sellOnPos}
+            disabled={isStockItem}
+            onChange={(event) => setSellOnPos(event.target.checked)}
+          />
           Sell on POS
         </label>
         <label className="flex items-center gap-2">
@@ -124,6 +152,11 @@ export function ProductForm({
           Active
         </label>
       </div>
+      {isStockItem ? (
+        <p className="text-xs font-medium text-zenith-muted md:col-span-2">
+          Not sold on POS — tracked only as business stock.
+        </p>
+      ) : null}
 
       <p className="mt-2 text-sm font-semibold md:col-span-2">How do you normally buy this?</p>
       <Field label="Normally bought as">
