@@ -12,15 +12,19 @@ import { Button } from "@/components/ui/Button";
 
 type Staff = { id: string; name: string; role: Role };
 
-function StaffFace({ person }: { person: Staff }) {
+function StaffFace({ person, compact }: { person: Staff; compact?: boolean }) {
   return (
-    <span className="flex min-w-0 items-center gap-2.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zenith-gold text-sm font-semibold tracking-wide text-white">
+    <span className="flex min-w-0 items-center gap-2">
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-full bg-zenith-gold font-semibold tracking-wide text-white ${
+          compact ? "h-7 w-7 text-[11px]" : "h-9 w-9 text-sm"
+        }`}
+      >
         {staffInitials(person.name)}
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold leading-tight">{person.name}</span>
-        <span className="block text-xs font-medium text-zenith-gold">
+        <span className="block text-[11px] font-medium leading-tight text-zenith-gold">
           {roleLabel(person.role)}
         </span>
       </span>
@@ -41,13 +45,14 @@ function StaffTile({
     <button
       type="button"
       onClick={onSelect}
-      className={`flex min-w-0 items-center gap-2.5 rounded-2xl border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
+      aria-label={`Choose ${person.name}, ${roleLabel(person.role)}`}
+      className={`flex h-10 min-w-0 w-full items-center rounded-xl border px-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold ${
         selected
           ? "border-zenith-gold bg-zenith-raised"
           : "border-zenith-border bg-white hover:border-zenith-gold"
       }`}
     >
-      <StaffFace person={person} />
+      <StaffFace person={person} compact />
     </button>
   );
 }
@@ -93,21 +98,23 @@ export function LoginScreen({
 
   return (
     <div className="brand-pattern flex min-h-screen items-center justify-center p-3 md:p-5">
-      <div className="w-full max-w-3xl rounded-2xl border border-zenith-border bg-white/95 p-4 shadow-sm md:p-6">
-        <div className="mb-4 flex flex-col items-center text-center">
-          <Logo size={64} />
+      <div className="flex w-full max-w-md flex-col rounded-2xl border border-zenith-border bg-white p-4 shadow-sm md:p-5">
+        <div className="mb-3 flex shrink-0 flex-col items-center text-center">
+          <Logo size={56} />
           <h1 className="mt-2 text-xl font-semibold tracking-wide text-zenith-gold">B-ZENITH</h1>
           <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zenith-muted">
             Staff login
           </p>
-          <PoweredByCloudSync className="mt-2" />
+          <PoweredByCloudSync className="mt-1.5" />
         </div>
 
         {!selected ? (
-          <div>
-            <p className="mb-3 text-center text-sm text-zenith-muted">Who is using this device?</p>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <p className="mb-2 shrink-0 text-center text-sm font-semibold">
+              Choose your account
+            </p>
             {currentUser ? (
-              <div className="mb-3 rounded-2xl border border-zenith-gold bg-zenith-raised px-3 py-2.5 text-center text-sm">
+              <div className="mb-2 shrink-0 rounded-xl border border-zenith-gold bg-zenith-raised px-3 py-2 text-center text-sm">
                 <p>
                   {currentUser.name} is signed in. Choose another person to switch.
                 </p>
@@ -121,13 +128,17 @@ export function LoginScreen({
                 </Button>
               </div>
             ) : null}
-            <div className="space-y-3">
+            <div
+              className="max-h-[min(16.5rem,42vh)] space-y-2 overflow-y-auto overscroll-contain pr-0.5"
+              role="group"
+              aria-label="Staff accounts"
+            >
               {groups.map((group) => (
                 <section key={group.role}>
-                  <h2 className="mb-1.5 text-sm font-semibold tracking-wide text-zenith-gold">
+                  <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zenith-gold">
                     {roleLabel(group.role)}
                   </h2>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     {group.people.map((person) => (
                       <StaffTile
                         key={person.id}
@@ -142,7 +153,7 @@ export function LoginScreen({
             </div>
           </div>
         ) : (
-          <div className="mx-auto max-w-sm">
+          <div className="mx-auto w-full max-w-sm shrink-0">
             <button
               type="button"
               className="mb-3 text-sm font-semibold text-zenith-gold"
@@ -171,7 +182,7 @@ export function LoginScreen({
         )}
 
         {showDevHelp ? (
-          <div className="mt-5 rounded-2xl border border-zenith-border bg-zenith-surface p-3 text-sm text-zenith-muted">
+          <div className="mt-4 shrink-0 rounded-2xl border border-zenith-border bg-zenith-surface p-3 text-sm text-zenith-muted">
             <div className="mb-1 font-semibold text-zenith-gold">Development credentials</div>
             <div>John — Waiter — 1111</div>
             <div>Mary — Waiter — 1112</div>

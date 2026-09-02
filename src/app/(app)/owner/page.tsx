@@ -1,12 +1,10 @@
 import { requireRole } from "@/lib/auth/current-user";
 import { staffControlCounts } from "@/lib/admin-control";
 import { formatRwf } from "@/lib/domain/money";
-import { currentOutstandingAmount } from "@/lib/manager-dashboard";
 import { endOfDay, startOfDay } from "@/lib/dates";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { listStock } from "@/services/inventory";
-import { payableOutstandingBalance, todayLiveOrderTotals } from "@/services/orders";
-import { sumPaymentsReceived, unsettledCreditTotal } from "@/services/payments";
+import { todayLiveOrderTotals } from "@/services/orders";
 import { listUsers } from "@/services/users";
 
 function CountCard({ label, value }: { label: string; value: string | number }) {
@@ -22,16 +20,10 @@ export default async function OwnerHomePage() {
   await requireRole("OWNER");
   const from = startOfDay();
   const to = endOfDay();
-  const [liveTotals, paidToday, payableDue, creditDue, lowStock, staff] = await Promise.all([
+  const [liveTotals, lowStock, staff] = await Promise.all([
     todayLiveOrderTotals(from, to),
-    sumPaymentsReceived(from, to),
-    payableOutstandingBalance(),
-    unsettledCreditTotal(),
     listStock(true),
     listUsers(),
-  ]);
-  const outstanding = currentOutstandingAmount([{ total: payableDue, paidAmount: 0 }], [
-    { amountOwed: creditDue },
   ]);
   const counts = staffControlCounts(staff);
 
@@ -50,8 +42,8 @@ export default async function OwnerHomePage() {
         <div className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-5">
           <CountCard label="Orders today" value={liveTotals.ordersToday} />
           <CountCard label="Sales today" value={formatRwf(liveTotals.salesToday)} />
-          <CountCard label="Paid today" value={formatRwf(paidToday)} />
-          <CountCard label="Outstanding" value={formatRwf(outstanding)} />
+          <CountCard label="Paid today" value={formatRwf(liveTotals.paidToday)} />
+          <CountCard label="Outstanding" value={formatRwf(liveTotals.outstanding)} />
           <CountCard label="Low stock" value={lowStock.length} />
         </div>
       </section>

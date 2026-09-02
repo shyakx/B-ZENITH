@@ -5,6 +5,7 @@ import { sumLineTotals } from "@/lib/domain/money";
 import { CURRENT_TABLE_PAYMENT_STATUSES } from "@/lib/domain/payments";
 import { nextStockAfterIncrease, nextStockAfterSale, saleStockMessage } from "@/lib/domain/stock";
 import { AppError } from "@/lib/errors";
+import { reconcileTodaySales } from "@/lib/manager-dashboard";
 import { prisma } from "@/lib/prisma";
 import { lockProductStocksForUpdate } from "@/lib/stock-lock";
 import {
@@ -417,16 +418,20 @@ export async function listOrders(filter: OrderListFilter & { withItems?: boolean
   });
 }
 
+/**
+ * Owner/Manager “Today” cards. One population: non-cancelled orders created
+ * in the Kigali business-day window. Paid/outstanding are this set’s
+ * `paidAmount` / remainder — not Payment.createdAt and not all-time due.
+ */
 export async function todayLiveOrderTotals(from: Date, to: Date) {
-  const where: Prisma.OrderWhereInput = {
-    createdAt: { gte: from, lte: to },
-    status: { not: OrderStatus.CANCELLED },
-  };
-  const [ordersToday, sales] = await Promise.all([
-    prisma.order.count({ where }),
-    prisma.order.aggregate({ where, _sum: { total: true } }),
-  ]);
-  return { ordersToday, salesToday: sales._sum.total ?? 0 };
+  const orders = await prisma.order.findMany({
+    where: {
+      createdAt: { gte: from, lte: to },
+      status: { not: OrderStatus.CANCELLED },
+    },
+    select: { total: true, paidAmount: true },
+  });
+  return reconcileTodaySales(orders);
 }
 
 export async function payableOutstandingBalance() {

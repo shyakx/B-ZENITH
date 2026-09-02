@@ -2,12 +2,11 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatDateTime, startOfDay, endOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
-import { currentOutstandingAmount } from "@/lib/manager-dashboard";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { listStock, listMovements } from "@/services/inventory";
-import { listOrders, payableOutstandingBalance, todayLiveOrderTotals } from "@/services/orders";
-import { listRecentPayments, sumPaymentsReceived, unsettledCreditTotal } from "@/services/payments";
+import { listOrders, todayLiveOrderTotals } from "@/services/orders";
+import { listRecentPayments } from "@/services/payments";
 
 export default async function ManagerDashboardPage() {
   await requireRole("MANAGER");
@@ -15,9 +14,6 @@ export default async function ManagerDashboardPage() {
   const to = endOfDay();
   const [
     liveTotals,
-    paidToday,
-    payableDue,
-    creditDue,
     openOrders,
     lowStock,
     recentOrders,
@@ -25,23 +21,11 @@ export default async function ManagerDashboardPage() {
     movements,
   ] = await Promise.all([
     todayLiveOrderTotals(from, to),
-    sumPaymentsReceived(from, to),
-    payableOutstandingBalance(),
-    unsettledCreditTotal(),
     listOrders({ openOnly: true, take: 20 }),
     listStock(true),
     listOrders({ take: 5 }),
     listRecentPayments(5),
     listMovements(5),
-  ]);
-
-  const totals = {
-    ordersToday: liveTotals.ordersToday,
-    salesToday: liveTotals.salesToday,
-    paidToday,
-  };
-  const outstanding = currentOutstandingAmount([{ total: payableDue, paidAmount: 0 }], [
-    { amountOwed: creditDue },
   ]);
 
   return (
@@ -53,25 +37,25 @@ export default async function ManagerDashboardPage() {
 
       <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-5">
         <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-2xl font-semibold text-zenith-gold">{totals.ordersToday}</div>
+          <div className="text-2xl font-semibold text-zenith-gold">{liveTotals.ordersToday}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Orders today
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(totals.salesToday)}</div>
+          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(liveTotals.salesToday)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Sales today
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(totals.paidToday)}</div>
+          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(liveTotals.paidToday)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Paid today
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(outstanding)}</div>
+          <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(liveTotals.outstanding)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
             Outstanding
           </div>

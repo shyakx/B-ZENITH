@@ -439,6 +439,7 @@ export async function unsettledCreditTotal() {
   return result._sum.amountOwed ?? 0;
 }
 
+/** Cash/payment activity by Payment.createdAt — not today’s sale-dated dashboard. */
 export async function sumPaymentsReceived(from: Date, to: Date, method?: PaymentMethod) {
   const result = await prisma.payment.aggregate({
     where: {
