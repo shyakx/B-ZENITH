@@ -46,7 +46,7 @@ export default async function WaiterHomePage() {
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-2xl font-semibold text-zenith-gold">{stats.orderCount}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Today&apos;s orders
+            Orders today
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">

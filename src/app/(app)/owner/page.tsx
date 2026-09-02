@@ -39,11 +39,14 @@ export default async function OwnerHomePage() {
 
       <section className="mt-6">
         <h2 className="text-base font-semibold">Today</h2>
+        <p className="mt-1 text-xs text-zenith-muted">
+          Collected and unpaid amounts are for today&apos;s sales, not all cash received today.
+        </p>
         <div className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-5">
           <CountCard label="Orders today" value={liveTotals.ordersToday} />
           <CountCard label="Sales today" value={formatRwf(liveTotals.salesToday)} />
-          <CountCard label="Paid today" value={formatRwf(liveTotals.paidToday)} />
-          <CountCard label="Outstanding" value={formatRwf(liveTotals.outstanding)} />
+          <CountCard label="Collected on today's sales" value={formatRwf(liveTotals.paidToday)} />
+          <CountCard label="Unpaid on today's sales" value={formatRwf(liveTotals.outstanding)} />
           <CountCard label="Low stock" value={lowStock.length} />
         </div>
       </section>

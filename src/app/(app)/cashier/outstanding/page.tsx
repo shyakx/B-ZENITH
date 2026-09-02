@@ -11,15 +11,15 @@ export default async function OutstandingPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
-      <h1 className="font-display text-2xl text-zenith-gold">Outstanding</h1>
+      <h1 className="font-display text-2xl text-zenith-gold">Customer credit</h1>
       <p className="mt-1 text-zenith-muted">
-        Customer credit (pay later). Open unpaid and partial bills stay on Orders / Bills.
+        Customers who were allowed to pay later. Open unpaid and partial bills stay on Orders / Bills.
       </p>
 
       <div className="mt-6 space-y-3">
         {credits.length === 0 ? (
           <p className="rounded-2xl border border-zenith-border bg-white px-4 py-6 font-semibold">
-            Nothing outstanding.
+            No customer credit right now.
           </p>
         ) : null}
         {credits.map((credit) => (

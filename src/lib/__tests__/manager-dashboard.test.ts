@@ -92,7 +92,7 @@ describe("today dashboard sales reconciliation", () => {
     ).toBe(24000);
   });
 
-  it("keeps the Sales Today = Paid Today + Outstanding invariant", () => {
+  it("keeps the Sales today = Collected on today's sales + Unpaid on today's sales invariant", () => {
     const cases = [
       [{ total: 100000, paidAmount: 100000 }],
       [{ total: 100000, paidAmount: 0 }],
@@ -115,7 +115,7 @@ describe("today dashboard sales reconciliation", () => {
   });
 });
 
-describe("reports outstanding (all-time, not the today cards)", () => {
+describe("reports all unpaid now (all-time, not the today cards)", () => {
   it("adds unpaid/partial balances and pay-later amounts", () => {
     expect(
       currentOutstandingAmount(

@@ -110,7 +110,7 @@ export default async function InventoryOverviewPage() {
         </div>
       ) : null}
       <StockTable title="Stock items" rows={materials} />
-      <StockTable title="Bar and packaged" rows={packaged} />
+      <StockTable title="Menu and bottled / packaged" rows={packaged} />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="mb-3 font-semibold">Running low</h2>

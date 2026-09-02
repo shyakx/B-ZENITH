@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
+import { productTypeStaffLabel } from "@/lib/product-type-labels";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { listStock } from "@/services/inventory";
@@ -34,11 +35,7 @@ export default async function StockByLocationPage() {
                 <tr key={product.id} className="border-b border-zenith-border/70">
                   <td className="py-2 pr-2 font-semibold">{product.name}</td>
                   <td className="py-2 pr-2">
-                    {product.productType === "RAW_MATERIAL"
-                      ? "Stock items"
-                      : product.productType === "PACKAGED_GOOD"
-                        ? "Packaged"
-                        : "Menu"}
+                    {productTypeStaffLabel(product.productType)}
                   </td>
                   <td className="py-2 pr-2">{product.main}</td>
                   <td className="py-2 pr-2">{product.bar}</td>

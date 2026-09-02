@@ -83,7 +83,7 @@ export default async function TableBillPage({
                       <div className="text-lg font-semibold">{formatRwf(order.paidAmount)}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Due</div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Balance</div>
                       <div className="text-lg font-semibold text-zenith-gold">{formatRwf(due)}</div>
                     </div>
                   </div>

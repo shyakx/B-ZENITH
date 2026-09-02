@@ -357,7 +357,7 @@ export async function settleCredit(input: {
         where: { id: input.creditId },
         include: { order: true },
       });
-      if (!credit) throw new AppError("Outstanding bill not found.");
+      if (!credit) throw new AppError("Customer credit not found.");
       if (credit.settled) throw new AppError("This bill is already settled.");
 
       const updated = await applyPaymentInTx(tx, {

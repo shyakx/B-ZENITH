@@ -60,8 +60,16 @@ export default async function ReportsPage({
       <div className="mb-6 grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Sales (orders created)" value={formatRwf(summary.orderTotal)} hint={`${summary.orderCount} orders`} />
         <StatCard label="Payments received" value={formatRwf(summary.collected)} />
-        <StatCard label="Paid order value" value={formatRwf(summary.paidSales)} />
-        <StatCard label="Outstanding now" value={formatRwf(outstanding)} />
+        <StatCard
+          label="Fully paid sales"
+          value={formatRwf(summary.paidSales)}
+          hint="Orders created in the selected period that were fully paid"
+        />
+        <StatCard
+          label="All unpaid now"
+          value={formatRwf(outstanding)}
+          hint="Current unpaid balances across all dates. From/To does not change this figure."
+        />
       </div>
       <div className="grid min-w-0 gap-6 lg:grid-cols-2">
         <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
@@ -99,7 +107,7 @@ export default async function ReportsPage({
           {summary.cashiers.length === 0 ? <p className="text-sm">No payments in this date range.</p> : null}
         </section>
         <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
-          <h2 className="mb-3 font-display text-xl">Outstanding pay later</h2>
+          <h2 className="mb-3 font-display text-xl">Customer credit</h2>
           {outstandingCredits.map((credit) => (
             <div key={credit.id} className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
               <span>

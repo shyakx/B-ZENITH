@@ -27,6 +27,12 @@ export function PaymentBadge({ status }: { status: PaymentStatus }) {
   return <Badge className={paymentStyles[status]}>{label}</Badge>;
 }
 
+const orderLabels: Record<OrderStatus, string> = {
+  OPEN: "Open",
+  COMPLETED: "Done",
+  CANCELLED: "Cancelled",
+};
+
 export function OrderBadge({ status }: { status: OrderStatus }) {
-  return <Badge className={orderStyles[status]}>{status}</Badge>;
+  return <Badge className={orderStyles[status]}>{orderLabels[status]}</Badge>;
 }

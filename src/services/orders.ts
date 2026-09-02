@@ -421,7 +421,8 @@ export async function listOrders(filter: OrderListFilter & { withItems?: boolean
 /**
  * Owner/Manager “Today” cards. One population: non-cancelled orders created
  * in the Kigali business-day window. Paid/outstanding are this set’s
- * `paidAmount` / remainder — not Payment.createdAt and not all-time due.
+ * Collected/unpaid are this set’s `paidAmount` / remainder — not
+ * Payment.createdAt and not all-time due.
  */
 export async function todayLiveOrderTotals(from: Date, to: Date) {
   const orders = await prisma.order.findMany({

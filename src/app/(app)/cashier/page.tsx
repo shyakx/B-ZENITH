@@ -55,7 +55,7 @@ export default async function CashierHomePage() {
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-2xl font-semibold text-zenith-gold">{stats.payLater}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Pay later
+            Customer credit
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
@@ -100,7 +100,7 @@ export default async function CashierHomePage() {
                     <div className="font-semibold">{formatRwf(order.paidAmount)}</div>
                   </div>
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Due</div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Balance</div>
                     <div className="font-semibold text-zenith-gold">
                       {formatRwf(order.total - order.paidAmount)}
                     </div>

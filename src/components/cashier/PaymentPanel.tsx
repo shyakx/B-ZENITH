@@ -213,7 +213,7 @@ export function PaymentPanel({
           onChange={(event) => setAmount(event.target.value)}
         />
       </Field>
-      <p className="text-sm font-semibold">Due {formatRwf(remaining)} · Cash</p>
+      <p className="text-sm font-semibold">Balance {formatRwf(remaining)} · Cash</p>
       {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
       <Button className="h-14 w-full text-lg" disabled={busy} onClick={askConfirm}>
         {mode === "table" ? "Pay table" : "Record payment"}

@@ -15,7 +15,7 @@ export default async function MaisonPage() {
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <PageHeader
         title="Maison de Passage"
-        subtitle="Simple usage records for wedding guests and similar bookings. Not a hotel system."
+        subtitle="Guest stay — not included in POS sales. Simple usage records for wedding guests and similar bookings."
       />
       <div className="mb-6 max-w-3xl">
         <Card>

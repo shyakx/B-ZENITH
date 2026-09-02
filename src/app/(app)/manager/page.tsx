@@ -51,13 +51,19 @@ export default async function ManagerDashboardPage() {
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(liveTotals.paidToday)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Paid today
+            Collected on today's sales
+          </div>
+          <div className="mt-1 text-xs font-medium normal-case tracking-normal text-zenith-muted">
+            Money collected against today&apos;s sales
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(liveTotals.outstanding)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Outstanding
+            Unpaid on today's sales
+          </div>
+          <div className="mt-1 text-xs font-medium normal-case tracking-normal text-zenith-muted">
+            Amount still unpaid from today&apos;s sales
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
@@ -139,6 +145,7 @@ export default async function ManagerDashboardPage() {
         </div>
         <div className="min-w-0">
           <h2 className="font-display text-xl">Recent payments</h2>
+          <p className="mt-1 text-sm text-zenith-muted">Payments recorded most recently</p>
           <div className="mt-3 space-y-2">
             {recentPayments.length === 0 ? <p className="text-sm">No payments yet.</p> : null}
             {recentPayments.map((payment) => (

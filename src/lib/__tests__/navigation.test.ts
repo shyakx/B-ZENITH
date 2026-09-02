@@ -67,7 +67,7 @@ describe("route-aware navigation", () => {
       "All orders",
       "Cashier home",
       "Bills / Payments",
-      "Outstanding",
+      "Customer credit",
       "Payments taken",
       "Products",
       "Inventory",
@@ -124,7 +124,7 @@ describe("route-aware navigation", () => {
     expect(ROLE_NAV.CASHIER.map((item) => item.label)).toEqual([
       "Home",
       "Orders / Bills",
-      "Outstanding",
+      "Customer credit",
       "Payments",
     ]);
     expect(cashier).not.toContain("/cashier/factures");
@@ -169,7 +169,7 @@ describe("route-aware navigation", () => {
       "POS / Orders",
       "Tables",
       "Bills / Payments",
-      "Outstanding",
+      "Customer credit",
       "Products",
       "Inventory",
       "Receive Stock",

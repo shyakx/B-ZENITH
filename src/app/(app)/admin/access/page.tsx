@@ -12,7 +12,7 @@ const ACCESS: {
     can: [
       "See the entire business",
       "Take orders and run POS",
-      "View tables, bills, and outstanding",
+      "View tables, bills, and customer credit",
       "Record payments when needed",
       "Manage products and inventory",
       "View reports and Maison",
@@ -37,7 +37,7 @@ const ACCESS: {
       "View bills",
       "Record payments",
       "Record pay later",
-      "Settle outstanding bills",
+      "Settle customer credit",
       "Print factures",
     ],
     cannot: [

@@ -2,8 +2,8 @@
  * Today’s dashboard (Owner / Manager) is sale-dated:
  * non-cancelled orders created on the Kigali business day.
  *
- * Paid today = how much of those sales is already collected (`Order.paidAmount`).
- * Outstanding = the unpaid remainder of those same sales.
+ * Collected on today's sales = how much of those sales is already collected (`Order.paidAmount`).
+ * Unpaid on today's sales = the unpaid remainder of those same sales.
  *
  * Cash collected on a payment timestamp (including older bills paid today) is a
  * different number. That stays on the cashier home as “Cash received today”

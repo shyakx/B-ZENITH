@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Input";
+import { productTypeStaffHelp, productTypeStaffLabel } from "@/lib/product-type-labels";
 
 type ProductFields = {
   id: string;
@@ -98,13 +99,12 @@ export function ProductForm({
           value={productType}
           onChange={(event) => setProductType(event.target.value as ProductType)}
         >
-          <option value="MENU_ITEM">Menu product</option>
-          <option value="PACKAGED_GOOD">Packaged good</option>
-          <option value="RAW_MATERIAL">Stock item (not sold)</option>
+          <option value="MENU_ITEM">{productTypeStaffLabel(ProductType.MENU_ITEM)}</option>
+          <option value="PACKAGED_GOOD">{productTypeStaffLabel(ProductType.PACKAGED_GOOD)}</option>
+          <option value="RAW_MATERIAL">{productTypeStaffLabel(ProductType.RAW_MATERIAL)}</option>
         </Select>
         <span className="block text-xs font-normal normal-case tracking-normal text-zenith-muted">
-          Use this for things you count but do not sell: soap, tissue, detergent, rice, oil, charcoal, and other
-          supplies.
+          {productTypeStaffHelp(productType)}
         </span>
       </Field>
       <Field label="Used from">
@@ -152,11 +152,6 @@ export function ProductForm({
           Active
         </label>
       </div>
-      {isStockItem ? (
-        <p className="text-xs font-medium text-zenith-muted md:col-span-2">
-          Not sold on POS — tracked only as business stock.
-        </p>
-      ) : null}
 
       <p className="mt-2 text-sm font-semibold md:col-span-2">How do you normally buy this?</p>
       <Field label="Normally bought as">

@@ -53,7 +53,7 @@ export function VoidOrderButton({
               Order #{orderNumber} · Table {tableName}
             </p>
             <p className="mt-3 text-sm text-zenith-muted">
-              This will cancel the entire order and return tracked stock. You can submit a new order
+              This will cancel your own unpaid order and return tracked stock. You can submit a new order
               afterward.
             </p>
             {error ? <p className="mt-3 text-sm text-zenith-danger">{error}</p> : null}
