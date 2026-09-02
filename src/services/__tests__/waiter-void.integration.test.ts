@@ -8,6 +8,7 @@ import { cleanupInventoryArtifacts, createIsolatedPosProduct } from "./inventory
 loadEnvConfig(process.cwd());
 
 const createdOrderIds: string[] = [];
+const createdTableIds: string[] = [];
 let productId = "";
 let categoryId = "";
 let startingStock = 0;
@@ -17,6 +18,14 @@ beforeAll(async () => {
   productId = isolated.product.id;
   categoryId = isolated.category.id;
   startingStock = isolated.barQuantity;
+  const table = await prisma.serviceTable.create({
+    data: {
+      name: `VOID-ISO-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      active: true,
+      sortOrder: 9200,
+    },
+  });
+  createdTableIds.push(table.id);
 });
 
 afterAll(async () => {
@@ -39,6 +48,9 @@ afterAll(async () => {
   if (categoryId) {
     await prisma.category.deleteMany({ where: { id: categoryId } });
   }
+  if (createdTableIds.length > 0) {
+    await prisma.serviceTable.deleteMany({ where: { id: { in: createdTableIds } } });
+  }
   await prisma.$disconnect();
 });
 
@@ -46,7 +58,7 @@ describe("waiter void + order again against the database", () => {
   it("voids own unpaid order, restores stock, keeps history, and replacement gets a new number", async () => {
     const john = await prisma.user.findFirst({ where: { name: "John", role: "WAITER" } });
     const mary = await prisma.user.findFirst({ where: { name: "Mary", role: "WAITER" } });
-    const table = await prisma.serviceTable.findFirst({ where: { active: true } });
+    const table = await prisma.serviceTable.findUnique({ where: { id: createdTableIds[0] } });
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!john || !mary || !table || !product) {
       throw new Error("Seed data is required for this test (John, Mary, a table).");
@@ -117,7 +129,7 @@ describe("waiter void + order again against the database", () => {
 
   it("rejects waiter void after partial or full payment without changing stock", async () => {
     const john = await prisma.user.findFirst({ where: { name: "John", role: "WAITER" } });
-    const table = await prisma.serviceTable.findFirst({ where: { active: true } });
+    const table = await prisma.serviceTable.findUnique({ where: { id: createdTableIds[0] } });
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!john || !table || !product) {
       throw new Error("Seed data is required for this test.");

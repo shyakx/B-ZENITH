@@ -38,6 +38,12 @@ describe("waiter void eligibility", () => {
     expect(canWaiterVoidOrder({ ...unpaid, status: OrderStatus.CANCELLED }, "john")).toBe(false);
   });
 
+  it("rejects a pay-later order so customer credit is not voided from the waiter screen", () => {
+    expect(
+      canWaiterVoidOrder({ ...unpaid, paymentStatus: PaymentStatus.PAY_LATER }, "john"),
+    ).toBe(false);
+  });
+
   it("does not give the waiter cashier cancel or payment permissions", () => {
     expect(hasPermission("WAITER", "cancelOrder")).toBe(false);
     expect(hasPermission("WAITER", "recordPayment")).toBe(false);

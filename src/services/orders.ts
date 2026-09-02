@@ -6,6 +6,7 @@ import { CURRENT_TABLE_PAYMENT_STATUSES } from "@/lib/domain/payments";
 import { nextStockAfterIncrease, nextStockAfterSale, saleStockMessage } from "@/lib/domain/stock";
 import { AppError } from "@/lib/errors";
 import { reconcileTodaySales } from "@/lib/manager-dashboard";
+import { lockOrderForUpdate } from "@/lib/order-lock";
 import { prisma } from "@/lib/prisma";
 import { lockProductStocksForUpdate } from "@/lib/stock-lock";
 import {
@@ -270,11 +271,15 @@ export async function cancelOrder(input: {
   ownerWaiterId?: string;
 }) {
   return prisma.$transaction(async (tx) => {
+    // Lock first — the same Order FOR UPDATE payments use — then decide from that snapshot.
+    await lockOrderForUpdate(tx, input.orderId);
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
       include: {
         items: true,
         table: { select: { name: true } },
+        credit: true,
+        payments: { select: { id: true, amount: true } },
       },
     });
     if (!order) throw new AppError("Order not found.");
@@ -284,12 +289,26 @@ export async function cancelOrder(input: {
     if (order.status === OrderStatus.CANCELLED) {
       throw new AppError("This order is already cancelled.");
     }
-    if (input.ownerWaiterId) {
-      if (order.paidAmount > 0 || order.paymentStatus !== PaymentStatus.UNPAID) {
-        throw new AppError("A paid or partially paid order cannot be voided.");
-      }
-    } else if (order.paidAmount > 0 || order.paymentStatus === PaymentStatus.PAID) {
-      throw new AppError("A paid or partially paid order cannot be cancelled.");
+
+    const recordedPaid = order.payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const paidAmount = Math.max(order.paidAmount, recordedPaid);
+    const hasOpenCredit =
+      order.paymentStatus === PaymentStatus.PAY_LATER || Boolean(order.credit && !order.credit.settled);
+
+    if (hasOpenCredit) {
+      throw new AppError("Customer credit must be resolved before the order can be cancelled.");
+    }
+    if (
+      paidAmount > 0 ||
+      order.payments.length > 0 ||
+      order.paymentStatus === PaymentStatus.PAID ||
+      order.paymentStatus === PaymentStatus.PARTIALLY_PAID
+    ) {
+      throw new AppError(
+        input.ownerWaiterId
+          ? "A paid or partially paid order cannot be voided."
+          : "A paid or partially paid order cannot be cancelled.",
+      );
     }
 
     const restore: { itemId: string; productId: string; locationId: string; quantity: number }[] = [];

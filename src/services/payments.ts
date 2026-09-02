@@ -2,6 +2,7 @@ import { OrderStatus, PaymentMethod, PaymentStatus, Prisma } from "@prisma/clien
 import { writeAudit } from "@/lib/audit";
 import { allocateAcrossOrders, paymentStatusAfterAmount, validatePaymentAmount } from "@/lib/domain/payments";
 import { AppError } from "@/lib/errors";
+import { lockOrderForUpdate } from "@/lib/order-lock";
 import { prisma } from "@/lib/prisma";
 import { orderInclude } from "@/services/orders";
 
@@ -39,7 +40,7 @@ function asAppError(error: unknown): never {
 }
 
 async function lockOrder(tx: Tx, orderId: string) {
-  await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
+  await lockOrderForUpdate(tx, orderId);
 }
 
 async function applyPaymentInTx(
