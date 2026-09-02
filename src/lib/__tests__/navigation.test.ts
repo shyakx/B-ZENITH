@@ -55,14 +55,20 @@ describe("route-aware navigation", () => {
     expect(isNavActive("/manager/orders/abc", "/manager", ROLE_NAV.MANAGER.map((item) => item.href))).toBe(false);
   });
 
-  it("gives ADMIN the same business pages as OWNER plus system home", () => {
+  it("gives ADMIN explicit all-access navigation covering every role", () => {
     expect(ROLE_NAV.ADMIN.map((item) => item.label)).toEqual([
       "Home",
       "Business today",
+      "Waiter home",
       "POS / Orders",
+      "Waiter orders",
+      "Manager home",
       "Tables",
+      "All orders",
+      "Cashier home",
       "Bills / Payments",
       "Outstanding",
+      "Payments taken",
       "Products",
       "Inventory",
       "Receive Stock",
@@ -78,13 +84,20 @@ describe("route-aware navigation", () => {
       "Settings",
       "Audit",
     ]);
-    expect(ROLE_NAV.ADMIN.map((item) => item.href)).toEqual([
+    const hrefs = ROLE_NAV.ADMIN.map((item) => item.href);
+    expect(hrefs).toEqual([
       "/admin",
       "/owner",
+      "/waiter",
       "/waiter/orders/new",
+      "/waiter/orders",
+      "/manager",
       "/manager/tables",
+      "/manager/orders",
+      "/cashier",
       "/cashier/bills",
       "/cashier/outstanding",
+      "/cashier/payments",
       "/manager/products",
       "/manager/inventory",
       "/manager/purchases",
@@ -100,12 +113,11 @@ describe("route-aware navigation", () => {
       "/admin/settings",
       "/admin/audit",
     ]);
-    expect(ROLE_NAV.OWNER.every((item) => ROLE_NAV.ADMIN.some((link) => link.href === item.href))).toBe(
-      true,
-    );
-    const admin = ROLE_NAV.ADMIN.map((item) => item.href);
-    expect(isNavActive("/admin/users/abc", "/admin/users", admin)).toBe(true);
-    expect(isNavActive("/admin/users/abc", "/admin", admin)).toBe(false);
+    for (const role of ["WAITER", "CASHIER", "MANAGER", "OWNER"] as const) {
+      expect(ROLE_NAV[role].every((item) => hrefs.includes(item.href))).toBe(true);
+    }
+    expect(isNavActive("/admin/users/abc", "/admin/users", hrefs)).toBe(true);
+    expect(isNavActive("/admin/users/abc", "/admin", hrefs)).toBe(false);
   });
 
   it("keeps cashier navigation to money screens only", () => {

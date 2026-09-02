@@ -62,13 +62,7 @@ const ACCESS: {
   },
   {
     role: "ADMIN",
-    can: [
-      "See the entire business",
-      "Open every Owner page",
-      "Take orders, bills, payments, inventory, and reports",
-      "Manage staff, roles, PINs, settings, and audit",
-      "Create, promote, and delete Owner accounts",
-    ],
+    can: ["All access: every page, payment, order, stock move, report, and staff action"],
     cannot: ["Delete the last active owner"],
   },
 ];
@@ -81,7 +75,7 @@ export default async function AccessPage() {
     <div className="mx-auto w-full min-w-0 max-w-4xl">
       <h1 className="text-xl font-semibold text-zenith-gold">Access</h1>
       <p className="mt-2 text-sm">
-        These five roles are fixed. Owner and Admin both see and operate the whole business.
+        These five roles are fixed. Admin has all access. Owner also runs the whole business.
       </p>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

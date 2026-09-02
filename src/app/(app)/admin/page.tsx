@@ -23,7 +23,7 @@ export default async function AdminHomePage() {
         <VisibleDate />
       </div>
       <p className="mt-3 text-sm">
-        Manage the people who use B-ZENITH. Admin can also open the same business pages as Owner.
+        Admin has all access: every business page, payment, stock move, report, and staff action.
       </p>
 
       <section className="mt-6">

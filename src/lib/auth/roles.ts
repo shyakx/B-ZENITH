@@ -2,8 +2,8 @@ export const ROLES = ["OWNER", "ADMIN", "MANAGER", "CASHIER", "WAITER"] as const
 export type Role = (typeof ROLES)[number];
 
 /**
- * OWNER owns the business: full operational visibility and staff administration.
- * ADMIN sees the same business pages as OWNER, and also manages people and settings.
+ * ADMIN has explicit all-access: every page, every permission, every staff action
+ * except last-owner safety. OWNER also operates the whole business.
  * MANAGER runs catalog, inventory, reports, and Maison — not payments or staff.
  * CASHIER takes payments. WAITER takes orders.
  */
@@ -80,6 +80,11 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
 const FULL_ACCESS_PATH_PREFIXES = ["/owner", "/waiter", "/cashier", "/manager", "/admin"] as const;
 
+/** Admin is the explicit superuser. Owner also has full operational access. */
+export function hasAllAccess(role: Role): boolean {
+  return role === "ADMIN";
+}
+
 export function isFullAccessRole(role: Role): boolean {
   return role === "OWNER" || role === "ADMIN";
 }
@@ -101,6 +106,7 @@ export function isPublicPath(pathname: string): boolean {
 }
 
 export function hasPermission(role: Role, permission: Permission): boolean {
+  if (hasAllAccess(role)) return true;
   return ROLE_PERMISSIONS[role].includes(permission);
 }
 
@@ -109,12 +115,17 @@ export function hasPermission(role: Role, permission: Permission): boolean {
  * Other roles must match the page gate.
  */
 export function satisfiesRoleGate(userRole: Role, allowed: readonly Role[]): boolean {
+  if (hasAllAccess(userRole)) return true;
   return isFullAccessRole(userRole) || allowed.includes(userRole);
 }
 
 export function canAccessPath(role: Role, pathname: string): boolean {
   const path = normalizePath(pathname);
   if (path === "/" || isPublicPath(path)) {
+    return true;
+  }
+
+  if (hasAllAccess(role)) {
     return true;
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccessPath, hasPermission, isPublicPath, isRole, PERMISSIONS, satisfiesRoleGate } from "@/lib/auth/roles";
+import { canAccessPath, hasAllAccess, hasPermission, isPublicPath, isRole, PERMISSIONS, satisfiesRoleGate } from "@/lib/auth/roles";
 import { isValidPin } from "@/lib/auth/pin";
 
 describe("authentication and authorization", () => {
@@ -58,10 +58,12 @@ describe("authentication and authorization", () => {
     expect(canAccessPath("OWNER", "/admin/audit")).toBe(true);
     expect(canAccessPath("OWNER", "/print/order/1")).toBe(true);
 
-    expect(canAccessPath("ADMIN", "/owner")).toBe(true);
-    expect(canAccessPath("ADMIN", "/manager/tables")).toBe(true);
-    expect(canAccessPath("ADMIN", "/cashier/bills")).toBe(true);
-    expect(canAccessPath("ADMIN", "/print/order/1")).toBe(true);
+    expect(canAccessPath("ADMIN", "/waiter")).toBe(true);
+    expect(canAccessPath("ADMIN", "/cashier/payments")).toBe(true);
+    expect(canAccessPath("ADMIN", "/manager/orders")).toBe(true);
+    expect(hasAllAccess("ADMIN")).toBe(true);
+    expect(hasAllAccess("OWNER")).toBe(false);
+    expect(hasAllAccess("MANAGER")).toBe(false);
     expect(canAccessPath("MANAGER", "/owner")).toBe(false);
     expect(canAccessPath("MANAGER", "/admin/users")).toBe(false);
     expect(canAccessPath("CASHIER", "/owner")).toBe(false);
