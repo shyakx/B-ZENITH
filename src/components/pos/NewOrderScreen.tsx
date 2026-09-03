@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Minus, Plus } from "lucide-react";
 import { createOrderAction } from "@/actions/orders";
 import { formatRwf, sumLineTotals } from "@/lib/domain/money";
+import { clearDraftOrderKey, getOrCreateDraftOrderKey } from "@/lib/domain/order-draft-key";
 import { Button } from "@/components/ui/Button";
 import { CategoryPicker } from "@/components/pos/CategoryPicker";
 
@@ -42,8 +43,12 @@ export function NewOrderScreen({
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [key] = useState(() => crypto.randomUUID());
+  const [key, setKey] = useState("");
   const [submitted, setSubmitted] = useState<{ orderNumber: number; total: number } | null>(null);
+
+  useEffect(() => {
+    setKey(getOrCreateDraftOrderKey());
+  }, []);
 
   const table = tables.find((item) => item.id === tableId);
   const visible = useMemo(() => {
@@ -91,18 +96,25 @@ export function NewOrderScreen({
       setError("Select a table and add products first.");
       return;
     }
+    const idempotencyKey = key || getOrCreateDraftOrderKey();
+    if (!idempotencyKey) {
+      setError("Missing order key. Please try again.");
+      return;
+    }
+    setKey(idempotencyKey);
     setBusy(true);
     const result = await createOrderAction({
       tableId,
       items: cart.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
       note,
-      idempotencyKey: key,
+      idempotencyKey,
     });
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
       return;
     }
+    clearDraftOrderKey();
     setSubmitted({ orderNumber: result.data.orderNumber, total });
     setStep("done");
   }
