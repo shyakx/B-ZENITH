@@ -42,7 +42,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (createdMaisonIds.length > 0) {
-    await prisma.auditLog.deleteMany({ where: { entityId: { in: createdMaisonIds } } });
+    const maisonPayments = await prisma.maisonPayment.findMany({
+      where: { maisonRecordId: { in: createdMaisonIds } },
+      select: { id: true },
+    });
+    await prisma.auditLog.deleteMany({
+      where: { entityId: { in: [...createdMaisonIds, ...maisonPayments.map((row) => row.id)] } },
+    });
+    await prisma.maisonPayment.deleteMany({ where: { maisonRecordId: { in: createdMaisonIds } } });
     await prisma.maisonRecord.deleteMany({ where: { id: { in: createdMaisonIds } } });
   }
   const tableOrders =
@@ -480,7 +487,12 @@ describe("financial reconciliation (existing behavior, not a redesign)", () => {
       staffId: manager.id,
     });
     createdMaisonIds.push(record.id);
-    await recordMaisonPayment({ id: record.id, amount, staffId: manager.id });
+    await recordMaisonPayment({
+      id: record.id,
+      amount,
+      staffId: manager.id,
+      idempotencyKey: crypto.randomUUID(),
+    });
 
     expect(await prisma.payment.findFirst({ where: { amount } })).toBeNull();
     expect(await prisma.order.findFirst({ where: { total: amount } })).toBeNull();

@@ -429,6 +429,18 @@ model MaisonRecord {
   staff         User          @relation(fields: [staffId], references: [id])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  payments      MaisonPayment[]
+}
+
+model MaisonPayment {
+  id             String       @id @default(cuid())
+  maisonRecordId String
+  maisonRecord   MaisonRecord @relation(fields: [maisonRecordId], references: [id])
+  amount         Int
+  idempotencyKey String       @unique
+  createdAt      DateTime     @default(now())
+
+  @@index([maisonRecordId, createdAt])
 }
 
 model AuditLog {

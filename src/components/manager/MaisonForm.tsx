@@ -58,13 +58,17 @@ export function MaisonForm() {
 export function MaisonPayButton({ id, remaining }: { id: string; remaining: number }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   async function action(formData: FormData) {
     const result = await payMaisonAction({
       id,
       amount: Number(formData.get("amount")),
+      idempotencyKey,
     });
     if (!result.ok) return setError(result.error);
+    setError("");
+    setIdempotencyKey(crypto.randomUUID());
     router.refresh();
   }
 

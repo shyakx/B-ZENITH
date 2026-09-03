@@ -94,6 +94,8 @@ describe("authentication and authorization", () => {
     expect(hasPermission("CASHIER", "createOrder")).toBe(false);
     expect(hasPermission("CASHIER", "manageProducts")).toBe(false);
     expect(hasPermission("CASHIER", "manageInventory")).toBe(false);
+    expect(hasPermission("CASHIER", "manageMaison")).toBe(false);
+    expect(hasPermission("WAITER", "manageMaison")).toBe(false);
     expect(hasPermission("CASHIER", "manageUsers")).toBe(false);
     expect(hasPermission("CASHIER", "manageSettings")).toBe(false);
     expect(hasPermission("MANAGER", "viewAllOrders")).toBe(true);
@@ -111,6 +113,7 @@ describe("authentication and authorization", () => {
     expect(hasPermission("ADMIN", "manageInventory")).toBe(true);
     expect(hasPermission("WAITER", "manageProducts")).toBe(false);
     expect(hasPermission("ADMIN", "manageSettings")).toBe(true);
+    expect(hasPermission("ADMIN", "manageMaison")).toBe(true);
     expect(hasPermission("ADMIN", "viewAudit")).toBe(true);
     expect(hasPermission("ADMIN", "recordPayment")).toBe(true);
     expect(hasPermission("WAITER", "manageUsers")).toBe(false);

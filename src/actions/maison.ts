@@ -31,6 +31,7 @@ export async function createMaisonAction(input: {
 export async function payMaisonAction(input: {
   id: string;
   amount: number;
+  idempotencyKey: string;
 }): Promise<ActionResult<{ paymentStatus: string }>> {
   try {
     const user = await requirePermission("manageMaison");
