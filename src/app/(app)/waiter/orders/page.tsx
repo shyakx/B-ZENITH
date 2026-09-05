@@ -4,6 +4,7 @@ import { formatDateTime } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { Badge, PaymentBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { VoidOrderButton } from "@/components/waiter/VoidOrderButton";
 import { canWaiterVoidOrder } from "@/lib/domain/void-order";
 import { listOrders } from "@/services/orders";
@@ -17,7 +18,9 @@ export default async function MyOrdersPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl text-zenith-gold">My orders</h1>
-          <p className="mt-1 text-zenith-muted">Only your orders. Payment is handled by the cashier.</p>
+          <p className="mt-1 text-zenith-muted">
+            Only your orders. Print a facture anytime. Payment is handled by the cashier.
+          </p>
         </div>
         <Link href="/waiter/orders/new">
           <Button>+ New order</Button>
@@ -49,6 +52,7 @@ export default async function MyOrdersPage() {
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="text-xl font-semibold">{formatRwf(order.total)}</div>
               <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <PrintFactureLink href={`/print/order/${order.id}`} />
                 <Link href={`/waiter/orders/new?again=${order.id}`}>
                   <Button variant="secondary">Order again</Button>
                 </Link>

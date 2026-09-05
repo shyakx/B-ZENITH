@@ -17,12 +17,19 @@ const ACCESS: {
       "Manage products and inventory",
       "View reports and Maison",
       "Manage staff, roles, settings, and audit",
+      "Delete test sales and Maison stays",
     ],
     cannot: ["Leave the business without an active owner", "Delete an Admin account"],
   },
   {
     role: "WAITER",
-    can: ["Create orders", "View own orders", "Void own unpaid orders", "Order again"],
+    can: [
+      "Create orders",
+      "View own orders",
+      "Print own factures anytime",
+      "Void own unpaid orders",
+      "Order again",
+    ],
     cannot: [
       "Take payments",
       "Manage stock",
@@ -62,7 +69,10 @@ const ACCESS: {
   },
   {
     role: "ADMIN",
-    can: ["All access: every page, payment, order, stock move, report, and staff action"],
+    can: [
+      "All access: every page, payment, order, stock move, report, and staff action",
+      "Delete test sales and Maison stays",
+    ],
     cannot: ["Delete the last active owner"],
   },
 ];

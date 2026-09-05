@@ -8,6 +8,7 @@ import { formatRwf, sumLineTotals } from "@/lib/domain/money";
 import { clearDraftOrderKey, getOrCreateDraftOrderKey } from "@/lib/domain/order-draft-key";
 import { Button } from "@/components/ui/Button";
 import { CategoryPicker } from "@/components/pos/CategoryPicker";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 
 type Product = {
   id: string;
@@ -44,7 +45,11 @@ export function NewOrderScreen({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState("");
-  const [submitted, setSubmitted] = useState<{ orderNumber: number; total: number } | null>(null);
+  const [submitted, setSubmitted] = useState<{
+    id: string;
+    orderNumber: number;
+    total: number;
+  } | null>(null);
 
   useEffect(() => {
     setKey(getOrCreateDraftOrderKey());
@@ -115,7 +120,7 @@ export function NewOrderScreen({
       return;
     }
     clearDraftOrderKey();
-    setSubmitted({ orderNumber: result.data.orderNumber, total });
+    setSubmitted({ id: result.data.id, orderNumber: result.data.orderNumber, total });
     setStep("done");
   }
 
@@ -129,6 +134,7 @@ export function NewOrderScreen({
         <p className="mt-4 text-lg">Table {table?.name}</p>
         <p className="mt-1 text-2xl font-semibold text-zenith-gold">{formatRwf(submitted.total)}</p>
         <div className="mt-8 grid gap-3">
+          <PrintFactureLink href={`/print/order/${submitted.id}`} className="w-full" />
           <Link href="/waiter/orders/new">
             <Button className="w-full">+ New order</Button>
           </Link>
@@ -260,7 +266,7 @@ export function NewOrderScreen({
               cart.map((line) => (
                 <div key={line.product.id} className="order-line rounded-xl bg-zenith-surface">
                   <div className="order-line-name text-sm font-semibold leading-snug">{line.product.name}</div>
-                  <div className="flex items-center gap-1">
+                  <div className="order-line-qty">
                     <button
                       onClick={() => setQty(line.product.id, line.quantity - 1)}
                       className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
@@ -275,7 +281,7 @@ export function NewOrderScreen({
                       <Plus size={16} />
                     </button>
                   </div>
-                  <span className="shrink-0 text-sm font-semibold">
+                  <span className="order-line-price text-sm font-semibold">
                     {formatRwf(line.product.sellingPrice * line.quantity)}
                   </span>
                 </div>

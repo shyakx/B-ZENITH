@@ -41,13 +41,17 @@ export function remainingBalance(total: number, paidAmount: number): number {
   return Math.max(0, total - paidAmount);
 }
 
-export function formatRwf(amount: MoneyValue): string {
+export function formatRwfAmount(amount: MoneyValue): string {
   try {
     const rounded = toDecimal(amount).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
-    return `${Number(rounded.toString()).toLocaleString("en-US")} RWF`;
+    return Number(rounded.toString()).toLocaleString("en-US");
   } catch {
-    return "0 RWF";
+    return "0";
   }
+}
+
+export function formatRwf(amount: MoneyValue): string {
+  return `${formatRwfAmount(amount)} RWF`;
 }
 
 export function formatRwfPerUnit(amount: MoneyValue): string {

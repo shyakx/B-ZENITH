@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth/current-user";
 import { endOfDay, formatDateTime, startOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { listPayments } from "@/services/payments";
 
@@ -42,7 +43,10 @@ export default async function PaymentsPage() {
               </div>
               <div className="text-sm font-semibold">{formatDateTime(payment.createdAt)}</div>
             </div>
-            <div className="font-display text-xl text-zenith-gold">{formatRwf(payment.amount)}</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="font-display text-xl text-zenith-gold">{formatRwf(payment.amount)}</div>
+              <PrintFactureLink href={`/print/order/${payment.order.id}`} />
+            </div>
           </div>
         ))}
       </div>

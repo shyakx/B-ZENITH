@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   costTimesQuantity,
   formatRwf,
+  formatRwfAmount,
   formatRwfPerUnit,
   lineTotal,
   remainingBalance,
@@ -30,6 +31,7 @@ describe("money", () => {
   });
 
   it("formats RWF", () => {
+    expect(formatRwfAmount(18000)).toBe("18,000");
     expect(formatRwf(18000)).toBe("18,000 RWF");
   });
 

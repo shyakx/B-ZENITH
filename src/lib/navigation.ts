@@ -54,6 +54,7 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
     { href: "/cashier/bills", label: "Orders / Bills", hint: "Bills waiting to pay" },
     { href: "/cashier/outstanding", label: "Customer credit", hint: "Pay later customers" },
     { href: "/cashier/payments", label: "Payments", hint: "Cash already taken" },
+    { href: "/cashier/factures", label: "Factures", hint: "Print any bill" },
   ],
   MANAGER: [
     { href: "/manager", label: "Home", hint: "Day overview", group: "Operations" },
@@ -78,6 +79,7 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
     { href: "/cashier/bills", label: "Bills / Payments", hint: "Bills waiting to pay", group: "Business" },
     { href: "/cashier/outstanding", label: "Customer credit", hint: "Pay later customers", group: "Business" },
     { href: "/cashier/payments", label: "Payments taken", hint: "Cash already taken", group: "Business" },
+    { href: "/cashier/factures", label: "Factures", hint: "Print any bill", group: "Business" },
     { href: "/manager/products", label: "Products", hint: "Menu & stock items", group: "Catalog" },
     { href: "/manager/inventory", label: "Inventory", hint: "Stock rooms and moves", group: "Inventory" },
     { href: "/manager/purchases", label: "Receive Stock", hint: "Buy into Main Stock", group: "Inventory" },
@@ -91,6 +93,7 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
     { href: "/admin/users", label: "Staff", hint: "People, roles, PINs", group: "Administration" },
     { href: "/admin/access", label: "Access", hint: "What each role can do", group: "Administration" },
     { href: "/admin/settings", label: "Settings", hint: "Facture details", group: "Administration" },
+    { href: "/admin/data", label: "Data control", hint: "Delete test sales and stays", group: "Administration" },
     { href: "/admin/audit", label: "Audit", hint: "Who changed what", group: "Administration" },
   ],
   OWNER: [
@@ -99,6 +102,7 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
     { href: "/manager/tables", label: "Tables", hint: "Open and close tables", group: "Business" },
     { href: "/cashier/bills", label: "Bills / Payments", hint: "Bills waiting to pay", group: "Business" },
     { href: "/cashier/outstanding", label: "Customer credit", hint: "Pay later customers", group: "Business" },
+    { href: "/cashier/factures", label: "Factures", hint: "Print any bill", group: "Business" },
     { href: "/manager/products", label: "Products", hint: "Menu & stock items", group: "Catalog" },
     { href: "/manager/inventory", label: "Inventory", hint: "Stock rooms and moves", group: "Inventory" },
     { href: "/manager/purchases", label: "Receive Stock", hint: "Buy into Main Stock", group: "Inventory" },
@@ -112,6 +116,7 @@ export const ROLE_NAV: Record<Role, NavItem[]> = {
     { href: "/admin/users", label: "Staff", hint: "People, roles, PINs", group: "Administration" },
     { href: "/admin/access", label: "Access", hint: "What each role can do", group: "Administration" },
     { href: "/admin/settings", label: "Settings", hint: "Facture details", group: "Administration" },
+    { href: "/admin/data", label: "Data control", hint: "Delete test sales and stays", group: "Administration" },
     { href: "/admin/audit", label: "Audit", hint: "Who changed what", group: "Administration" },
   ],
 };

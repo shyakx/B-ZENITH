@@ -154,9 +154,10 @@ export function LoginScreen({
           </div>
         ) : (
           <div className="mx-auto w-full max-w-sm shrink-0">
-            <button
+            <Button
               type="button"
-              className="mb-3 text-sm font-semibold text-zenith-gold"
+              variant="secondary"
+              className="mb-3 h-11 w-full"
               onClick={() => {
                 setSelected(null);
                 setPin("");
@@ -164,7 +165,7 @@ export function LoginScreen({
               }}
             >
               ← Change staff
-            </button>
+            </Button>
             <div className="mb-3 flex flex-col items-center text-center">
               <div className="rounded-2xl border border-zenith-gold bg-zenith-raised px-3 py-2">
                 <StaffFace person={selected} />

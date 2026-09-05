@@ -417,6 +417,7 @@ export async function listOutstanding() {
       createdAt: true,
       order: {
         select: {
+          id: true,
           orderNumber: true,
           createdAt: true,
           table: { select: { name: true } },

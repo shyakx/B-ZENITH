@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth/current-user";
 import { formatDateTime } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { getOrderById } from "@/services/orders";
 
 export default async function ManagerOrderDetailPage({
@@ -68,9 +68,7 @@ export default async function ManagerOrderDetailPage({
       <p className="mt-4 text-sm">Payment is recorded by the cashier. This screen is view only.</p>
 
       <div className="mt-4">
-        <Link href={`/print/order/${order.id}`} target="_blank">
-          <Button variant="secondary">Print facture</Button>
-        </Link>
+        <PrintFactureLink href={`/print/order/${order.id}`} />
       </div>
     </div>
   );

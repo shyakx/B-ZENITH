@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
 import { combinedBill } from "@/lib/domain/payments";
 import { PaymentPanel } from "@/components/cashier/PaymentPanel";
 import { PaymentHistoryList } from "@/components/payments/PaymentHistoryList";
+import { CancelOrderButton } from "@/components/cashier/CancelOrderButton";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { PaymentBadge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { getCurrentTableBill } from "@/services/orders";
 
 export default async function TableBillPage({
@@ -30,9 +30,7 @@ export default async function TableBillPage({
           <p className="mt-1 text-zenith-muted">Pay one order or the remaining table balance.</p>
         </div>
         {orders.length > 0 ? (
-          <Link href={`/print/table/${tableId}`} target="_blank">
-            <Button variant="secondary">Print table facture</Button>
-          </Link>
+          <PrintFactureLink href={`/print/table/${tableId}`} label="Print table facture" />
         ) : null}
       </div>
 
@@ -105,14 +103,11 @@ export default async function TableBillPage({
                     />
                   </div>
 
-                  <div className="mt-4">
-                    <Link
-                      className="text-sm font-semibold text-zenith-gold"
-                      href={`/print/order/${order.id}`}
-                      target="_blank"
-                    >
-                      Print facture
-                    </Link>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <PrintFactureLink href={`/print/order/${order.id}`} />
+                    {order.paymentStatus === "UNPAID" && order.status !== "CANCELLED" ? (
+                      <CancelOrderButton orderId={order.id} />
+                    ) : null}
                   </div>
                 </article>
               );

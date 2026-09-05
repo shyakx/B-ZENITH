@@ -1,8 +1,18 @@
-import { formatRwf } from "@/lib/domain/money";
-import { formatDateTime } from "@/lib/dates";
-import { paymentHistoryRows } from "@/lib/domain/payment-history";
+import { formatRwfAmount } from "@/lib/domain/money";
+import { formatPaymentDate, formatPaymentTime, paymentHistoryRows } from "@/lib/domain/payment-history";
 import type { BusinessSettings } from "@/lib/settings";
 import type { OrderWithDetails } from "@/services/orders";
+
+function receiptStatus(orders: OrderWithDetails[], total: number, paid: number) {
+  if (paid >= total && total > 0) return "PAID";
+  if (paid > 0) return "PARTIAL";
+  if (orders[0]?.paymentStatus === "PAY_LATER") return "PAY LATER";
+  return orders[0]?.paymentStatus ?? "UNPAID";
+}
+
+function receiptWhen(date: Date | string) {
+  return `${formatPaymentDate(date)} ${formatPaymentTime(date)}`;
+}
 
 export function FactureDocument({
   settings,
@@ -16,136 +26,127 @@ export function FactureDocument({
   const history = paymentHistoryRows(orders.flatMap((order) => order.payments));
   const waiters = [...new Set(orders.map((order) => order.waiter.name))].join(", ");
   const table = orders[0]?.table.name ?? "-";
-  const status =
-    paid >= total && total > 0
-      ? "PAID"
-      : paid > 0
-        ? "PARTIAL"
-        : orders[0]?.paymentStatus === "PAY_LATER"
-          ? "PAY LATER"
-          : orders[0]?.paymentStatus;
+  const status = receiptStatus(orders, total, paid);
 
   return (
-    <div className="mx-auto max-w-2xl bg-white p-8 text-black">
-      <div className="mb-6 flex items-center gap-4 border-b border-black pb-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/logo.png" alt="B-ZENITH" width={72} height={72} />
-        <div>
-          <div className="font-serif text-3xl tracking-[0.16em]">{settings.businessName}</div>
-          <div className="text-sm">{settings.address}</div>
-          {settings.phone ? <div className="text-sm">{settings.phone}</div> : null}
-          {settings.tin ? <div className="text-sm">TIN {settings.tin}</div> : null}
+    <div className="facture">
+      <header className="facture-header">
+        <div className="facture-seal">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.png" alt="B-ZENITH" className="facture-logo" />
         </div>
-      </div>
+        <div className="facture-brand">{settings.businessName}</div>
+        {settings.address ? <div>{settings.address}</div> : null}
+        {settings.phone ? <div>Tel {settings.phone}</div> : null}
+        {settings.tin ? <div>TIN {settings.tin}</div> : null}
+      </header>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
-        <div>Facture / Bill</div>
-        <div className="text-right">Printed {formatDateTime(new Date())}</div>
-        <div>Table {table}</div>
-        <div className="text-right">Waiter(s): {waiters}</div>
+      <div className="facture-rule" />
+
+      <div className="facture-title">Facture / Bill</div>
+      <div className="facture-meta">
         <div>
-          {orders.length === 1
-            ? `Order #${orders[0].orderNumber}`
-            : `${orders.length} current orders`}
+          <span>Table</span>
+          <strong>{table}</strong>
         </div>
-        <div className="text-right">Status: {status}</div>
+        <div>
+          <span>Waiter</span>
+          <strong>{waiters}</strong>
+        </div>
+        <div>
+          <span>{orders.length === 1 ? "Order" : "Orders"}</span>
+          <strong>
+            {orders.length === 1 ? `#${orders[0].orderNumber}` : `${orders.length} open`}
+          </strong>
+        </div>
+        <div>
+          <span>Status</span>
+          <strong>{status}</strong>
+        </div>
+        <div>
+          <span>Printed</span>
+          <strong>{receiptWhen(new Date())}</strong>
+        </div>
         {orders.length === 1 ? (
-          <div className="col-span-2 font-semibold">
-            {formatDateTime(orders[0].createdAt)}
+          <div>
+            <span>Opened</span>
+            <strong>{receiptWhen(orders[0].createdAt)}</strong>
           </div>
         ) : null}
       </div>
 
-      <table className="mb-4 w-full text-sm">
-        <thead>
-          <tr className="border-b border-black text-left">
-            <th className="py-2">Item</th>
-            <th>Qty</th>
-            <th>Price</th>
-            <th className="text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.flatMap((order) => [
-            orders.length > 1 ? (
-              <tr key={`h-${order.id}`} className="font-semibold">
-                <td colSpan={4} className="pt-3">
-                  Order #{order.orderNumber} — {order.waiter.name} — {formatDateTime(order.createdAt)}
-                </td>
-              </tr>
-            ) : null,
-            ...order.items.map((item) => (
-              <tr key={item.id}>
-                <td className="py-1">{item.name}</td>
-                <td>{item.quantity}</td>
-                <td>{formatRwf(item.unitPrice)}</td>
-                <td className="text-right">{formatRwf(item.lineTotal)}</td>
-              </tr>
-            )),
-            orders.length > 1 ? (
-              <tr key={`t-${order.id}`} className="text-xs">
-                <td colSpan={4} className="pb-2 pt-1">
-                  Order total {formatRwf(order.total)} · Paid {formatRwf(order.paidAmount)} ·
-                  Balance {formatRwf(order.total - order.paidAmount)} ·{" "}
-                  {order.paymentStatus === "PARTIALLY_PAID"
-                    ? "PARTIAL"
-                    : order.paymentStatus === "PAY_LATER"
-                      ? "PAY LATER"
-                      : order.paymentStatus}
-                </td>
-              </tr>
-            ) : null,
-          ])}
-        </tbody>
-      </table>
+      <div className="facture-rule" />
 
-      <div className="space-y-1 text-sm">
-        <div className="flex justify-between font-semibold">
+      <div className="facture-items">
+        {orders.flatMap((order) => [
+          orders.length > 1 ? (
+            <div key={`h-${order.id}`} className="facture-group">
+              #{order.orderNumber} · {order.waiter.name} · {receiptWhen(order.createdAt)}
+            </div>
+          ) : null,
+          ...order.items.map((item) => (
+            <div key={item.id} className="facture-item">
+              <div className="facture-item-name">{item.name}</div>
+              <div className="facture-item-row">
+                <span>
+                  {item.quantity} × {formatRwfAmount(item.unitPrice)}
+                </span>
+                <span>{formatRwfAmount(item.lineTotal)}</span>
+              </div>
+            </div>
+          )),
+          orders.length > 1 ? (
+            <div key={`t-${order.id}`} className="facture-group-total">
+              Order {formatRwfAmount(order.total)} · Paid {formatRwfAmount(order.paidAmount)} ·
+              Due {formatRwfAmount(order.total - order.paidAmount)}
+            </div>
+          ) : null,
+        ])}
+      </div>
+
+      <div className="facture-rule" />
+
+      <div className="facture-totals">
+        <div>
           <span>Total</span>
-          <span>{formatRwf(total)}</span>
+          <strong>{formatRwfAmount(total)} RWF</strong>
         </div>
-      </div>
-
-      {history.length > 0 ? (
-        <table className="mb-3 mt-3 w-full text-sm">
-          <thead>
-            <tr className="border-b border-black text-left text-xs uppercase tracking-wider">
-              <th className="py-1.5" colSpan={4}>
-                Payment history
-              </th>
-            </tr>
-            <tr className="border-b border-black text-left text-xs">
-              <th className="py-1">Date</th>
-              <th>Time</th>
-              <th>Method</th>
-              <th className="text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
+        {history.length > 0 ? (
+          <div className="facture-history">
+            <div className="facture-history-title">Payments</div>
             {history.map((row) => (
-              <tr key={row.key}>
-                <td className="py-1">{row.date}</td>
-                <td>{row.time}</td>
-                <td>{row.method}</td>
-                <td className="text-right">{formatRwf(row.amount)}</td>
-              </tr>
+              <div key={row.key} className="facture-item-row">
+                <span>
+                  {row.date} {row.time} {row.method}
+                </span>
+                <span>{formatRwfAmount(row.amount)}</span>
+              </div>
             ))}
-          </tbody>
-        </table>
-      ) : null}
-
-      <div className="space-y-1 text-sm">
-        <div className="flex justify-between">
-          <span>Total paid</span>
-          <span>{formatRwf(paid)}</span>
+          </div>
+        ) : null}
+        <div>
+          <span>Paid</span>
+          <strong>{formatRwfAmount(paid)} RWF</strong>
         </div>
-        <div className="flex justify-between">
+        <div className="facture-balance">
           <span>Balance</span>
-          <span>{formatRwf(total - paid)}</span>
+          <strong>{formatRwfAmount(total - paid)} RWF</strong>
         </div>
       </div>
 
-      <p className="mt-8 text-center text-sm">{settings.receiptFooter}</p>
+      {settings.receiptFooter ? <p className="facture-footer">{settings.receiptFooter}</p> : null}
+
+      <aside className="facture-credit" aria-label="Software credit">
+        <div className="facture-credit-mark" aria-hidden="true">
+          <span />
+          <i>✦</i>
+          <span />
+        </div>
+        <p className="facture-credit-kicker">Powered by</p>
+        <p className="facture-credit-name">CLOUD SYNC Inc.</p>
+        <p className="facture-credit-note">POS software</p>
+        <p className="facture-credit-support">Support +250 782 194 138</p>
+      </aside>
     </div>
   );
 }

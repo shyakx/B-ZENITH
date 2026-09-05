@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccessPath, hasAllAccess, hasPermission, isPublicPath, isRole, PERMISSIONS, satisfiesRoleGate } from "@/lib/auth/roles";
+import { canAccessPath, canViewOrderFacture, hasAllAccess, hasPermission, isPublicPath, isRole, PERMISSIONS, satisfiesRoleGate } from "@/lib/auth/roles";
 import { isValidPin } from "@/lib/auth/pin";
 
 describe("authentication and authorization", () => {
@@ -134,6 +134,11 @@ describe("authentication and authorization", () => {
     expect(hasPermission("OWNER", "manageUsers")).toBe(true);
     expect(hasPermission("OWNER", "manageSettings")).toBe(true);
     expect(hasPermission("OWNER", "viewAudit")).toBe(true);
+    expect(hasPermission("OWNER", "purgeBusinessData")).toBe(true);
+    expect(hasPermission("ADMIN", "purgeBusinessData")).toBe(true);
+    expect(hasPermission("WAITER", "purgeBusinessData")).toBe(false);
+    expect(hasPermission("CASHIER", "purgeBusinessData")).toBe(false);
+    expect(hasPermission("MANAGER", "purgeBusinessData")).toBe(false);
     expect(hasPermission("ADMIN", "createOrder")).toBe(true);
     expect(PERMISSIONS.every((permission) => hasPermission("ADMIN", permission))).toBe(true);
     expect(hasPermission("MANAGER", "manageUsers")).toBe(false);

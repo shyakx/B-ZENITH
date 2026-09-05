@@ -37,7 +37,8 @@ export type Permission =
   | "manageMaison"
   | "manageUsers"
   | "manageSettings"
-  | "viewAudit";
+  | "viewAudit"
+  | "purgeBusinessData";
 
 export const PERMISSIONS: Permission[] = [
   "createOrder",
@@ -54,10 +55,11 @@ export const PERMISSIONS: Permission[] = [
   "manageUsers",
   "manageSettings",
   "viewAudit",
+  "purgeBusinessData",
 ];
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  WAITER: ["createOrder", "viewOwnOrders"],
+  WAITER: ["createOrder", "viewOwnOrders", "printFacture"],
   CASHIER: [
     "viewAllOrders",
     "recordPayment",
@@ -141,11 +143,21 @@ export function canAccessPath(role: Role, pathname: string): boolean {
     return true;
   }
 
+  if (path.startsWith("/print/order/")) {
+    return hasPermission(role, "printFacture");
+  }
+
   if (path.startsWith("/print/")) {
     return role === "CASHIER" || role === "MANAGER";
   }
 
   return false;
+}
+
+export function canViewOrderFacture(role: Role, userId: string, orderWaiterId: string): boolean {
+  if (!hasPermission(role, "printFacture")) return false;
+  if (role === "WAITER") return userId === orderWaiterId;
+  return true;
 }
 
 export function roleLabel(role: Role): string {

@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { staffControlCounts } from "@/lib/admin-control";
+import { Button } from "@/components/ui/Button";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { listUsers } from "@/services/users";
 
@@ -25,6 +27,11 @@ export default async function AdminHomePage() {
       <p className="mt-3 text-sm">
         Admin has all access: every business page, payment, stock move, report, and staff action.
       </p>
+      <div className="mt-4">
+        <Link href="/admin/data">
+          <Button variant="secondary">Data control — delete test sales</Button>
+        </Link>
+      </div>
 
       <section className="mt-6">
         <h2 className="text-base font-semibold">Staff</h2>

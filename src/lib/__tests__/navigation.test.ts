@@ -69,6 +69,7 @@ describe("route-aware navigation", () => {
       "Bills / Payments",
       "Customer credit",
       "Payments taken",
+      "Factures",
       "Products",
       "Inventory",
       "Receive Stock",
@@ -82,6 +83,7 @@ describe("route-aware navigation", () => {
       "Staff",
       "Access",
       "Settings",
+      "Data control",
       "Audit",
     ]);
     const hrefs = ROLE_NAV.ADMIN.map((item) => item.href);
@@ -98,6 +100,7 @@ describe("route-aware navigation", () => {
       "/cashier/bills",
       "/cashier/outstanding",
       "/cashier/payments",
+      "/cashier/factures",
       "/manager/products",
       "/manager/inventory",
       "/manager/purchases",
@@ -111,6 +114,7 @@ describe("route-aware navigation", () => {
       "/admin/users",
       "/admin/access",
       "/admin/settings",
+      "/admin/data",
       "/admin/audit",
     ]);
     for (const role of ["WAITER", "CASHIER", "MANAGER", "OWNER"] as const) {
@@ -126,8 +130,9 @@ describe("route-aware navigation", () => {
       "Orders / Bills",
       "Customer credit",
       "Payments",
+      "Factures",
     ]);
-    expect(cashier).not.toContain("/cashier/factures");
+    expect(cashier).toContain("/cashier/factures");
     expect(isNavActive("/cashier/outstanding", "/cashier/outstanding", cashier)).toBe(true);
     expect(isNavActive("/cashier/outstanding", "/cashier", cashier)).toBe(false);
     expect(isNavActive("/cashier/payments", "/cashier/payments", cashier)).toBe(true);
@@ -170,6 +175,7 @@ describe("route-aware navigation", () => {
       "Tables",
       "Bills / Payments",
       "Customer credit",
+      "Factures",
       "Products",
       "Inventory",
       "Receive Stock",
@@ -183,6 +189,7 @@ describe("route-aware navigation", () => {
       "Staff",
       "Access",
       "Settings",
+      "Data control",
       "Audit",
     ]);
     expect(ROLE_NAV.OWNER.map((item) => item.href)).toEqual([
@@ -191,6 +198,7 @@ describe("route-aware navigation", () => {
       "/manager/tables",
       "/cashier/bills",
       "/cashier/outstanding",
+      "/cashier/factures",
       "/manager/products",
       "/manager/inventory",
       "/manager/purchases",
@@ -204,6 +212,7 @@ describe("route-aware navigation", () => {
       "/admin/users",
       "/admin/access",
       "/admin/settings",
+      "/admin/data",
       "/admin/audit",
     ]);
     expect(ROLE_NAV.ADMIN.map((item) => item.href)).toContain("/owner");

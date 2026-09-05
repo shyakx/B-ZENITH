@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/current-user";
 import { endOfDay, formatDateTime, startOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { staffGreeting } from "@/lib/greeting";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { PaymentBadge } from "@/components/ui/Badge";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { countOpenBillsByStatus, listOpenOrdersByTable } from "@/services/orders";
@@ -77,36 +78,37 @@ export default async function CashierHomePage() {
         ) : (
           <div className="mt-3 grid gap-2">
             {openOrders.map((order) => (
-              <Link
-                key={order.id}
-                href={`/cashier/bills/${order.tableId}#order-${order.id}`}
-                className="block min-w-0 rounded-xl border border-zenith-border bg-white p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-lg font-semibold text-zenith-gold">TABLE {order.table.name}</div>
-                    <div className="mt-0.5 font-semibold">Order #{order.orderNumber}</div>
-                    <div className="mt-0.5 text-sm">{order.waiter.name}</div>
+              <article key={order.id} className="min-w-0 rounded-xl border border-zenith-border bg-white p-3">
+                <Link href={`/cashier/bills/${order.tableId}#order-${order.id}`} className="block min-w-0">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-lg font-semibold text-zenith-gold">TABLE {order.table.name}</div>
+                      <div className="mt-0.5 font-semibold">Order #{order.orderNumber}</div>
+                      <div className="mt-0.5 text-sm">{order.waiter.name}</div>
+                    </div>
+                    <PaymentBadge status={order.paymentStatus} />
                   </div>
-                  <PaymentBadge status={order.paymentStatus} />
-                </div>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Total</div>
-                    <div className="font-semibold">{formatRwf(order.total)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Paid</div>
-                    <div className="font-semibold">{formatRwf(order.paidAmount)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Balance</div>
-                    <div className="font-semibold text-zenith-gold">
-                      {formatRwf(order.total - order.paidAmount)}
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Total</div>
+                      <div className="font-semibold">{formatRwf(order.total)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Paid</div>
+                      <div className="font-semibold">{formatRwf(order.paidAmount)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Balance</div>
+                      <div className="font-semibold text-zenith-gold">
+                        {formatRwf(order.total - order.paidAmount)}
+                      </div>
                     </div>
                   </div>
+                </Link>
+                <div className="mt-3">
+                  <PrintFactureLink href={`/print/order/${order.id}`} className="w-full" />
                 </div>
-              </Link>
+              </article>
             ))}
           </div>
         )}
@@ -136,7 +138,10 @@ export default async function CashierHomePage() {
                     {payment.order.waiter.name} · {formatDateTime(payment.createdAt)}
                   </div>
                 </div>
-                <div className="text-lg font-semibold text-zenith-gold">{formatRwf(payment.amount)}</div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="text-lg font-semibold text-zenith-gold">{formatRwf(payment.amount)}</div>
+                  <PrintFactureLink href={`/print/order/${payment.order.id}`} />
+                </div>
               </div>
             ))}
           </div>

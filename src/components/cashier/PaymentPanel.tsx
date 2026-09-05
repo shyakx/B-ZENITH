@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { markPayLaterAction, recordPaymentAction, recordTablePaymentAction } from "@/actions/payments";
 import { formatRwf } from "@/lib/domain/money";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 import { PaymentBadge } from "@/components/ui/Badge";
@@ -157,6 +158,11 @@ export function PaymentPanel({
             ))}
           </ul>
         ) : null}
+        <PrintFactureLink
+          href={mode === "table" ? `/print/table/${targetId}` : `/print/order/${targetId}`}
+          label={mode === "table" ? "Print table facture" : "Print facture"}
+          className="w-full"
+        />
         {success.remaining > 0 ? (
           <Button
             variant="secondary"
@@ -174,7 +180,16 @@ export function PaymentPanel({
   }
 
   if (remaining <= 0) {
-    return <p className="text-sm font-semibold text-zenith-success">This bill is paid.</p>;
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-zenith-success">This bill is paid.</p>
+        <PrintFactureLink
+          href={mode === "table" ? `/print/table/${targetId}` : `/print/order/${targetId}`}
+          label={mode === "table" ? "Print table facture" : "Print facture"}
+          className="w-full"
+        />
+      </div>
+    );
   }
 
   if (confirming) {

@@ -4,6 +4,7 @@ import { formatDateTime, startOfDay, endOfDay } from "@/lib/dates";
 import { staffGreeting } from "@/lib/greeting";
 import { formatRwf } from "@/lib/domain/money";
 import { itemQuantity, waiterTodayStats } from "@/lib/waiter-dashboard";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { Button } from "@/components/ui/Button";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
@@ -93,22 +94,23 @@ export default async function WaiterHomePage() {
         ) : (
           <div className="mt-3 grid gap-3">
             {openOrders.map((order) => (
-              <Link
-                key={order.id}
-                href={`/waiter/orders#order-${order.id}`}
-                className="block min-w-0 rounded-xl border border-zenith-border bg-white p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-lg font-semibold text-zenith-gold">ORDER #{order.orderNumber}</div>
-                    <div className="mt-1 text-sm">
-                      Table {order.table.name} · {itemQuantity(order)} items
+              <article key={order.id} className="min-w-0 rounded-xl border border-zenith-border bg-white p-3">
+                <Link href={`/waiter/orders#order-${order.id}`} className="block min-w-0">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-lg font-semibold text-zenith-gold">ORDER #{order.orderNumber}</div>
+                      <div className="mt-1 text-sm">
+                        Table {order.table.name} · {itemQuantity(order)} items
+                      </div>
                     </div>
+                    <PaymentBadge status={order.paymentStatus} />
                   </div>
-                  <PaymentBadge status={order.paymentStatus} />
+                  <div className="mt-2 text-lg font-semibold">{formatRwf(order.total)}</div>
+                </Link>
+                <div className="mt-3">
+                  <PrintFactureLink href={`/print/order/${order.id}`} className="w-full" />
                 </div>
-                <div className="mt-2 text-lg font-semibold">{formatRwf(order.total)}</div>
-              </Link>
+              </article>
             ))}
           </div>
         )}
@@ -154,6 +156,7 @@ export default async function WaiterHomePage() {
                     <th className="py-2 pr-3 font-semibold">Time</th>
                     <th className="py-2 pr-3 font-semibold">Items</th>
                     <th className="py-2 font-semibold">Status</th>
+                    <th className="py-2 font-semibold">Facture</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -166,6 +169,9 @@ export default async function WaiterHomePage() {
                       <td className="py-2.5">
                         <OrderBadge status={order.status} />
                       </td>
+                      <td className="py-2.5">
+                        <PrintFactureLink href={`/print/order/${order.id}`} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -174,19 +180,20 @@ export default async function WaiterHomePage() {
 
             <div className="mt-3 grid gap-2 md:hidden">
               {recentOrders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/waiter/orders#order-${order.id}`}
-                  className="rounded-2xl border border-zenith-border bg-white p-4"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="font-display text-xl text-zenith-gold">#{order.orderNumber}</div>
-                    <OrderBadge status={order.status} />
+                <article key={order.id} className="rounded-2xl border border-zenith-border bg-white p-4">
+                  <Link href={`/waiter/orders#order-${order.id}`} className="block">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-display text-xl text-zenith-gold">#{order.orderNumber}</div>
+                      <OrderBadge status={order.status} />
+                    </div>
+                    <div className="mt-1 text-sm">
+                      Table {order.table.name} · {formatDateTime(order.createdAt)} · {itemQuantity(order)} items
+                    </div>
+                  </Link>
+                  <div className="mt-3">
+                    <PrintFactureLink href={`/print/order/${order.id}`} className="w-full" />
                   </div>
-                  <div className="mt-1 text-sm">
-                    Table {order.table.name} · {formatDateTime(order.createdAt)} · {itemQuantity(order)} items
-                  </div>
-                </Link>
+                </article>
               ))}
             </div>
           </>

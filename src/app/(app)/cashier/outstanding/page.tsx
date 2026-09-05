@@ -1,3 +1,4 @@
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatDate } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
@@ -44,7 +45,8 @@ export default async function OutstandingPage() {
                   Amount owed
                 </div>
                 <div className="font-display text-2xl text-zenith-gold">{formatRwf(credit.amountOwed)}</div>
-                <div className="mt-3">
+                <div className="mt-3 flex flex-col items-end gap-2">
+                  <PrintFactureLink href={`/print/order/${credit.order.id}`} />
                   <SettleCreditButton
                     creditId={credit.id}
                     amountOwed={credit.amountOwed}

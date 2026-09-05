@@ -2,7 +2,9 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
 import { combinedBill } from "@/lib/domain/payments";
+import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { PaymentBadge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { listOpenOrdersByTable } from "@/services/orders";
 
 export default async function BillsPage() {
@@ -25,22 +27,21 @@ export default async function BillsPage() {
         {groups.map((group) => {
           const bill = combinedBill(group.orders);
           return (
-            <Link
-              key={group.tableId}
-              href={`/cashier/bills/${group.tableId}`}
-              className="block min-w-0 rounded-xl border border-zenith-border bg-white p-4"
-            >
+            <article key={group.tableId} className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-display text-xl text-zenith-gold">TABLE {group.tableName}</h2>
                 <PaymentBadge status={bill.status} />
               </div>
               <div className="space-y-2">
                 {group.orders.map((order) => (
-                  <div key={order.id} className="flex flex-wrap justify-between gap-2 text-base">
+                  <div key={order.id} className="flex flex-wrap items-center justify-between gap-2 text-base">
                     <span>
                       Order #{order.orderNumber} — {order.waiter.name}
                     </span>
-                    <span className="font-semibold">{formatRwf(order.total)}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{formatRwf(order.total)}</span>
+                      <PrintFactureLink href={`/print/order/${order.id}`} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -62,7 +63,13 @@ export default async function BillsPage() {
                   <div className="text-lg font-semibold text-zenith-gold">{formatRwf(bill.remaining)}</div>
                 </div>
               </div>
-            </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href={`/cashier/bills/${group.tableId}`}>
+                  <Button>Open bill</Button>
+                </Link>
+                <PrintFactureLink href={`/print/table/${group.tableId}`} label="Print table facture" />
+              </div>
+            </article>
           );
         })}
       </div>
