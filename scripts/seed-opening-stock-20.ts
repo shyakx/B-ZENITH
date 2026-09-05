@@ -28,6 +28,7 @@ async function main() {
     throw new Error("Refusing to run. Set CONFIRM_OPENING_STOCK=YES to set opening stock.");
   }
 
+  console.log("Loading locations…");
   const locations = await prisma.stockLocation.findMany({
     where: { code: { in: ["MAIN", "BAR", "KITCHEN"] }, active: true },
     select: { id: true, code: true, name: true },
@@ -37,6 +38,7 @@ async function main() {
     throw new Error("MAIN, BAR, and KITCHEN locations are required.");
   }
 
+  console.log("Loading tracked products…");
   const products = await prisma.product.findMany({
     where: { trackInventory: true },
     select: {
@@ -51,47 +53,59 @@ async function main() {
   let kitchenProducts = 0;
   let barProducts = 0;
 
+  const rows: { productId: string; locationId: string; quantity: number }[] = [];
   for (const product of products) {
     const kitchen = isKitchenProduct(product);
     if (kitchen) kitchenProducts += 1;
     else barProducts += 1;
 
-    const targets: { locationId: string; quantity: number }[] = [
-      { locationId: byCode.MAIN.id, quantity: QUANTITY },
+    rows.push(
+      { productId: product.id, locationId: byCode.MAIN.id, quantity: QUANTITY },
       {
+        productId: product.id,
         locationId: byCode.BAR.id,
         quantity: kitchen ? 0 : QUANTITY,
       },
       {
+        productId: product.id,
         locationId: byCode.KITCHEN.id,
         quantity: kitchen ? QUANTITY : 0,
       },
-    ];
-
-    for (const target of targets) {
-      await prisma.productStock.upsert({
-        where: {
-          productId_locationId: { productId: product.id, locationId: target.locationId },
-        },
-        update: { quantity: target.quantity },
-        create: {
-          productId: product.id,
-          locationId: target.locationId,
-          quantity: target.quantity,
-        },
-      });
-    }
-
-    const rows = await prisma.productStock.findMany({
-      where: { productId: product.id },
-      select: { quantity: true },
-    });
-    const total = rows.reduce((sum, row) => sum + row.quantity, 0);
-    await prisma.product.update({
-      where: { id: product.id },
-      data: { stockQuantity: total },
-    });
+    );
   }
+
+  console.log(`Upserting ${rows.length} stock rows for ${products.length} products…`);
+  const chunkSize = 50;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    await prisma.$transaction(
+      chunk.map((row) =>
+        prisma.productStock.upsert({
+          where: {
+            productId_locationId: { productId: row.productId, locationId: row.locationId },
+          },
+          update: { quantity: row.quantity },
+          create: {
+            productId: row.productId,
+            locationId: row.locationId,
+            quantity: row.quantity,
+          },
+        }),
+      ),
+    );
+    console.log(`  ${Math.min(i + chunkSize, rows.length)}/${rows.length}`);
+  }
+
+  console.log("Refreshing product stockQuantity totals…");
+  await prisma.$executeRaw`
+    UPDATE "Product" p
+    SET "stockQuantity" = COALESCE((
+      SELECT SUM(ps.quantity)::int
+      FROM "ProductStock" ps
+      WHERE ps."productId" = p.id
+    ), 0)
+    WHERE p."trackInventory" = true
+  `;
 
   const drinkSample = await prisma.productStock.findMany({
     where: {
