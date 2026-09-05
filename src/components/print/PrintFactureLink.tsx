@@ -6,6 +6,20 @@ export function withAutoPrint(href: string) {
   return href.includes("?") ? `${href}&print=1` : `${href}?print=1`;
 }
 
+export function PrintSlipLink({
+  href,
+  label = "Print slip",
+  variant = "secondary",
+  className = "",
+}: {
+  href: string;
+  label?: string;
+  variant?: "primary" | "secondary" | "ghost";
+  className?: string;
+}) {
+  return <PrintFactureLink href={href} label={label} variant={variant} className={className} />;
+}
+
 export function PrintFactureLink({
   href,
   label = "Print facture",

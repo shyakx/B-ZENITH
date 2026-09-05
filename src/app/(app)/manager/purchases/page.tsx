@@ -21,7 +21,7 @@ export default async function PurchasesPage() {
       <InventoryNav />
       <PageHeader
         title="Receive Stock"
-        subtitle="Buy from a supplier. Everything received first goes into Main Stock."
+        subtitle="Receive full bottles, crates, and packs into Main Stock. Move shots and glasses to Bar or Kitchen from Move Stock."
       />
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <Card>

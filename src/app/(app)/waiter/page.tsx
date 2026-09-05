@@ -4,7 +4,7 @@ import { formatDateTime, startOfDay, endOfDay } from "@/lib/dates";
 import { staffGreeting } from "@/lib/greeting";
 import { formatRwf } from "@/lib/domain/money";
 import { itemQuantity, waiterTodayStats } from "@/lib/waiter-dashboard";
-import { PrintFactureLink } from "@/components/print/PrintFactureLink";
+import { PrintSlipLink } from "@/components/print/PrintFactureLink";
 import { Button } from "@/components/ui/Button";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
@@ -108,7 +108,7 @@ export default async function WaiterHomePage() {
                   <div className="mt-2 text-lg font-semibold">{formatRwf(order.total)}</div>
                 </Link>
                 <div className="mt-3">
-                  <PrintFactureLink href={`/print/order/${order.id}`} className="w-full" />
+                  <PrintSlipLink href={`/print/slip/order/${order.id}`} className="w-full" />
                 </div>
               </article>
             ))}
@@ -156,7 +156,7 @@ export default async function WaiterHomePage() {
                     <th className="py-2 pr-3 font-semibold">Time</th>
                     <th className="py-2 pr-3 font-semibold">Items</th>
                     <th className="py-2 font-semibold">Status</th>
-                    <th className="py-2 font-semibold">Facture</th>
+                    <th className="py-2 font-semibold">Slip</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -170,7 +170,7 @@ export default async function WaiterHomePage() {
                         <OrderBadge status={order.status} />
                       </td>
                       <td className="py-2.5">
-                        <PrintFactureLink href={`/print/order/${order.id}`} />
+                        <PrintSlipLink href={`/print/slip/order/${order.id}`} />
                       </td>
                     </tr>
                   ))}
@@ -191,7 +191,7 @@ export default async function WaiterHomePage() {
                     </div>
                   </Link>
                   <div className="mt-3">
-                    <PrintFactureLink href={`/print/order/${order.id}`} className="w-full" />
+                    <PrintSlipLink href={`/print/slip/order/${order.id}`} className="w-full" />
                   </div>
                 </article>
               ))}

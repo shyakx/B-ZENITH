@@ -9,7 +9,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl">
       <h1 className="text-xl font-semibold text-zenith-gold">Settings</h1>
-      <p className="mt-2 text-sm">These details appear on the B-ZENITH facture. They do not change past orders or prices.</p>
+      <p className="mt-2 text-sm">These details appear on the B-ZENITH facture, including the bill paper size. They do not change past orders or prices.</p>
       <div className="mt-6">
         <SettingsForm settings={settings} />
       </div>

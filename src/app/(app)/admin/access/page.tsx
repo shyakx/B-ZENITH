@@ -26,7 +26,7 @@ const ACCESS: {
     can: [
       "Create orders",
       "View own orders",
-      "Print own factures anytime",
+      "Print a commande slip for the table or kitchen",
       "Void own unpaid orders",
       "Order again",
     ],

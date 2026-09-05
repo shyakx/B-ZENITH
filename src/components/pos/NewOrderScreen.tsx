@@ -8,7 +8,7 @@ import { formatRwf, sumLineTotals } from "@/lib/domain/money";
 import { clearDraftOrderKey, getOrCreateDraftOrderKey } from "@/lib/domain/order-draft-key";
 import { Button } from "@/components/ui/Button";
 import { CategoryPicker } from "@/components/pos/CategoryPicker";
-import { PrintFactureLink } from "@/components/print/PrintFactureLink";
+import { PrintSlipLink } from "@/components/print/PrintFactureLink";
 
 type Product = {
   id: string;
@@ -134,7 +134,7 @@ export function NewOrderScreen({
         <p className="mt-4 text-lg">Table {table?.name}</p>
         <p className="mt-1 text-2xl font-semibold text-zenith-gold">{formatRwf(submitted.total)}</p>
         <div className="mt-8 grid gap-3">
-          <PrintFactureLink href={`/print/order/${submitted.id}`} className="w-full" />
+          <PrintSlipLink href={`/print/slip/order/${submitted.id}`} className="w-full" />
           <Link href="/waiter/orders/new">
             <Button className="w-full">+ New order</Button>
           </Link>

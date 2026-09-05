@@ -30,6 +30,7 @@ export type Permission =
   | "recordPayment"
   | "payLater"
   | "printFacture"
+  | "printSlip"
   | "cancelOrder"
   | "manageProducts"
   | "manageInventory"
@@ -47,6 +48,7 @@ export const PERMISSIONS: Permission[] = [
   "recordPayment",
   "payLater",
   "printFacture",
+  "printSlip",
   "cancelOrder",
   "manageProducts",
   "manageInventory",
@@ -59,7 +61,7 @@ export const PERMISSIONS: Permission[] = [
 ];
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  WAITER: ["createOrder", "viewOwnOrders", "printFacture"],
+  WAITER: ["createOrder", "viewOwnOrders", "printSlip"],
   CASHIER: [
     "viewAllOrders",
     "recordPayment",
@@ -143,12 +145,12 @@ export function canAccessPath(role: Role, pathname: string): boolean {
     return true;
   }
 
-  if (path.startsWith("/print/order/")) {
-    return hasPermission(role, "printFacture");
+  if (path.startsWith("/print/slip/")) {
+    return hasPermission(role, "printSlip");
   }
 
   if (path.startsWith("/print/")) {
-    return role === "CASHIER" || role === "MANAGER";
+    return hasPermission(role, "printFacture");
   }
 
   return false;
@@ -156,6 +158,12 @@ export function canAccessPath(role: Role, pathname: string): boolean {
 
 export function canViewOrderFacture(role: Role, userId: string, orderWaiterId: string): boolean {
   if (!hasPermission(role, "printFacture")) return false;
+  if (role === "WAITER") return userId === orderWaiterId;
+  return true;
+}
+
+export function canViewOrderSlip(role: Role, userId: string, orderWaiterId: string): boolean {
+  if (!hasPermission(role, "printSlip")) return false;
   if (role === "WAITER") return userId === orderWaiterId;
   return true;
 }

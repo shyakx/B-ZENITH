@@ -318,6 +318,11 @@ export async function cancelOrder(input: {
         include: { defaultStockLocation: true },
       });
       if (!product || !product.trackInventory) continue;
+      const sale = await tx.inventoryMovement.findFirst({
+        where: { orderId: order.id, orderItemId: item.id, type: MovementType.SALE },
+        select: { id: true },
+      });
+      if (!sale) continue;
       const locationId = item.stockLocationId ?? product.defaultStockLocationId;
       const location = locationId
         ? await tx.stockLocation.findUnique({ where: { id: locationId } })

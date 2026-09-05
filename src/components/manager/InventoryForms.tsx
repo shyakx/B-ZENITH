@@ -12,7 +12,16 @@ import {
   transferStockAction,
 } from "@/actions/inventory";
 import { formatRwf, formatRwfPerUnit, unitCostFromTotalPrice } from "@/lib/domain/money";
-import { quantityWithUnit, unitLabel } from "@/lib/domain/units";
+import {
+  canReceiveProduct,
+  isPourUnit,
+  preferredStockInUnitId,
+  preferredTransferUnitId,
+  quantityWithUnit,
+  stockInUnitsForProduct,
+  transferUnitsForProduct,
+  unitLabel,
+} from "@/lib/domain/units";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Input";
 
@@ -42,25 +51,6 @@ function newKey(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function preferredUnitId(product?: ProductOption) {
-  const crate = product?.packs?.find((pack) => pack.unit.code === "CRATE");
-  if (crate) return crate.unitId;
-  if (product?.packs?.[0]) return product.packs[0].unitId;
-  return product?.baseUnit?.id ?? "";
-}
-
-function unitsForProduct(product?: ProductOption) {
-  if (!product) return [];
-  const units = new Map<string, { id: string; code: string; name: string; factor: number; isPack: boolean }>();
-  if (product.baseUnit) {
-    units.set(product.baseUnit.id, { ...product.baseUnit, factor: 1, isPack: false });
-  }
-  for (const pack of product.packs ?? []) {
-    units.set(pack.unitId, { ...pack.unit, factor: pack.baseQuantity, isPack: true });
-  }
-  return [...units.values()];
-}
-
 function productOptionLabel(product: ProductOption, available?: (product: ProductOption) => number) {
   const unit = product.baseUnit ? ` · ${unitLabel(product.baseUnit.name)}` : "";
   const qty = available ? ` (${available(product)} in Main Stock)` : "";
@@ -72,15 +62,20 @@ function ProductSelect({
   value,
   onChange,
   available,
+  groupPour = false,
 }: {
   products: ProductOption[];
   value?: string;
   onChange?: (id: string) => void;
   available?: (product: ProductOption) => number;
+  groupPour?: boolean;
 }) {
   const kitchen = products.filter((product) => product.productType === "RAW_MATERIAL");
   const other = products.filter((product) => product.productType !== "RAW_MATERIAL");
-  const grouped = kitchen.length > 0 && other.length > 0;
+  const pieces = products.filter((product) => isPourUnit(product.baseUnit?.code ?? ""));
+  const full = products.filter((product) => !isPourUnit(product.baseUnit?.code ?? ""));
+  const pourGrouped = groupPour && pieces.length > 0 && full.length > 0;
+  const kitchenGrouped = !pourGrouped && kitchen.length > 0 && other.length > 0;
 
   return (
     <Select
@@ -90,7 +85,24 @@ function ProductSelect({
       onChange={onChange ? (event) => onChange(event.target.value) : undefined}
     >
       <option value="">Choose product</option>
-      {grouped ? (
+      {pourGrouped ? (
+        <>
+          <optgroup label="Full bottles / packs">
+            {full.map((product) => (
+              <option key={product.id} value={product.id}>
+                {productOptionLabel(product, available)}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Pieces (shots / glasses)">
+            {pieces.map((product) => (
+              <option key={product.id} value={product.id}>
+                {productOptionLabel(product, available)}
+              </option>
+            ))}
+          </optgroup>
+        </>
+      ) : kitchenGrouped ? (
         <>
           <optgroup label="Bar / packaged">
             {other.map((product) => (
@@ -159,8 +171,9 @@ export function PurchaseForm({
   const [unitId, setUnitId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
-  const product = products.find((row) => row.id === productId);
-  const unitChoices = unitsForProduct(product);
+  const receivable = products.filter((row) => canReceiveProduct(row));
+  const product = receivable.find((row) => row.id === productId);
+  const unitChoices = stockInUnitsForProduct(product);
   const selectedUnit = unitChoices.find((unit) => unit.id === unitId);
   const qty = Number(quantity);
   const received = Number.isInteger(qty) && qty > 0 && selectedUnit ? qty * selectedUnit.factor : 0;
@@ -170,8 +183,8 @@ export function PurchaseForm({
 
   function chooseProduct(id: string) {
     setProductId(id);
-    const next = products.find((row) => row.id === id);
-    setUnitId(preferredUnitId(next));
+    const next = receivable.find((row) => row.id === id);
+    setUnitId(preferredStockInUnitId(next));
   }
 
   async function action(formData: FormData) {
@@ -218,7 +231,7 @@ export function PurchaseForm({
         )}
       </Field>
       <Field label="What did you receive?">
-        <ProductSelect products={products} value={productId} onChange={chooseProduct} />
+        <ProductSelect products={receivable} value={productId} onChange={chooseProduct} />
       </Field>
       <Field label="How many?">
         <Input
@@ -251,7 +264,9 @@ export function PurchaseForm({
       </Field>
       <div className="rounded-lg border border-zenith-gold bg-zenith-raised px-3 py-2 text-sm">
         <div className="font-semibold">Receive into: Main Stock</div>
-        <div className="mt-1 text-zenith-muted">Everything bought from a supplier first enters Main Stock.</div>
+        <div className="mt-1 text-zenith-muted">
+          Buy full bottles, crates, and packs. Shots and glasses are moved to Bar or Kitchen from Move Stock.
+        </div>
         {received > 0 && product ? (
           <div className="mt-2 font-semibold">
             You are receiving {quantityWithUnit(received, stockName)} into Main Stock.
@@ -294,18 +309,29 @@ export function TransferForm({
   const [error, setError] = useState("");
   const [productId, setProductId] = useState("");
   const [toId, setToId] = useState("");
+  const [unitId, setUnitId] = useState("");
   const [quantity, setQuantity] = useState("");
   const product = products.find((row) => row.id === productId);
   const destination = destinations.find((row) => row.id === toId);
+  const unitChoices = transferUnitsForProduct(product);
+  const selectedUnit = unitChoices.find((unit) => unit.id === unitId);
   const qty = Number(quantity);
+  const moved = Number.isInteger(qty) && qty > 0 && selectedUnit ? qty * selectedUnit.factor : 0;
   const unitName = product?.baseUnit?.name ?? "units";
 
+  function chooseProduct(id: string) {
+    setProductId(id);
+    const next = products.find((row) => row.id === id);
+    setUnitId(preferredTransferUnitId(next));
+  }
+
   async function action(formData: FormData) {
+    if (!selectedUnit || moved <= 0) return setError("Choose how many to move and the unit.");
     const result = await transferStockAction({
       toLocationId: String(formData.get("toLocationId")),
       notes: String(formData.get("notes") ?? ""),
       idempotencyKey: newKey("transfer"),
-      lines: [{ productId: String(formData.get("productId")), baseQuantity: Number(formData.get("quantity")) }],
+      lines: [{ productId, baseQuantity: moved }],
     });
     if (!result.ok) return setError(result.error);
     setError("");
@@ -318,12 +344,14 @@ export function TransferForm({
         <ProductSelect
           products={products}
           value={productId}
-          onChange={setProductId}
+          onChange={chooseProduct}
           available={(row) => row.main ?? 0}
+          groupPour
         />
       </Field>
-      <div className="rounded-lg border border-zenith-gold bg-zenith-raised px-3 py-2 text-sm font-semibold">
-        From: Main Stock
+      <div className="rounded-lg border border-zenith-gold bg-zenith-raised px-3 py-2 text-sm">
+        <div className="font-semibold">From: Main Stock</div>
+        <div className="mt-1 text-zenith-muted">Send full bottles or pieces such as shots to Bar, Kitchen, or Cafe.</div>
       </div>
       <Field label="To">
         <LocationSelect locations={destinations} name="toLocationId" value={toId} onChange={setToId} />
@@ -338,12 +366,23 @@ export function TransferForm({
           onChange={(event) => setQuantity(event.target.value)}
         />
       </Field>
+      <Field label="Unit">
+        <Select value={unitId} onChange={(event) => setUnitId(event.target.value)} disabled={!product}>
+          <option value="">{product ? "Choose unit" : "Choose a product first"}</option>
+          {unitChoices.map((unit) => (
+            <option key={unit.id} value={unit.id}>
+              {unitLabel(unit.name)}
+              {unit.isPack ? "" : isPourUnit(unit.code) ? " (pieces)" : ""}
+            </option>
+          ))}
+        </Select>
+      </Field>
       <Field label="Reason">
         <Input name="notes" />
       </Field>
-      {product && Number.isInteger(qty) && qty > 0 ? (
+      {product && moved > 0 ? (
         <p className="text-sm font-semibold">
-          Moving {quantityWithUnit(qty, unitName)} of {product.name}
+          Moving {selectedUnit?.isPack ? `${quantityWithUnit(qty, selectedUnit.name)} (${quantityWithUnit(moved, unitName)})` : quantityWithUnit(moved, unitName)} of {product.name}
           {destination ? ` · Main Stock → ${destination.name}` : ""}
         </p>
       ) : null}

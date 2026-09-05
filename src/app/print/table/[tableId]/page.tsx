@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/current-user";
 import { getBusinessSettings } from "@/lib/settings";
 import { FactureDocument } from "@/components/print/FactureDocument";
-import { PrintButton } from "@/components/print/PrintButton";
+import { PrintToolbar } from "@/components/print/PrintButton";
 import { getCurrentTableBill } from "@/services/orders";
 
 export default async function PrintTablePage({
@@ -29,10 +29,8 @@ export default async function PrintTablePage({
   }
 
   return (
-    <div className="print-page">
-      <div className="mb-4 flex justify-end no-print">
-        <PrintButton autoPrint={print === "1"} />
-      </div>
+    <div className="print-page" data-paper={settings.receiptPaperMm}>
+      <PrintToolbar autoPrint={print === "1"} paperMm={settings.receiptPaperMm} />
       <FactureDocument settings={settings} orders={bill.orders} />
     </div>
   );

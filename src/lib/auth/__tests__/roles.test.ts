@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccessPath, canViewOrderFacture, hasAllAccess, hasPermission, isPublicPath, isRole, PERMISSIONS, satisfiesRoleGate } from "@/lib/auth/roles";
+import { canAccessPath, canViewOrderFacture, canViewOrderSlip, hasAllAccess, hasPermission, isPublicPath, isRole, PERMISSIONS, satisfiesRoleGate } from "@/lib/auth/roles";
 import { isValidPin } from "@/lib/auth/pin";
 
 describe("authentication and authorization", () => {
@@ -90,6 +90,17 @@ describe("authentication and authorization", () => {
     expect(hasPermission("CASHIER", "recordPayment")).toBe(true);
     expect(hasPermission("CASHIER", "payLater")).toBe(true);
     expect(hasPermission("CASHIER", "printFacture")).toBe(true);
+    expect(hasPermission("WAITER", "printFacture")).toBe(false);
+    expect(hasPermission("WAITER", "printSlip")).toBe(true);
+    expect(hasPermission("CASHIER", "printSlip")).toBe(false);
+    expect(canAccessPath("WAITER", "/print/slip/order/1")).toBe(true);
+    expect(canAccessPath("WAITER", "/print/order/1")).toBe(false);
+    expect(canAccessPath("CASHIER", "/print/order/1")).toBe(true);
+    expect(canAccessPath("CASHIER", "/print/slip/order/1")).toBe(false);
+    expect(canViewOrderSlip("WAITER", "w1", "w1")).toBe(true);
+    expect(canViewOrderSlip("WAITER", "w1", "w2")).toBe(false);
+    expect(canViewOrderFacture("WAITER", "w1", "w1")).toBe(false);
+    expect(canViewOrderFacture("CASHIER", "c1", "w1")).toBe(true);
     expect(hasPermission("CASHIER", "viewAllOrders")).toBe(true);
     expect(hasPermission("CASHIER", "createOrder")).toBe(false);
     expect(hasPermission("CASHIER", "manageProducts")).toBe(false);

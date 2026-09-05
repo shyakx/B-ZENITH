@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/prisma";
 
+export const RECEIPT_PAPER_OPTIONS = ["80", "58"] as const;
+export type ReceiptPaperMm = (typeof RECEIPT_PAPER_OPTIONS)[number];
+
 export type BusinessSettings = {
   businessName: string;
   address: string;
   phone: string;
   tin: string;
   receiptFooter: string;
+  receiptPaperMm: ReceiptPaperMm;
 };
 
 export const DEFAULT_SETTINGS: BusinessSettings = {
@@ -14,7 +18,12 @@ export const DEFAULT_SETTINGS: BusinessSettings = {
   phone: "",
   tin: "",
   receiptFooter: "Thank you for visiting B-ZENITH",
+  receiptPaperMm: "80",
 };
+
+export function parseReceiptPaperMm(value: string | null | undefined): ReceiptPaperMm {
+  return value === "58" ? "58" : "80";
+}
 
 export async function getBusinessSettings(): Promise<BusinessSettings> {
   const rows = await prisma.setting.findMany();
@@ -25,6 +34,7 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
     phone: map.phone ?? DEFAULT_SETTINGS.phone,
     tin: map.tin ?? DEFAULT_SETTINGS.tin,
     receiptFooter: map.receiptFooter ?? DEFAULT_SETTINGS.receiptFooter,
+    receiptPaperMm: parseReceiptPaperMm(map.receiptPaperMm),
   };
 }
 

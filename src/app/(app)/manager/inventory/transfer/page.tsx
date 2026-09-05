@@ -14,7 +14,7 @@ export default async function TransferStockPage() {
     <div>
       <PageHeader
         title="Move Stock"
-        subtitle="Move from Main Stock to Bar, Kitchen, or Cafe."
+        subtitle="Send stock from Main to Bar, Kitchen, or Cafe. You can move full bottles or pieces such as shots."
       />
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <Card>

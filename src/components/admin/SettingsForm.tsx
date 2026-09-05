@@ -4,7 +4,8 @@ import { useState } from "react";
 import { saveSettingsAction } from "@/actions/settings";
 import type { BusinessSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/Button";
-import { Field, Input, Textarea } from "@/components/ui/Input";
+import { Field, Input, Select, Textarea } from "@/components/ui/Input";
+import { parseReceiptPaperMm } from "@/lib/settings";
 
 export function SettingsForm({ settings }: { settings: BusinessSettings }) {
   const [error, setError] = useState("");
@@ -20,6 +21,7 @@ export function SettingsForm({ settings }: { settings: BusinessSettings }) {
       phone: String(formData.get("phone") ?? ""),
       tin: String(formData.get("tin") ?? ""),
       receiptFooter: String(formData.get("receiptFooter") ?? ""),
+      receiptPaperMm: parseReceiptPaperMm(String(formData.get("receiptPaperMm") ?? "")),
     });
     setBusy(false);
     if (!result.ok) return setError(result.error);
@@ -52,6 +54,18 @@ export function SettingsForm({ settings }: { settings: BusinessSettings }) {
           <Input name="tin" defaultValue={settings.tin} />
         </Field>
         <p className="mt-2 text-sm">This tax identification number appears on the facture.</p>
+      </div>
+      <div>
+        <Field label="Receipt paper">
+          <Select name="receiptPaperMm" defaultValue={settings.receiptPaperMm}>
+            <option value="80">80mm bill roll (XP-80C)</option>
+            <option value="58">58mm small roll</option>
+          </Select>
+        </Field>
+        <p className="mt-2 text-sm">
+          This is the bill width the printer should use. In the print window choose that paper and 100%
+          scale. Do not pick A4 or Fit to page.
+        </p>
       </div>
       <div>
         <Field label="Receipt footer">
