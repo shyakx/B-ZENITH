@@ -78,7 +78,24 @@ await sharp(src)
   .png({ compressionLevel: 9, force: true })
   .toFile(path.join(appDir, "apple-icon.png"));
 
-await writeIco([16, 32, 48], path.join(root, "public/favicon.ico"));
+const faviconPath = path.join(root, "public/favicon.ico");
+try {
+  const toIco = (await import("to-ico")).default;
+  const pngs = [];
+  for (const size of [16, 32, 48]) {
+    pngs.push(
+      await sharp(src)
+        .resize(size, size, { fit: "cover" })
+        .ensureAlpha()
+        .png({ force: true })
+        .toBuffer(),
+    );
+  }
+  fs.writeFileSync(faviconPath, await toIco(pngs));
+  console.log("favicon.ico (to-ico)", fs.statSync(faviconPath).size);
+} catch {
+  await writeIco([16, 32, 48], faviconPath);
+}
 
 const mark = await sharp(src).resize(360, 360, { fit: "cover" }).png().toBuffer();
 const svg = Buffer.from(`<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">

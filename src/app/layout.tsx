@@ -39,15 +39,16 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "48x48" },
-      { url: "/brand/icon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/brand/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/brand/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/brand/icon-32.png?v=zenith2", sizes: "32x32", type: "image/png" },
+      { url: "/icon.png?v=zenith2", type: "image/png" },
+      { url: "/brand/icon-192.png?v=zenith2", sizes: "192x192", type: "image/png" },
+      { url: "/brand/icon-512.png?v=zenith2", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico?v=zenith2", sizes: "48x48" },
     ],
-    apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.ico"],
+    apple: [{ url: "/brand/apple-touch-icon.png?v=zenith2", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/brand/icon-32.png?v=zenith2"],
   },
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.webmanifest?v=zenith2",
   appleWebApp: {
     capable: true,
     title: "B-ZENITH",
