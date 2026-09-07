@@ -22,7 +22,8 @@ async function writeIco(sizes, outPath) {
   for (const size of sizes) {
     const buf = await sharp(src)
       .resize(size, size, { fit: "cover" })
-      .png({ compressionLevel: 9 })
+      .ensureAlpha()
+      .png({ compressionLevel: 9, force: true })
       .toBuffer();
     images.push({ size, buf });
   }
@@ -66,14 +67,18 @@ await sharp(src)
   .toFile(path.join(brand, "logo-display.png"));
 console.log("logo-display", fs.statSync(path.join(brand, "logo-display.png")).size);
 
-await sharp(src).resize(32, 32, { fit: "cover" }).png({ compressionLevel: 9 }).toFile(path.join(appDir, "icon.png"));
+await sharp(src)
+  .resize(32, 32, { fit: "cover" })
+  .ensureAlpha()
+  .png({ compressionLevel: 9, force: true })
+  .toFile(path.join(appDir, "icon.png"));
 await sharp(src)
   .resize(180, 180, { fit: "cover" })
-  .png({ compressionLevel: 9 })
+  .ensureAlpha()
+  .png({ compressionLevel: 9, force: true })
   .toFile(path.join(appDir, "apple-icon.png"));
 
 await writeIco([16, 32, 48], path.join(root, "public/favicon.ico"));
-fs.copyFileSync(path.join(root, "public/favicon.ico"), path.join(appDir, "favicon.ico"));
 
 const mark = await sharp(src).resize(360, 360, { fit: "cover" }).png().toBuffer();
 const svg = Buffer.from(`<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
