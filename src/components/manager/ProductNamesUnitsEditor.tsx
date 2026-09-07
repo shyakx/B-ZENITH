@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { saveManagerProductReferenceAction } from "@/actions/inventory";
+import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 
@@ -16,9 +17,35 @@ type Row = {
 };
 
 export function ProductNamesUnitsEditor({ products }: { products: Row[] }) {
+  const [query, setQuery] = useState("");
+  const visible = useMemo(
+    () =>
+      products.filter((product) =>
+        matchesSearch(
+          query,
+          product.name,
+          product.category,
+          product.unitCode,
+          product.managerReferenceName,
+          product.managerReferenceNote,
+        ),
+      ),
+    [products, query],
+  );
+
   return (
     <div className="space-y-3">
-      {products.map((product) => (
+      <ListSearchField
+        value={query}
+        onChange={setQuery}
+        placeholder="Search by product, nickname, category, or unit…"
+      />
+      {visible.length === 0 ? (
+        <p className="text-sm text-zenith-muted">
+          {query.trim() ? "No products match that search." : "No products yet."}
+        </p>
+      ) : null}
+      {visible.map((product) => (
         <ProductReferenceRow key={product.id} product={product} />
       ))}
     </div>

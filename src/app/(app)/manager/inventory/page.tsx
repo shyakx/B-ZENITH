@@ -3,71 +3,11 @@ import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
 import { formatStockQty } from "@/lib/domain/units";
 import { EnsureKitchenStoresButton } from "@/components/manager/EnsureKitchenStoresButton";
+import { InventoryStockLists } from "@/components/manager/InventoryStockLists";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { inventoryValuation, listMovements, listStock } from "@/services/inventory";
 import { kitchenStoresStatus } from "@/services/products";
-
-function StockTable({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: {
-    id: string;
-    name: string;
-    main: number;
-    bar: number;
-    kitchen: number;
-    cafe: number;
-    managerReferenceName?: string | null;
-    baseUnit?: { code: string; name: string } | null;
-  }[];
-}) {
-  return (
-    <Card className="mb-4">
-      <h2 className="mb-3 font-semibold">{title}</h2>
-      {rows.length === 0 ? (
-        <p className="text-sm text-zenith-muted">Nothing in this list yet.</p>
-      ) : (
-        <div className="overflow-x-auto text-sm">
-          <table className="w-full min-w-[560px] text-left">
-            <thead>
-              <tr className="border-b border-zenith-border text-xs uppercase tracking-wider text-zenith-muted">
-                <th className="py-2 pr-2">Product</th>
-                <th className="py-2 pr-2">Unit</th>
-                <th className="py-2 pr-2 text-right">Main</th>
-                <th className="py-2 pr-2 text-right">Bar</th>
-                <th className="py-2 pr-2 text-right">Kitchen</th>
-                <th className="py-2 text-right">Cafe</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((product) => {
-                const unit = product.baseUnit?.code ?? null;
-                return (
-                  <tr key={product.id} className="border-b border-zenith-border/70">
-                    <td className="py-2 pr-2 font-semibold">
-                      {product.name}
-                      {product.managerReferenceName ? (
-                        <div className="font-normal text-xs text-zenith-muted">{product.managerReferenceName}</div>
-                      ) : null}
-                    </td>
-                    <td className="py-2 pr-2 text-xs font-semibold text-zenith-muted">{unit ?? "—"}</td>
-                    <td className="py-2 pr-2 text-right">{formatStockQty(product.main, unit)}</td>
-                    <td className="py-2 pr-2 text-right">{formatStockQty(product.bar, unit)}</td>
-                    <td className="py-2 pr-2 text-right">{formatStockQty(product.kitchen, unit)}</td>
-                    <td className="py-2 text-right">{formatStockQty(product.cafe, unit)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Card>
-  );
-}
 
 export default async function InventoryOverviewPage() {
   await requireRole("MANAGER");
@@ -132,8 +72,7 @@ export default async function InventoryOverviewPage() {
           <EnsureKitchenStoresButton missing={kitchen.missing.length} />
         </div>
       ) : null}
-      <StockTable title="Stock items" rows={materials} />
-      <StockTable title="Menu and bottled / packaged" rows={packaged} />
+      <InventoryStockLists materials={materials} packaged={packaged} />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="mb-3 font-semibold">Running low</h2>

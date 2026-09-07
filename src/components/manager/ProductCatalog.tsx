@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ProductType } from "@prisma/client";
 import { EnsureKitchenStoresButton } from "@/components/manager/EnsureKitchenStoresButton";
+import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
 import { ProductEditor } from "@/components/manager/ProductForm";
 
 type CatalogItem = {
@@ -46,9 +47,25 @@ export function ProductCatalog({
   kitchenMissing?: number;
 }) {
   const [tab, setTab] = useState<"menu" | "materials">("menu");
+  const [query, setQuery] = useState("");
   const menu = items.filter((item) => item.productType !== ProductType.RAW_MATERIAL);
   const materials = items.filter((item) => item.productType === ProductType.RAW_MATERIAL);
-  const visible = tab === "menu" ? menu : materials;
+  const pool = tab === "menu" ? menu : materials;
+  const visible = useMemo(
+    () =>
+      pool.filter((product) =>
+        matchesSearch(
+          query,
+          product.name,
+          product.categoryName,
+          product.sellingPrice,
+          product.stockLine,
+          product.sellOnPos ? "on pos" : "not on pos",
+          product.active ? "active" : "inactive",
+        ),
+      ),
+    [pool, query],
+  );
 
   return (
     <div className="mt-5">
@@ -72,10 +89,23 @@ export function ProductCatalog({
           Stock items
         </button>
       </div>
+      <ListSearchField
+        value={query}
+        onChange={setQuery}
+        placeholder={tab === "menu" ? "Search menu products…" : "Search stock items…"}
+      />
       {tab === "materials" ? <EnsureKitchenStoresButton missing={kitchenMissing} /> : null}
       <div className={`grid min-w-0 gap-2 ${tab === "materials" && kitchenMissing > 0 ? "mt-3" : ""}`}>
-        {tab === "materials" && visible.length === 0 && kitchenMissing === 0 ? (
-          <p className="text-sm text-zenith-muted">No stock items yet.</p>
+        {visible.length === 0 ? (
+          <p className="text-sm text-zenith-muted">
+            {query.trim()
+              ? "No products match that search."
+              : tab === "materials"
+                ? kitchenMissing === 0
+                  ? "No stock items yet."
+                  : null
+                : "No menu products yet."}
+          </p>
         ) : null}
         {visible.map((product) => (
           <article key={product.id} className="min-w-0 rounded-xl border border-zenith-border bg-white p-3">
