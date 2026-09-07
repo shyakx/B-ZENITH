@@ -100,7 +100,7 @@ export function LoginScreen({
     <div className="brand-pattern flex min-h-screen items-center justify-center p-3 md:p-5">
       <div className="flex w-full max-w-md flex-col rounded-2xl border border-zenith-border bg-white p-4 shadow-sm md:p-5">
         <div className="mb-3 flex shrink-0 flex-col items-center text-center">
-          <Logo size={56} />
+          <Logo size={56} priority />
           <h1 className="mt-2 text-xl font-semibold tracking-wide text-zenith-gold">B-ZENITH</h1>
           <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-zenith-muted">
             Staff login

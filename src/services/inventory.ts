@@ -1,4 +1,5 @@
 import { MovementType, Prisma, ProductType, type InventoryMovement } from "@prisma/client";
+import { cache } from "react";
 import { writeAudit } from "@/lib/audit";
 import { LOCATION_CODES } from "@/lib/domain/locations";
 import {
@@ -727,13 +728,13 @@ export async function listTransfers(take = 80) {
   });
 }
 
-export async function listLocations() {
+export const listLocations = cache(async () => {
   return prisma.stockLocation.findMany({ orderBy: { sortOrder: "asc" } });
-}
+});
 
-export async function listUnits() {
+export const listUnits = cache(async () => {
   return prisma.unit.findMany({ where: { active: true }, orderBy: { code: "asc" } });
-}
+});
 
 export async function listInventoryMaterials() {
   return prisma.product.findMany({

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 export const RECEIPT_PAPER_OPTIONS = ["80", "58"] as const;
@@ -25,7 +26,7 @@ export function parseReceiptPaperMm(value: string | null | undefined): ReceiptPa
   return value === "58" ? "58" : "80";
 }
 
-export async function getBusinessSettings(): Promise<BusinessSettings> {
+export const getBusinessSettings = cache(async (): Promise<BusinessSettings> => {
   const rows = await prisma.setting.findMany();
   const map = Object.fromEntries(rows.map((row) => [row.key, row.value]));
   return {
@@ -36,7 +37,7 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
     receiptFooter: map.receiptFooter ?? DEFAULT_SETTINGS.receiptFooter,
     receiptPaperMm: parseReceiptPaperMm(map.receiptPaperMm),
   };
-}
+});
 
 export async function saveBusinessSettings(settings: BusinessSettings) {
   await prisma.$transaction(

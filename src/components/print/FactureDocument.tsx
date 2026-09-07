@@ -33,7 +33,7 @@ export function FactureDocument({
       <header className="facture-header">
         <div className="facture-seal">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.png" alt="B-ZENITH" className="facture-logo" />
+          <img src="/brand/logo-mark.png" alt="B-ZENITH" className="facture-logo" />
         </div>
         <div className="facture-brand">{settings.businessName}</div>
         {settings.address ? <div>{settings.address}</div> : null}
