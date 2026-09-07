@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
+import { formatStockQty } from "@/lib/domain/units";
 import { EnsureKitchenStoresButton } from "@/components/manager/EnsureKitchenStoresButton";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -12,7 +13,16 @@ function StockTable({
   rows,
 }: {
   title: string;
-  rows: { id: string; name: string; main: number; bar: number; kitchen: number; cafe: number; baseUnit?: { name: string } | null }[];
+  rows: {
+    id: string;
+    name: string;
+    main: number;
+    bar: number;
+    kitchen: number;
+    cafe: number;
+    managerReferenceName?: string | null;
+    baseUnit?: { code: string; name: string } | null;
+  }[];
 }) {
   return (
     <Card className="mb-4">
@@ -21,10 +31,11 @@ function StockTable({
         <p className="text-sm text-zenith-muted">Nothing in this list yet.</p>
       ) : (
         <div className="overflow-x-auto text-sm">
-          <table className="w-full min-w-[520px] text-left">
+          <table className="w-full min-w-[560px] text-left">
             <thead>
               <tr className="border-b border-zenith-border text-xs uppercase tracking-wider text-zenith-muted">
                 <th className="py-2 pr-2">Product</th>
+                <th className="py-2 pr-2">Unit</th>
                 <th className="py-2 pr-2 text-right">Main</th>
                 <th className="py-2 pr-2 text-right">Bar</th>
                 <th className="py-2 pr-2 text-right">Kitchen</th>
@@ -32,18 +43,24 @@ function StockTable({
               </tr>
             </thead>
             <tbody>
-              {rows.map((product) => (
-                <tr key={product.id} className="border-b border-zenith-border/70">
-                  <td className="py-2 pr-2 font-semibold">
-                    {product.name}
-                    {product.baseUnit ? <span className="font-normal text-zenith-muted"> · {product.baseUnit.name}</span> : null}
-                  </td>
-                  <td className="py-2 pr-2 text-right">{product.main}</td>
-                  <td className="py-2 pr-2 text-right">{product.bar}</td>
-                  <td className="py-2 pr-2 text-right">{product.kitchen}</td>
-                  <td className="py-2 text-right">{product.cafe}</td>
-                </tr>
-              ))}
+              {rows.map((product) => {
+                const unit = product.baseUnit?.code ?? null;
+                return (
+                  <tr key={product.id} className="border-b border-zenith-border/70">
+                    <td className="py-2 pr-2 font-semibold">
+                      {product.name}
+                      {product.managerReferenceName ? (
+                        <div className="font-normal text-xs text-zenith-muted">{product.managerReferenceName}</div>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-2 text-xs font-semibold text-zenith-muted">{unit ?? "—"}</td>
+                    <td className="py-2 pr-2 text-right">{formatStockQty(product.main, unit)}</td>
+                    <td className="py-2 pr-2 text-right">{formatStockQty(product.bar, unit)}</td>
+                    <td className="py-2 pr-2 text-right">{formatStockQty(product.kitchen, unit)}</td>
+                    <td className="py-2 text-right">{formatStockQty(product.cafe, unit)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -76,7 +93,7 @@ export default async function InventoryOverviewPage() {
     <div>
       <PageHeader
         title="Stock Overview"
-        subtitle="Buy into Main Stock, then move drinks to Bar and kitchen stores to Kitchen."
+        subtitle="Buy into Main Stock, then move drinks to Bar and kitchen stores to Kitchen. Quantities always show the official stock unit."
       />
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
@@ -85,10 +102,10 @@ export default async function InventoryOverviewPage() {
           ["Kitchen", totals.kitchen, "Kitchen use"],
           ["Cafe", totals.cafe, "Cafe use"],
         ].map(([label, value, hint]) => (
-          <div key={label} className="rounded-xl border border-zenith-border bg-white p-3">
-            <div className="text-xl font-semibold text-zenith-gold">{value}</div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label}</div>
-            <div className="mt-1 text-xs text-zenith-muted">{hint}</div>
+          <div key={label as string} className="rounded-xl border border-zenith-border bg-white p-3">
+            <div className="text-xl font-semibold text-zenith-gold">{value as number}</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label as string}</div>
+            <div className="mt-1 text-xs text-zenith-muted">{hint as string}</div>
           </div>
         ))}
       </div>
@@ -102,6 +119,12 @@ export default async function InventoryOverviewPage() {
         </Link>
         <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/locations">
           Stock by Location
+        </Link>
+        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/product-names">
+          Product Names & Units
+        </Link>
+        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/movements">
+          Stock Movements
         </Link>
       </div>
       {kitchen.missing.length > 0 ? (
@@ -117,8 +140,15 @@ export default async function InventoryOverviewPage() {
           <div className="space-y-2 text-sm">
             {stock.filter((row) => row.total <= 5).slice(0, 12).map((product) => (
               <div key={product.id} className="flex justify-between gap-2">
-                <span>{product.name}</span>
-                <span className="font-semibold text-zenith-danger">{product.total}</span>
+                <span>
+                  {product.name}
+                  {product.managerReferenceName ? (
+                    <span className="text-zenith-muted"> · {product.managerReferenceName}</span>
+                  ) : null}
+                </span>
+                <span className="font-semibold text-zenith-danger">
+                  {formatStockQty(product.total, product.baseUnit?.code)}
+                </span>
               </div>
             ))}
           </div>
@@ -132,7 +162,10 @@ export default async function InventoryOverviewPage() {
                   {move.product.name}
                   {move.location ? ` · ${move.location.name}` : ""}
                 </span>
-                <span>{move.quantity > 0 ? `+${move.quantity}` : move.quantity}</span>
+                <span className="font-semibold">
+                  {move.quantity > 0 ? "+" : ""}
+                  {formatStockQty(move.quantity, move.product.baseUnit?.code)}
+                </span>
               </div>
             ))}
           </div>

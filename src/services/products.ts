@@ -331,3 +331,88 @@ export async function upsertTable(input: { id?: string; name: string; active: bo
     data: { name, active: input.active, sortOrder: (last?.sortOrder ?? 0) + 1 },
   });
 }
+
+/** Manager nickname labels only — never touches stock, units, or prices. */
+export async function listProductNameReferences() {
+  return prisma.product.findMany({
+    where: { active: true },
+    select: {
+      id: true,
+      name: true,
+      trackInventory: true,
+      stockQuantity: true,
+      managerReferenceName: true,
+      managerReferenceNote: true,
+      category: { select: { name: true } },
+      baseUnit: { select: { code: true, name: true } },
+    },
+    orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+  });
+}
+
+export async function updateManagerProductReference(input: {
+  productId: string;
+  managerReferenceName: string | null;
+  managerReferenceNote: string | null;
+  userId: string;
+}) {
+  const product = await prisma.product.findUnique({
+    where: { id: input.productId },
+    select: {
+      id: true,
+      name: true,
+      managerReferenceName: true,
+      managerReferenceNote: true,
+      stockQuantity: true,
+      baseUnitId: true,
+      sellingPrice: true,
+    },
+  });
+  if (!product) throw new AppError("Product not found.");
+
+  const managerReferenceName = input.managerReferenceName?.trim() || null;
+  const managerReferenceNote = input.managerReferenceNote?.trim() || null;
+  if (managerReferenceName && managerReferenceName.length > 80) {
+    throw new AppError("Manager reference name must be 80 characters or less.");
+  }
+  if (managerReferenceNote && managerReferenceNote.length > 160) {
+    throw new AppError("Manager note must be 160 characters or less.");
+  }
+
+  const updated = await prisma.product.update({
+    where: { id: product.id },
+    data: { managerReferenceName, managerReferenceNote },
+    select: {
+      id: true,
+      name: true,
+      managerReferenceName: true,
+      managerReferenceNote: true,
+      stockQuantity: true,
+      baseUnitId: true,
+      sellingPrice: true,
+    },
+  });
+
+  await writeAudit({
+    userId: input.userId,
+    action: "PRODUCT_MANAGER_REFERENCE_UPDATED",
+    entity: "Product",
+    entityId: product.id,
+    before: {
+      managerReferenceName: product.managerReferenceName,
+      managerReferenceNote: product.managerReferenceNote,
+      stockQuantity: product.stockQuantity,
+      baseUnitId: product.baseUnitId,
+      sellingPrice: product.sellingPrice,
+    },
+    after: {
+      managerReferenceName: updated.managerReferenceName,
+      managerReferenceNote: updated.managerReferenceNote,
+      stockQuantity: updated.stockQuantity,
+      baseUnitId: updated.baseUnitId,
+      sellingPrice: updated.sellingPrice,
+    },
+  });
+
+  return updated;
+}

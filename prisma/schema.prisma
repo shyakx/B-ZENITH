@@ -151,6 +151,10 @@ model Product {
   baseUnit               Unit?       @relation(fields: [baseUnitId], references: [id])
   defaultStockLocationId String?
   defaultStockLocation   StockLocation? @relation("ProductDefaultStockLocation", fields: [defaultStockLocationId], references: [id])
+  /// Manager-only nickname for recognition. Never used in stock math.
+  managerReferenceName   String?
+  /// Optional manager note (e.g. pack size reminder). Never used in stock math.
+  managerReferenceNote   String?
   active                 Boolean     @default(true)
   sortOrder              Int         @default(0)
   createdAt              DateTime    @default(now())

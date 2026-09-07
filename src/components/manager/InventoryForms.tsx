@@ -52,7 +52,7 @@ function newKey(prefix: string) {
 }
 
 function productOptionLabel(product: ProductOption, available?: (product: ProductOption) => number) {
-  const unit = product.baseUnit ? ` · ${unitLabel(product.baseUnit.name)}` : "";
+  const unit = product.baseUnit ? ` · ${product.baseUnit.code}` : "";
   const qty = available ? ` (${available(product)} in Main Stock)` : "";
   return `${product.name}${unit}${qty}`;
 }
@@ -425,7 +425,7 @@ export function WasteForm({
       <Field label="Where?">
         <LocationSelect locations={locations} />
       </Field>
-      <Field label="How many?">
+      <Field label="How many? (official stock units)">
         <Input name="quantity" type="number" min={1} required />
       </Field>
       <Field label="Why?">
@@ -478,7 +478,7 @@ export function AdjustForm({
           <option value="decrease">Decrease</option>
         </Select>
       </Field>
-      <Field label="Quantity">
+      <Field label="Quantity (official stock units)">
         <Input name="quantity" type="number" min={1} required />
       </Field>
       <Field label="Reason">
@@ -522,7 +522,7 @@ export function CountForm({
       <Field label="Product">
         <ProductSelect products={products} />
       </Field>
-      <Field label="What did you physically count?">
+      <Field label="What did you physically count? (official stock units)">
         <Input name="counted" type="number" min={0} required />
       </Field>
       {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}

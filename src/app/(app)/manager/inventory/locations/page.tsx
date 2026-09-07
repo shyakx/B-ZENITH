@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
+import { formatStockQty } from "@/lib/domain/units";
 import { productTypeStaffLabel } from "@/lib/product-type-labels";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,15 +14,16 @@ export default async function StockByLocationPage() {
     <div>
       <PageHeader
         title="Stock by Location"
-        subtitle="See how much is in Main Stock, Bar, Kitchen, and Cafe."
+        subtitle="See how much is in Main Stock, Bar, Kitchen, and Cafe — always with the official stock unit."
       />
       <Card>
         <div className="overflow-x-auto text-sm">
-          <table className="w-full min-w-[640px] text-left">
+          <table className="w-full min-w-[720px] text-left">
             <thead>
               <tr className="border-b border-zenith-border text-xs uppercase tracking-wider text-zenith-muted">
                 <th className="py-2 pr-2">Product</th>
                 <th className="py-2 pr-2">Type</th>
+                <th className="py-2 pr-2">Unit</th>
                 <th className="py-2 pr-2">Main</th>
                 <th className="py-2 pr-2">Bar</th>
                 <th className="py-2 pr-2">Kitchen</th>
@@ -31,20 +33,27 @@ export default async function StockByLocationPage() {
               </tr>
             </thead>
             <tbody>
-              {stock.map((product) => (
-                <tr key={product.id} className="border-b border-zenith-border/70">
-                  <td className="py-2 pr-2 font-semibold">{product.name}</td>
-                  <td className="py-2 pr-2">
-                    {productTypeStaffLabel(product.productType)}
-                  </td>
-                  <td className="py-2 pr-2">{product.main}</td>
-                  <td className="py-2 pr-2">{product.bar}</td>
-                  <td className="py-2 pr-2">{product.kitchen}</td>
-                  <td className="py-2 pr-2">{product.cafe}</td>
-                  <td className="py-2 pr-2 font-semibold">{product.total}</td>
-                  <td className="py-2">{formatRwf(product.valuation)}</td>
-                </tr>
-              ))}
+              {stock.map((product) => {
+                const unit = product.baseUnit?.code ?? null;
+                return (
+                  <tr key={product.id} className="border-b border-zenith-border/70">
+                    <td className="py-2 pr-2 font-semibold">
+                      {product.name}
+                      {product.managerReferenceName ? (
+                        <div className="font-normal text-xs text-zenith-muted">{product.managerReferenceName}</div>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-2">{productTypeStaffLabel(product.productType)}</td>
+                    <td className="py-2 pr-2 font-semibold">{unit ?? "—"}</td>
+                    <td className="py-2 pr-2">{formatStockQty(product.main, unit)}</td>
+                    <td className="py-2 pr-2">{formatStockQty(product.bar, unit)}</td>
+                    <td className="py-2 pr-2">{formatStockQty(product.kitchen, unit)}</td>
+                    <td className="py-2 pr-2">{formatStockQty(product.cafe, unit)}</td>
+                    <td className="py-2 pr-2 font-semibold">{formatStockQty(product.total, unit)}</td>
+                    <td className="py-2">{formatRwf(product.valuation)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

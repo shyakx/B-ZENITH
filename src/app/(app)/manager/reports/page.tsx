@@ -8,6 +8,7 @@ import { payableOutstandingBalance } from "@/services/orders";
 import { listOutstanding, unsettledCreditTotal } from "@/services/payments";
 import { salesSummary } from "@/services/reports";
 import { inventoryValuation, listStock } from "@/services/inventory";
+import { formatStockQty } from "@/lib/domain/units";
 
 export default async function ReportsPage({
   searchParams,
@@ -129,12 +130,21 @@ export default async function ReportsPage({
             <div className="flex justify-between font-semibold"><span>Total</span><span>{formatRwf(valuation.total)}</span></div>
           </div>
           <div className="mt-3 text-sm">
-            {stock.slice(0, 8).map((product) => (
-              <div key={product.id} className="mb-1 flex justify-between gap-2">
-                <span>{product.name}</span>
-                <span>M{product.main} B{product.bar} K{product.kitchen} C{product.cafe}</span>
-              </div>
-            ))}
+            {stock.slice(0, 8).map((product) => {
+              const unit = product.baseUnit?.code ?? null;
+              return (
+                <div key={product.id} className="mb-1 flex justify-between gap-2">
+                  <span>
+                    {product.name}
+                    {unit ? <span className="text-zenith-muted"> · {unit}</span> : null}
+                  </span>
+                  <span>
+                    M {formatStockQty(product.main, unit)} · B {formatStockQty(product.bar, unit)} · K{" "}
+                    {formatStockQty(product.kitchen, unit)} · C {formatStockQty(product.cafe, unit)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </section>
       </div>

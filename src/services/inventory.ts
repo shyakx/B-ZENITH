@@ -12,6 +12,10 @@ import {
   nextStockAfterTransferOut,
   nextStockAfterWaste,
 } from "@/lib/domain/stock";
+import {
+  accumulateMovementReport,
+  emptyMovementBuckets,
+} from "@/lib/domain/inventory-movement-report";
 import { costTimesQuantity, toDecimal, unitCostFromTotalPrice } from "@/lib/domain/money";
 import { assertStockInReceiveUnit } from "@/lib/domain/units";
 import { AppError } from "@/lib/errors";
@@ -639,6 +643,7 @@ export async function listStock(lowOnly = false) {
       productType: true,
       stockQuantity: true,
       costPrice: true,
+      managerReferenceName: true,
       category: { select: { id: true, name: true } },
       baseUnit: { select: { id: true, code: true, name: true } },
       packs: {
@@ -687,7 +692,7 @@ export async function listMovements(take = 80, filter?: { type?: MovementType; l
       locationId: filter?.locationId,
     },
     include: {
-      product: { select: { id: true, name: true } },
+      product: { select: { id: true, name: true, baseUnit: { select: { code: true } } } },
       user: { select: { id: true, name: true } },
       location: { select: { code: true, name: true } },
     },
@@ -754,6 +759,56 @@ export async function inventoryValuation() {
     total: byLocation.MAIN + byLocation.BAR + byLocation.KITCHEN + byLocation.CAFE,
     method: "last-cost" as const,
   };
+}
+
+/**
+ * Read-only movement report for managers.
+ * Current on-hand = sum(ProductStock). Movement columns = lifetime InventoryMovement buckets.
+ * Does not invent opening rows and does not claim movements reconcile to on-hand.
+ */
+export async function listInventoryMovementReport() {
+  const [products, movements] = await Promise.all([
+    prisma.product.findMany({
+      where: { trackInventory: true, active: true },
+      select: {
+        id: true,
+        name: true,
+        stockQuantity: true,
+        managerReferenceName: true,
+        category: { select: { name: true } },
+        baseUnit: { select: { code: true, name: true } },
+        stocks: { select: { quantity: true } },
+      },
+      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+    }),
+    prisma.inventoryMovement.findMany({
+      where: { product: { trackInventory: true, active: true } },
+      select: { productId: true, type: true, quantity: true },
+    }),
+  ]);
+
+  const byProduct = new Map<string, ReturnType<typeof emptyMovementBuckets>>();
+  for (const move of movements) {
+    const buckets = byProduct.get(move.productId) ?? emptyMovementBuckets();
+    accumulateMovementReport(buckets, move.type, move.quantity);
+    byProduct.set(move.productId, buckets);
+  }
+
+  return products.map((product) => {
+    const onHand = product.stocks.reduce((sum, row) => sum + row.quantity, 0);
+    const buckets = byProduct.get(product.id) ?? emptyMovementBuckets();
+    return {
+      id: product.id,
+      name: product.name,
+      managerReferenceName: product.managerReferenceName,
+      category: product.category.name,
+      unitCode: product.baseUnit?.code ?? null,
+      unitName: product.baseUnit?.name ?? null,
+      onHand,
+      stockQuantity: product.stockQuantity,
+      ...buckets,
+    };
+  });
 }
 
 export { getLocationByCode, requireOperationalLocation, syncCompatibilityStock } from "@/services/stock";

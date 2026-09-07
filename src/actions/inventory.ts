@@ -11,6 +11,7 @@ import {
   transferStock,
   upsertProductPack,
 } from "@/services/inventory";
+import { updateManagerProductReference } from "@/services/products";
 import { setSupplierActive, upsertSupplier } from "@/services/suppliers";
 
 function refresh() {
@@ -154,6 +155,25 @@ export async function saveProductPackAction(input: {
     const pack = await upsertProductPack({ ...input, userId: user.id });
     refresh();
     return ok({ id: pack.id });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function saveManagerProductReferenceAction(input: {
+  productId: string;
+  managerReferenceName: string | null;
+  managerReferenceNote: string | null;
+}): Promise<ActionResult<{ id: string }>> {
+  try {
+    const user = await requirePermission("manageInventory");
+    const product = await updateManagerProductReference({ ...input, userId: user.id });
+    revalidatePath("/manager/inventory");
+    revalidatePath("/manager/inventory/product-names");
+    revalidatePath("/manager/inventory/movements");
+    revalidatePath("/manager/inventory/locations");
+    revalidatePath("/manager/products");
+    return ok({ id: product.id });
   } catch (error) {
     return fail(error);
   }
