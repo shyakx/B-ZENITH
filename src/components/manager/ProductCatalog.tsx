@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ProductType } from "@prisma/client";
+import { BusinessArea, ProductType } from "@prisma/client";
 import { EnsureKitchenStoresButton } from "@/components/manager/EnsureKitchenStoresButton";
 import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
 import { ProductEditor } from "@/components/manager/ProductForm";
+import { categoryAreaStaffLabel } from "@/lib/product-type-labels";
 
 type CatalogItem = {
   id: string;
   name: string;
   categoryName: string;
+  categoryArea: BusinessArea;
   sellingPrice: string;
   productType: ProductType;
   sellOnPos: boolean;
@@ -41,16 +43,20 @@ export function ProductCatalog({
   kitchenMissing = 0,
 }: {
   items: CatalogItem[];
-  categories: { id: string; name: string }[];
+  categories: { id: string; name: string; area: BusinessArea }[];
   locations: { id: string; code: string; name: string }[];
   units: { id: string; code: string; name: string }[];
   kitchenMissing?: number;
 }) {
   const [tab, setTab] = useState<"menu" | "materials">("menu");
   const [query, setQuery] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const menu = items.filter((item) => item.productType !== ProductType.RAW_MATERIAL);
   const materials = items.filter((item) => item.productType === ProductType.RAW_MATERIAL);
-  const pool = tab === "menu" ? menu : materials;
+  const pool = (tab === "menu" ? menu : materials).filter(
+    (item) => showInactive || item.active,
+  );
+  const inactiveCount = (tab === "menu" ? menu : materials).filter((item) => !item.active).length;
   const visible = useMemo(
     () =>
       pool.filter((product) =>
@@ -58,6 +64,7 @@ export function ProductCatalog({
           query,
           product.name,
           product.categoryName,
+          categoryAreaStaffLabel(product.categoryArea),
           product.sellingPrice,
           product.stockLine,
           product.sellOnPos ? "on pos" : "not on pos",
@@ -69,7 +76,7 @@ export function ProductCatalog({
 
   return (
     <div className="mt-5">
-      <div className="mb-3 flex gap-2">
+      <div className="mb-3 flex flex-wrap gap-2">
         <button
           type="button"
           className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
@@ -88,6 +95,17 @@ export function ProductCatalog({
         >
           Stock items
         </button>
+        {inactiveCount > 0 ? (
+          <button
+            type="button"
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+              showInactive ? "bg-zenith-raised text-zenith-gold" : "border border-zenith-border bg-white"
+            }`}
+            onClick={() => setShowInactive((value) => !value)}
+          >
+            {showInactive ? "Hide inactive" : `Show inactive (${inactiveCount})`}
+          </button>
+        ) : null}
       </div>
       <ListSearchField
         value={query}
@@ -112,9 +130,12 @@ export function ProductCatalog({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-semibold">{product.name}</div>
-                <div className="text-sm">
-                  {product.categoryName} · {product.sellingPrice} ·{" "}
-                  {product.sellOnPos ? "On POS" : "Not on POS"} · {product.active ? "Active" : "Inactive"}
+                <div className="mt-1 inline-flex rounded-lg bg-zenith-raised px-2 py-1 text-xs font-semibold uppercase tracking-wide text-zenith-gold">
+                  {product.categoryName} · {categoryAreaStaffLabel(product.categoryArea)}
+                </div>
+                <div className="mt-1 text-sm">
+                  {product.sellingPrice} · {product.sellOnPos ? "On POS" : "Not on POS"} ·{" "}
+                  {product.active ? "Active" : "Inactive"}
                 </div>
                 <div className="text-sm text-zenith-muted">Stock · {product.stockLine}</div>
               </div>

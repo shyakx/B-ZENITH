@@ -25,6 +25,7 @@ export default async function ProductsPage() {
       id: product.id,
       name: product.name,
       categoryName: product.category.name,
+      categoryArea: product.category.area,
       sellingPrice: formatRwf(product.sellingPrice),
       productType: product.productType,
       sellOnPos: product.sellOnPos,
@@ -74,8 +75,12 @@ export default async function ProductsPage() {
             <ul className="mt-3 min-w-0 space-y-3">
               {categories.map((category) => (
                 <li key={category.id} className="min-w-0">
-                  <div className="text-sm">
-                    {category.name} · {category.area} · {category._count.products} products
+                  <div className="text-sm font-semibold">
+                    {category.name}
+                    <span className="font-normal text-zenith-muted">
+                      {" "}
+                      · {category.area} menu · {category._count.products} products
+                    </span>
                   </div>
                   <CategoryRow category={category} />
                 </li>

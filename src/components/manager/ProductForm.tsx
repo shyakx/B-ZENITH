@@ -3,10 +3,17 @@
 import { useState } from "react";
 import { BusinessArea, ProductType } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
+import { deleteProductAction, saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Input";
-import { productTypeStaffHelp, productTypeStaffLabel } from "@/lib/product-type-labels";
+import {
+  categoryAreaStaffLabel,
+  categoryOptionLabel,
+  productTypeStaffHelp,
+  productTypeStaffLabel,
+} from "@/lib/product-type-labels";
+
+type CategoryOption = { id: string; name: string; area: BusinessArea };
 
 type ProductFields = {
   id: string;
@@ -30,14 +37,16 @@ export function ProductForm({
   units,
   product,
 }: {
-  categories: { id: string; name: string }[];
+  categories: CategoryOption[];
   locations: { id: string; code: string; name: string }[];
   units: { id: string; code: string; name: string }[];
   product?: ProductFields;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
   const [purchaseUnitId, setPurchaseUnitId] = useState(product?.purchaseUnitId ?? product?.baseUnitId ?? "");
   const [contains, setContains] = useState(String(product?.purchaseContains ?? 1));
   const [stockUnitId, setStockUnitId] = useState(product?.baseUnitId ?? "");
@@ -48,14 +57,18 @@ export function ProductForm({
 
   const purchaseUnit = units.find((unit) => unit.id === purchaseUnitId);
   const stockUnit = units.find((unit) => unit.id === stockUnitId);
+  const selectedCategory = categories.find((category) => category.id === categoryId);
   const showContains = Boolean(purchaseUnitId && stockUnitId && purchaseUnitId !== stockUnitId);
 
   async function onSubmit(formData: FormData) {
     setBusy(true);
+    setError("");
+    setMessage("");
+    const chosenCategoryId = String(formData.get("categoryId") ?? categoryId);
     const result = await saveProductAction({
       id: product?.id,
       name: String(formData.get("name") ?? ""),
-      categoryId: String(formData.get("categoryId") ?? ""),
+      categoryId: chosenCategoryId,
       sellingPrice: Number(formData.get("sellingPrice")),
       costPrice: formData.get("costPrice") ? Number(formData.get("costPrice")) : null,
       trackInventory: formData.get("trackInventory") === "on",
@@ -72,6 +85,14 @@ export function ProductForm({
       setError(result.error);
       return;
     }
+    const category = categories.find((entry) => entry.id === chosenCategoryId);
+    if (category) {
+      setMessage(
+        product
+          ? `Saved in category ${category.name} (${categoryAreaStaffLabel(category.area)}).`
+          : `Added to category ${category.name} (${categoryAreaStaffLabel(category.area)}).`,
+      );
+    }
     router.refresh();
   }
 
@@ -85,13 +106,30 @@ export function ProductForm({
         <Input name="sellingPrice" type="number" defaultValue={product?.sellingPrice ?? 0} required />
       </Field>
       <Field label="Category">
-        <Select name="categoryId" defaultValue={product?.categoryId}>
+        <Select
+          name="categoryId"
+          value={categoryId}
+          required
+          onChange={(event) => setCategoryId(event.target.value)}
+        >
+          <option value="" disabled>
+            Choose category (Breakfast, Drinks…)
+          </option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
-              {category.name}
+              {categoryOptionLabel(category)}
             </option>
           ))}
         </Select>
+        {selectedCategory ? (
+          <span className="mt-1 block rounded-lg border border-zenith-gold bg-zenith-raised px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zenith-gold">
+            Falls under {selectedCategory.name} · {categoryAreaStaffLabel(selectedCategory.area)} menu
+          </span>
+        ) : (
+          <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-zenith-muted">
+            Pick Breakfast, Drinks, or another category so staff know where it appears.
+          </span>
+        )}
       </Field>
       <Field label="Product type">
         <Select
@@ -190,7 +228,8 @@ export function ProductForm({
         </p>
       ) : null}
       {error ? <p className="text-sm text-zenith-danger md:col-span-2">{error}</p> : null}
-      <Button disabled={busy} className="md:col-span-2">
+      {message ? <p className="text-sm text-zenith-success md:col-span-2">{message}</p> : null}
+      <Button disabled={busy || !categoryId} className="md:col-span-2">
         {product ? "Save product" : "Add product"}
       </Button>
     </form>
@@ -215,7 +254,7 @@ export function CategoryForm() {
 
   return (
     <form action={onSubmit} className="grid gap-3 md:grid-cols-[1fr_160px_auto]">
-      <Input name="name" placeholder="Category name" required />
+      <Input name="name" placeholder="Category name (e.g. Breakfast, Drinks)" required />
       <Select name="area" defaultValue="KITCHEN">
         <option value="BAR">Bar (menu group)</option>
         <option value="CAFE">Cafe (menu group)</option>
@@ -228,13 +267,67 @@ export function CategoryForm() {
   );
 }
 
+function ProductDeleteControls({ productId, productName }: { productId: string; productName: string }) {
+  const router = useRouter();
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function onDelete() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const result = await deleteProductAction({ id: productId });
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setMessage(result.data.message);
+    setConfirm(false);
+    router.refresh();
+  }
+
+  if (confirm) {
+    return (
+      <div className="mt-3 space-y-2 rounded-xl border border-zenith-danger/40 bg-white p-3">
+        <p className="text-sm font-semibold">Delete {productName}?</p>
+        <p className="text-xs text-zenith-muted">
+          Removes it from POS, products, and stock lists. If it was used in past orders or stock
+          history, the record is hidden but kept for history.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirm(false)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="danger" disabled={busy} onClick={onDelete}>
+            {busy ? "Deleting…" : "Delete product"}
+          </Button>
+        </div>
+        {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <Button type="button" variant="danger" className="h-11" onClick={() => setConfirm(true)}>
+        Delete
+      </Button>
+      {message ? <p className="mt-2 text-sm text-zenith-success">{message}</p> : null}
+      {error ? <p className="mt-2 text-sm text-zenith-danger">{error}</p> : null}
+    </div>
+  );
+}
+
 export function ProductEditor({
   categories,
   locations,
   units,
   product,
 }: {
-  categories: { id: string; name: string }[];
+  categories: CategoryOption[];
   locations: { id: string; code: string; name: string }[];
   units: { id: string; code: string; name: string }[];
   product: ProductFields;
@@ -242,12 +335,15 @@ export function ProductEditor({
   const [open, setOpen] = useState(false);
   return (
     <div className="min-w-0">
-      <Button variant="secondary" className="h-11" onClick={() => setOpen((value) => !value)}>
-        {open ? "Close" : "Edit"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" className="h-11" onClick={() => setOpen((value) => !value)}>
+          {open ? "Close" : "Edit"}
+        </Button>
+      </div>
       {open ? (
         <div className="mt-3">
           <ProductForm categories={categories} locations={locations} units={units} product={product} />
+          <ProductDeleteControls productId={product.id} productName={product.name} />
         </div>
       ) : null}
     </div>

@@ -4,7 +4,7 @@ import { BusinessArea, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/current-user";
 import { fail, ok, type ActionResult } from "@/lib/errors";
-import { upsertCategory, upsertProduct, upsertTable, ensureKitchenStoreCatalog } from "@/services/products";
+import { upsertCategory, upsertProduct, upsertTable, ensureKitchenStoreCatalog, deleteProduct } from "@/services/products";
 
 export async function saveProductAction(input: {
   id?: string;
@@ -25,7 +25,29 @@ export async function saveProductAction(input: {
     const user = await requirePermission("manageProducts");
     const product = await upsertProduct({ ...input, userId: user.id });
     revalidatePath("/manager/products");
+    revalidatePath("/manager/inventory");
+    revalidatePath("/manager/inventory/product-names");
+    revalidatePath("/waiter/orders/new");
     return ok({ id: product.id });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function deleteProductAction(input: {
+  id: string;
+}): Promise<ActionResult<{ id: string; mode: "deleted" | "deactivated"; message: string }>> {
+  try {
+    const user = await requirePermission("manageProducts");
+    const result = await deleteProduct({ id: input.id, userId: user.id });
+    revalidatePath("/manager/products");
+    revalidatePath("/manager/inventory");
+    revalidatePath("/manager/inventory/locations");
+    revalidatePath("/manager/inventory/movements");
+    revalidatePath("/manager/inventory/product-names");
+    revalidatePath("/manager/purchases");
+    revalidatePath("/waiter/orders/new");
+    return ok(result);
   } catch (error) {
     return fail(error);
   }

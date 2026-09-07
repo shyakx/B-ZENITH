@@ -1,4 +1,4 @@
-import { ProductType } from "@prisma/client";
+import { BusinessArea, ProductType } from "@prisma/client";
 
 /** Staff-facing labels. Database enums stay MENU_ITEM / PACKAGED_GOOD / RAW_MATERIAL. */
 export function productTypeStaffLabel(type: ProductType): string {
@@ -22,4 +22,22 @@ export function productTypeStaffHelp(type: ProductType): string {
     case ProductType.RAW_MATERIAL:
       return "Not sold on POS. Use for rice, oil, charcoal, soap, tissue, detergent, and other counted supplies.";
   }
+}
+
+/** Menu group labels for category.area (Breakfast / Drinks live under these groups). */
+export function categoryAreaStaffLabel(area: BusinessArea): string {
+  switch (area) {
+    case BusinessArea.BAR:
+      return "Bar";
+    case BusinessArea.CAFE:
+      return "Cafe";
+    case BusinessArea.KITCHEN:
+      return "Kitchen";
+    case BusinessArea.OTHER:
+      return "Other";
+  }
+}
+
+export function categoryOptionLabel(category: { name: string; area: BusinessArea }): string {
+  return `${category.name} — ${categoryAreaStaffLabel(category.area)}`;
 }

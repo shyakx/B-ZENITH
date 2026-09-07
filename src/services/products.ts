@@ -110,6 +110,7 @@ export async function upsertProduct(input: {
 }) {
   const name = input.name.trim();
   if (name.length < 2) throw new AppError("Product name is required.");
+  if (!input.categoryId) throw new AppError("Choose a category (Breakfast, Drinks, etc.).");
   if (!Number.isInteger(input.sellingPrice) || input.sellingPrice < 0) {
     throw new AppError("Selling price must be a whole number.");
   }
@@ -190,6 +191,76 @@ export async function upsertProduct(input: {
   }
   await saveHowYouBuy(created.id, baseUnitId, input.purchaseUnitId, input.purchaseContains);
   return created;
+}
+
+export async function deleteProduct(input: { id: string; userId: string }) {
+  const product = await prisma.product.findUnique({
+    where: { id: input.id },
+    select: {
+      id: true,
+      name: true,
+      active: true,
+      _count: {
+        select: {
+          orderItems: true,
+          purchases: true,
+          movements: true,
+          receiptLines: true,
+          transferLines: true,
+        },
+      },
+    },
+  });
+  if (!product) throw new AppError("Product not found.");
+
+  const historyCount =
+    product._count.orderItems +
+    product._count.purchases +
+    product._count.movements +
+    product._count.receiptLines +
+    product._count.transferLines;
+
+  if (historyCount > 0) {
+    const updated = await prisma.product.update({
+      where: { id: product.id },
+      data: { active: false, sellOnPos: false },
+    });
+    await writeAudit({
+      userId: input.userId,
+      action: "PRODUCT_REMOVED",
+      entity: "Product",
+      entityId: product.id,
+      before: { name: product.name, active: product.active },
+      after: { name: updated.name, active: false, mode: "deactivated" },
+    });
+    return {
+      id: product.id,
+      mode: "deactivated" as const,
+      message:
+        "Product removed from menu, POS, and stock lists. History was kept because it was used in orders or stock movements.",
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.productStock.deleteMany({ where: { productId: product.id } });
+    await tx.productPack.deleteMany({ where: { productId: product.id } });
+    await tx.product.delete({ where: { id: product.id } });
+  });
+
+  await writeAudit({
+    userId: input.userId,
+    action: "PRODUCT_DELETED",
+    entity: "Product",
+    entityId: product.id,
+    before: { name: product.name },
+    after: { mode: "deleted" },
+  });
+
+  return {
+    id: product.id,
+    mode: "deleted" as const,
+    message: "Product deleted.",
+  };
 }
 
 export async function kitchenStoresStatus() {
