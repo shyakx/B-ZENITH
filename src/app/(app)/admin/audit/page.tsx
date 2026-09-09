@@ -1,20 +1,59 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { auditActionLabel, auditAffected } from "@/lib/admin-audit";
 import { formatDateTime } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import { listUsers } from "@/services/users";
 
-export default async function AuditPage() {
+export default async function AuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ userId?: string }>;
+}) {
   await requireRole("ADMIN");
-  const logs = await prisma.auditLog.findMany({
-    take: 200,
-    orderBy: { createdAt: "desc" },
-    include: { user: { select: { name: true, role: true } } },
-  });
+  const { userId } = await searchParams;
+  const [logs, staff] = await Promise.all([
+    prisma.auditLog.findMany({
+      take: 200,
+      where: userId ? { userId } : undefined,
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { id: true, name: true, role: true } } },
+    }),
+    listUsers(),
+  ]);
+  const selected = staff.find((user) => user.id === userId);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl">
       <h1 className="text-xl font-semibold text-zenith-gold">Audit</h1>
-      <p className="mt-2 text-sm">Who changed the system, and what they changed.</p>
+
+      <form className="mt-4 flex flex-wrap items-end gap-3">
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Staff</span>
+          <select
+            name="userId"
+            defaultValue={userId ?? ""}
+            className="min-w-[12rem] rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
+          >
+            <option value="">All staff</option>
+            {staff.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name} · {user.role}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="rounded-xl bg-zenith-gold px-4 py-2 font-semibold text-white">Filter</button>
+        {userId ? (
+          <Link href="/admin/audit" className="self-center text-sm font-semibold text-zenith-gold">
+            Clear filter
+          </Link>
+        ) : null}
+      </form>
+
+      {selected ? (
+        <p className="mt-3 text-sm text-zenith-muted">Showing activity for {selected.name}.</p>
+      ) : null}
 
       {logs.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-zenith-border bg-white px-4 py-6">No audit records yet.</p>

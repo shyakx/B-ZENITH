@@ -91,6 +91,46 @@ export function assertAllowedV1Transfer(fromCode: string, toCode: string): void 
   }
 }
 
+/**
+ * Whole-package transfer: base qty must be a positive multiple of the product pack size.
+ * Products without a pack cannot use whole-package transfer.
+ */
+export function assertWholePackageTransferQuantity(
+  baseQuantity: number,
+  options: {
+    wholePackageTransfer: boolean;
+    packBaseQuantity: number | null;
+    productName?: string;
+    packUnitName?: string;
+    stockUnitName?: string;
+  },
+): void {
+  if (!options.wholePackageTransfer) return;
+  assertPositiveQuantity(baseQuantity, "Transfer quantity");
+  const packSize = options.packBaseQuantity;
+  if (packSize == null || !Number.isInteger(packSize) || packSize <= 0) {
+    throw new Error(
+      `${options.productName ?? "This product"} is set to whole packages only. Set Package and Units per Package on the product first.`,
+    );
+  }
+  if (baseQuantity % packSize !== 0) {
+    const packLabel = options.packUnitName ?? "package";
+    const stockLabel = options.stockUnitName ?? "stock units";
+    throw new Error(
+      `Move whole ${packLabel}s only (1 ${packLabel} = ${packSize} ${stockLabel}). Partial amounts are not allowed for ${options.productName ?? "this product"}.`,
+    );
+  }
+}
+
+/** Primary purchase pack size for a product (first active pack). */
+export function primaryPackBaseQuantity(
+  packs: { baseQuantity: number; active?: boolean }[] | null | undefined,
+): number | null {
+  const active = (packs ?? []).filter((pack) => pack.active !== false);
+  if (active.length === 0) return null;
+  return active[0]!.baseQuantity;
+}
+
 export function saleStockMessage(productName: string, locationName: string, available: number): string {
   return `Not enough ${locationName} stock for ${productName}. Available: ${available}. Transfer stock from Main Stock first.`;
 }

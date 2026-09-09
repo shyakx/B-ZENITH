@@ -1,8 +1,10 @@
 import { BusinessArea, OrderStatus, PaymentStatus, ProductType } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
+import { hasPermission, type Role } from "@/lib/auth/roles";
 import { LOCATION_CODES } from "@/lib/domain/locations";
 import { KITCHEN_BASE_MATERIALS, KITCHEN_STORES_CATEGORY } from "@/lib/domain/kitchen-stores";
-import { AppError } from "@/lib/errors";
+import { findSimilarCatalogNames } from "@/lib/domain/name-similarity";
+import { AppError, SimilarNameError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { ensureTrackedProductStocks, sellOnPosForType, syncCompatibilityStock } from "@/services/stock";
 
@@ -106,6 +108,9 @@ export async function upsertProduct(input: {
   defaultStockLocationId?: string | null;
   purchaseUnitId?: string | null;
   purchaseContains?: number | null;
+  wholePackageTransfer?: boolean;
+  /** Manager confirmed create/rename despite a similar existing name. */
+  confirmSimilarName?: boolean;
   userId: string;
 }) {
   const name = input.name.trim();
@@ -124,6 +129,7 @@ export async function upsertProduct(input: {
   const baseUnitId = input.baseUnitId ?? (await defaultUnitId(productType));
   const defaultStockLocationId =
     input.defaultStockLocationId ?? (await defaultLocationId(productType, trackInventory));
+  const wholePackageTransfer = Boolean(input.wholePackageTransfer);
 
   if (trackInventory && defaultStockLocationId) {
     const location = await prisma.stockLocation.findUnique({ where: { id: defaultStockLocationId } });
@@ -132,9 +138,24 @@ export async function upsertProduct(input: {
     }
   }
 
+  if (wholePackageTransfer) {
+    if (!input.purchaseUnitId || !baseUnitId || input.purchaseUnitId === baseUnitId) {
+      throw new AppError(
+        "Whole package transfer needs a Package different from the Stock unit (for example CRATE of BOTTLES).",
+      );
+    }
+    if (!Number.isInteger(input.purchaseContains) || !input.purchaseContains || input.purchaseContains <= 1) {
+      throw new AppError("Units per package must be greater than 1 for whole-package transfer.");
+    }
+  }
+
   if (input.id) {
     const current = await prisma.product.findUnique({ where: { id: input.id } });
     if (!current) throw new AppError("Product not found.");
+
+    if (!input.confirmSimilarName && current.name.trim().toLowerCase() !== name.toLowerCase()) {
+      await assertNoSimilarProductName(name, input.id);
+    }
 
     const updated = await prisma.product.update({
       where: { id: input.id },
@@ -149,6 +170,7 @@ export async function upsertProduct(input: {
         sellOnPos,
         baseUnitId,
         defaultStockLocationId,
+        wholePackageTransfer,
       },
     });
 
@@ -172,6 +194,10 @@ export async function upsertProduct(input: {
     return updated;
   }
 
+  if (!input.confirmSimilarName) {
+    await assertNoSimilarProductName(name);
+  }
+
   const created = await prisma.product.create({
     data: {
       name,
@@ -184,6 +210,7 @@ export async function upsertProduct(input: {
       sellOnPos,
       baseUnitId,
       defaultStockLocationId,
+      wholePackageTransfer,
     },
   });
   if (trackInventory) {
@@ -191,6 +218,64 @@ export async function upsertProduct(input: {
   }
   await saveHowYouBuy(created.id, baseUnitId, input.purchaseUnitId, input.purchaseContains);
   return created;
+}
+
+async function assertNoSimilarProductName(name: string, excludeId?: string) {
+  const candidates = await prisma.product.findMany({
+    where: { active: true },
+    select: { id: true, name: true },
+  });
+  const similar = findSimilarCatalogNames(name, candidates, { excludeId, limit: 3 });
+  if (similar.length > 0) {
+    throw new SimilarNameError(
+      "Similar product already exists",
+      similar.map((row) => ({ id: row.id, name: row.name, kind: row.kind })),
+    );
+  }
+}
+
+export async function previewProductDelete(input: { id: string }) {
+  const product = await prisma.product.findUnique({
+    where: { id: input.id },
+    select: {
+      id: true,
+      name: true,
+      _count: {
+        select: {
+          orderItems: true,
+          purchases: true,
+          movements: true,
+          receiptLines: true,
+          transferLines: true,
+        },
+      },
+    },
+  });
+  if (!product) throw new AppError("Product not found.");
+
+  const historyCount =
+    product._count.orderItems +
+    product._count.purchases +
+    product._count.movements +
+    product._count.receiptLines +
+    product._count.transferLines;
+
+  if (historyCount > 0) {
+    return {
+      id: product.id,
+      name: product.name,
+      mode: "deactivated" as const,
+      message:
+        "This product has historical records and cannot be permanently deleted. It can be removed from active use instead.",
+    };
+  }
+
+  return {
+    id: product.id,
+    name: product.name,
+    mode: "deleted" as const,
+    message: "Delete this product? It has no order or stock history, so it can be removed completely.",
+  };
 }
 
 export async function deleteProduct(input: { id: string; userId: string }) {
@@ -237,7 +322,7 @@ export async function deleteProduct(input: { id: string; userId: string }) {
       id: product.id,
       mode: "deactivated" as const,
       message:
-        "Product removed from menu, POS, and stock lists. History was kept because it was used in orders or stock movements.",
+        "Removed from active use. Orders, payments, and stock history were kept unchanged.",
     };
   }
 
@@ -342,10 +427,21 @@ async function saveHowYouBuy(
   purchaseUnitId?: string | null,
   purchaseContains?: number | null,
 ) {
-  if (!purchaseUnitId || !baseUnitId || purchaseUnitId === baseUnitId) return;
-  if (!Number.isInteger(purchaseContains) || !purchaseContains || purchaseContains <= 0) {
-    throw new AppError("Say how many stock units are in one purchase unit.");
+  if (!purchaseUnitId || !baseUnitId || purchaseUnitId === baseUnitId) {
+    // Same as stock unit, or cleared: no package conversion. Does not touch ProductStock.
+    await prisma.productPack.updateMany({
+      where: { productId, active: true },
+      data: { active: false },
+    });
+    return;
   }
+  if (!Number.isInteger(purchaseContains) || !purchaseContains || purchaseContains <= 0) {
+    throw new AppError("Enter how many stock units are in one package.");
+  }
+  await prisma.productPack.updateMany({
+    where: { productId, active: true, NOT: { unitId: purchaseUnitId } },
+    data: { active: false },
+  });
   await prisma.productPack.upsert({
     where: { productId_unitId: { productId, unitId: purchaseUnitId } },
     update: { baseQuantity: purchaseContains, active: true },
@@ -358,25 +454,211 @@ async function saveHowYouBuy(
   });
 }
 
+/**
+ * Packaging rules only. Never changes ProductStock, movements, prices, or historical data.
+ */
+export async function listTrackedProductPackaging() {
+  return prisma.product.findMany({
+    where: { trackInventory: true, active: true },
+    select: {
+      id: true,
+      name: true,
+      wholePackageTransfer: true,
+      category: { select: { name: true, area: true } },
+      baseUnit: { select: { id: true, code: true, name: true } },
+      packs: {
+        where: { active: true },
+        select: {
+          unitId: true,
+          baseQuantity: true,
+          unit: { select: { id: true, code: true, name: true } },
+        },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+      },
+    },
+    orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+  });
+}
+
+export async function updateProductPackaging(input: {
+  productId: string;
+  packageUnitId: string | null;
+  unitsPerPackage: number | null;
+  wholePackageTransfer: boolean;
+  userId: string;
+}) {
+  await requirePermissionForPackaging(input.userId);
+
+  const product = await prisma.product.findUnique({
+    where: { id: input.productId },
+    select: {
+      id: true,
+      name: true,
+      trackInventory: true,
+      active: true,
+      baseUnitId: true,
+      baseUnit: { select: { id: true, code: true, name: true } },
+    },
+  });
+  if (!product || !product.active || !product.trackInventory) {
+    throw new AppError("Choose a tracked product.");
+  }
+  if (!product.baseUnitId) {
+    throw new AppError("This product has no stock unit yet. Set the stock unit on Products first.");
+  }
+
+  const packageUnitId = input.packageUnitId?.trim() || null;
+  const sameAsStock = !packageUnitId || packageUnitId === product.baseUnitId;
+  let wholePackageTransfer = Boolean(input.wholePackageTransfer);
+
+  if (sameAsStock) {
+    wholePackageTransfer = false;
+    await saveHowYouBuy(product.id, product.baseUnitId, product.baseUnitId, 1);
+  } else {
+    if (!Number.isInteger(input.unitsPerPackage) || !input.unitsPerPackage || input.unitsPerPackage <= 0) {
+      throw new AppError("Enter units per package (a whole number greater than 0).");
+    }
+    if (wholePackageTransfer && input.unitsPerPackage <= 1) {
+      throw new AppError("Whole package only needs more than 1 stock unit per package.");
+    }
+    const unit = await prisma.unit.findUnique({ where: { id: packageUnitId } });
+    if (!unit || !unit.active) throw new AppError("Choose a valid package type.");
+    await saveHowYouBuy(product.id, product.baseUnitId, packageUnitId, input.unitsPerPackage);
+  }
+
+  const updated = await prisma.product.update({
+    where: { id: product.id },
+    data: { wholePackageTransfer },
+    select: {
+      id: true,
+      name: true,
+      wholePackageTransfer: true,
+      packs: {
+        where: { active: true },
+        select: {
+          unitId: true,
+          baseQuantity: true,
+          unit: { select: { code: true, name: true } },
+        },
+      },
+    },
+  });
+
+  await writeAudit({
+    userId: input.userId,
+    action: "PRODUCT_PACKAGING_CHANGED",
+    entity: "Product",
+    entityId: product.id,
+    after: {
+      name: product.name,
+      packageUnitId: sameAsStock ? null : packageUnitId,
+      unitsPerPackage: sameAsStock ? null : input.unitsPerPackage,
+      wholePackageTransfer: updated.wholePackageTransfer,
+      note: "Packaging rule only — stock quantities unchanged",
+    },
+  });
+
+  return updated;
+}
+
+async function requirePermissionForPackaging(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, active: true },
+  });
+  if (!user || !user.active) throw new AppError("Not allowed.");
+  const role = user.role as Role;
+  if (!hasPermission(role, "manageProducts") && !hasPermission(role, "manageInventory")) {
+    throw new AppError("You are not allowed to change packaging.", "FORBIDDEN");
+  }
+}
+
 export async function upsertCategory(input: {
   id?: string;
   name: string;
   area: BusinessArea;
+  /** Manager confirmed create/rename despite a similar existing name. */
+  confirmSimilarName?: boolean;
 }) {
   const name = input.name.trim();
   if (name.length < 2) throw new AppError("Category name is required.");
 
   if (input.id) {
+    const current = await prisma.category.findUnique({ where: { id: input.id } });
+    if (!current) throw new AppError("Category not found.");
+
+    if (!input.confirmSimilarName && current.name.trim().toLowerCase() !== name.toLowerCase()) {
+      await assertNoSimilarCategoryName(name, input.id);
+    }
+
     return prisma.category.update({
       where: { id: input.id },
       data: { name, area: input.area },
     });
   }
 
+  if (!input.confirmSimilarName) {
+    await assertNoSimilarCategoryName(name);
+  }
+
   const last = await prisma.category.findFirst({ orderBy: { sortOrder: "desc" } });
-  return prisma.category.create({
-    data: { name, area: input.area, sortOrder: (last?.sortOrder ?? 0) + 1 },
+  try {
+    return await prisma.category.create({
+      data: { name, area: input.area, sortOrder: (last?.sortOrder ?? 0) + 1 },
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      throw new AppError("A category with this name already exists.");
+    }
+    throw error;
+  }
+}
+
+async function assertNoSimilarCategoryName(name: string, excludeId?: string) {
+  const candidates = await prisma.category.findMany({ select: { id: true, name: true } });
+  const similar = findSimilarCatalogNames(name, candidates, { excludeId, limit: 3 });
+  if (similar.length > 0) {
+    throw new SimilarNameError(
+      "Similar category already exists",
+      similar.map((row) => ({ id: row.id, name: row.name, kind: row.kind })),
+    );
+  }
+}
+
+export async function deleteCategory(input: { id: string; userId: string }) {
+  const category = await prisma.category.findUnique({
+    where: { id: input.id },
+    select: {
+      id: true,
+      name: true,
+      _count: { select: { products: true } },
+    },
   });
+  if (!category) throw new AppError("Category not found.");
+
+  if (category.name === KITCHEN_STORES_CATEGORY) {
+    throw new AppError("Kitchen Stores is required for stock items and cannot be deleted.");
+  }
+
+  if (category._count.products > 0) {
+    throw new AppError("This category contains products and cannot be deleted yet.");
+  }
+
+  await prisma.category.delete({ where: { id: category.id } });
+  await writeAudit({
+    userId: input.userId,
+    action: "CATEGORY_DELETED",
+    entity: "Category",
+    entityId: category.id,
+    before: { name: category.name },
+    after: { mode: "deleted" },
+  });
+
+  return {
+    id: category.id,
+    message: "Category deleted.",
+  };
 }
 
 export async function listTables(activeOnly = false) {

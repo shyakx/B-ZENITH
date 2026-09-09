@@ -11,10 +11,6 @@ export default async function ManagerTablesPage() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl">
       <h1 className="font-display text-2xl text-zenith-gold">Tables</h1>
-      <p className="mt-1 text-sm text-zenith-muted">
-        Create and manage service tables. Waiters can select active tables when taking orders. Inactive
-        tables stay in the list but cannot be chosen for new orders.
-      </p>
 
       <div className="mt-5 grid min-w-0 gap-4">
         <Card>
@@ -22,10 +18,7 @@ export default async function ManagerTablesPage() {
           <TableForm />
         </Card>
         <Card>
-          <h2 className="mb-1 font-semibold">Existing tables</h2>
-          <p className="mb-3 text-sm text-zenith-muted">
-            In use means the table currently has an unpaid or partially paid bill.
-          </p>
+          <h2 className="mb-3 font-semibold">Existing tables</h2>
           {tables.length === 0 ? (
             <p className="text-sm font-semibold">No tables yet. Add the first table above.</p>
           ) : (

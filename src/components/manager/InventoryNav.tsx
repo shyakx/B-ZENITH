@@ -26,16 +26,6 @@ export function InventoryNav() {
           </Link>
         );
       })}
-      <Link
-        href="/manager/purchases"
-        className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${
-          pathname.startsWith("/manager/purchases")
-            ? "bg-zenith-gold text-white"
-            : "border border-zenith-border bg-white text-zenith-ink"
-        }`}
-      >
-        Receive Stock
-      </Link>
     </nav>
   );
 }

@@ -12,9 +12,6 @@ export default async function FacturesPage() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Factures</h1>
-      <p className="mt-1 text-zenith-muted">
-        Print any unpaid, partial, pay-later, or paid bill. Printing does not record a payment.
-      </p>
 
       <div className="mt-6 space-y-3">
         {orders.length === 0 ? (

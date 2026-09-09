@@ -2,20 +2,19 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { LOCATION_CODES } from "@/lib/domain/locations";
 import { formatRwf } from "@/lib/domain/money";
-import { CategoryForm, CategoryRow, ProductEditor, ProductForm } from "@/components/manager/ProductForm";
+import { CategoryCatalog } from "@/components/manager/CategoryCatalog";
 import { ProductCatalog } from "@/components/manager/ProductCatalog";
-import { Card } from "@/components/ui/Card";
+import { ProductForm } from "@/components/manager/ProductForm";
 import { listLocations, listUnits } from "@/services/inventory";
-import { kitchenStoresStatus, listAllProducts, listCategories } from "@/services/products";
+import { listAllProducts, listCategories } from "@/services/products";
 
 export default async function ProductsPage() {
   await requireRole("MANAGER");
-  const [products, categories, locations, units, kitchen] = await Promise.all([
+  const [products, categories, locations, units] = await Promise.all([
     listAllProducts(),
     listCategories(),
     listLocations(),
     listUnits(),
-    kitchenStoresStatus(),
   ]);
 
   const items = products.map((product) => {
@@ -31,6 +30,7 @@ export default async function ProductsPage() {
       sellOnPos: product.sellOnPos,
       active: product.active,
       trackInventory: product.trackInventory,
+      stockUnit: product.baseUnit?.name ?? product.baseUnit?.code ?? "",
       stockLine: product.trackInventory
         ? `Main: ${byCode[LOCATION_CODES.MAIN] ?? 0} · Bar: ${byCode[LOCATION_CODES.BAR] ?? 0} · Kitchen: ${byCode[LOCATION_CODES.KITCHEN] ?? 0} · Cafe: ${byCode[LOCATION_CODES.CAFE] ?? 0}`
         : "Not tracked",
@@ -48,61 +48,38 @@ export default async function ProductsPage() {
         defaultStockLocationId: product.defaultStockLocationId,
         purchaseUnitId: purchase?.unitId ?? product.baseUnitId,
         purchaseContains: purchase?.baseQuantity ?? 1,
+        wholePackageTransfer: product.wholePackageTransfer,
       },
     };
   });
 
+  const categoryRows = categories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    area: category.area,
+    productCount: category._count.products,
+  }));
+
   return (
-    <div className="mx-auto w-full min-w-0 max-w-5xl">
+    <div className="mx-auto w-full min-w-0 max-w-6xl">
       <h1 className="font-display text-2xl text-zenith-gold">Products</h1>
-      <p className="mt-1 text-sm text-zenith-muted">
-        Menu products appear on POS. Stock items are tracked for business use but are not sold on POS.
-        Stock items include ingredients, cleaning supplies, packaging, and other items the business needs to track.
+      <p className="mt-2 text-sm">
+        <Link href="/manager/tables" className="font-semibold text-zenith-gold">
+          Manage tables →
+        </Link>
       </p>
 
-      <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-3 font-semibold">Add product</h2>
+      <section className="mt-6 min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+        <h2 className="font-semibold text-zenith-ink">Add Product</h2>
+        <div className="mt-3">
           <ProductForm categories={categories} locations={locations} units={units} />
-        </Card>
-        <div className="min-w-0 space-y-4">
-          <Card>
-            <h2 className="mb-3 font-semibold">Categories</h2>
-            <p className="mb-3 text-sm">
-              Bar, Cafe and Kitchen here are menu groups, not stock rooms.
-            </p>
-            <CategoryForm />
-            <ul className="mt-3 min-w-0 space-y-3">
-              {categories.map((category) => (
-                <li key={category.id} className="min-w-0">
-                  <div className="text-sm font-semibold">
-                    {category.name}
-                    <span className="font-normal text-zenith-muted">
-                      {" "}
-                      · {category.area} menu · {category._count.products} products
-                    </span>
-                  </div>
-                  <CategoryRow category={category} />
-                </li>
-              ))}
-            </ul>
-          </Card>
-          <Card>
-            <h2 className="mb-2 font-semibold">Tables</h2>
-            <Link href="/manager/tables" className="text-sm font-semibold text-zenith-gold">
-              Open table management →
-            </Link>
-          </Card>
         </div>
-      </div>
+      </section>
 
-      <ProductCatalog
-        items={items}
-        categories={categories}
-        locations={locations}
-        units={units}
-        kitchenMissing={kitchen.missing.length}
-      />
+      <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
+        <CategoryCatalog categories={categoryRows} />
+        <ProductCatalog items={items} categories={categories} locations={locations} units={units} />
+      </div>
     </div>
   );
 }

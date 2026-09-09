@@ -11,17 +11,21 @@ export function matchesSearch(query: string, ...parts: Array<string | null | und
 export function ListSearchField({
   value,
   onChange,
-  placeholder = "Search products…",
+  placeholder = "Search…",
   label = "Search",
+  showLabel = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   label?: string;
+  showLabel?: boolean;
 }) {
   return (
     <label className="mb-3 block">
-      <span className="sr-only">{label}</span>
+      <span className={showLabel ? "mb-1.5 block text-sm font-semibold text-zenith-ink" : "sr-only"}>
+        {label}
+      </span>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}

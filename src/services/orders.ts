@@ -60,11 +60,22 @@ const orderListFilter = (filter: {
   paymentStatus: filter.unpaidOnly
     ? { in: [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID, PaymentStatus.PAY_LATER] }
     : undefined,
-  createdAt: {
-    gte: filter.from,
-    lte: filter.to,
-  },
+  ...(filter.from != null || filter.to != null
+    ? {
+        createdAt: {
+          gte: filter.from,
+          lte: filter.to,
+        },
+      }
+    : {}),
 });
+
+/** Exported for unit tests — same where-clause used by listOrders. */
+export function buildOrderListWhere(
+  filter: Parameters<typeof orderListFilter>[0],
+): Prisma.OrderWhereInput {
+  return orderListFilter(filter);
+}
 
 type OrderItemInput = {
   productId: string;

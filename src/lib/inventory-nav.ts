@@ -1,11 +1,8 @@
 export const INVENTORY_NAV = [
-  { href: "/manager/inventory", label: "Overview" },
-  { href: "/manager/inventory/locations", label: "Stock by Location" },
-  { href: "/manager/inventory/product-names", label: "Product Names & Units" },
-  { href: "/manager/inventory/movements", label: "Stock Movements" },
-  { href: "/manager/inventory/transfer", label: "Move Stock" },
-  { href: "/manager/inventory/count", label: "Stock Count" },
-  { href: "/manager/inventory/adjust", label: "Waste / Adjustment" },
+  { href: "/manager/inventory", label: "Stock" },
+  { href: "/manager/inventory/packaging", label: "Packaging" },
+  { href: "/manager/inventory/movements", label: "Stock History" },
+  { href: "/manager/inventory/history", label: "Purchases" },
   { href: "/manager/inventory/suppliers", label: "Suppliers" },
-  { href: "/manager/inventory/history", label: "Purchase History" },
+  { href: "/manager/products", label: "Products" },
 ] as const;

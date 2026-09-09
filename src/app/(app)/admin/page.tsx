@@ -24,12 +24,9 @@ export default async function AdminHomePage() {
       <div className="mt-2">
         <VisibleDate />
       </div>
-      <p className="mt-3 text-sm">
-        Admin has all access: every business page, payment, stock move, report, and staff action.
-      </p>
       <div className="mt-4">
         <Link href="/admin/data">
-          <Button variant="secondary">Data control — delete test sales</Button>
+          <Button variant="secondary">Data control</Button>
         </Link>
       </div>
 

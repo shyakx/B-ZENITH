@@ -4,7 +4,7 @@ import { BusinessArea, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/current-user";
 import { fail, ok, type ActionResult } from "@/lib/errors";
-import { upsertCategory, upsertProduct, upsertTable, ensureKitchenStoreCatalog, deleteProduct } from "@/services/products";
+import { upsertCategory, upsertProduct, upsertTable, ensureKitchenStoreCatalog, deleteProduct, deleteCategory, previewProductDelete, updateProductPackaging } from "@/services/products";
 
 export async function saveProductAction(input: {
   id?: string;
@@ -20,15 +20,49 @@ export async function saveProductAction(input: {
   defaultStockLocationId?: string | null;
   purchaseUnitId?: string | null;
   purchaseContains?: number | null;
+  wholePackageTransfer?: boolean;
+  confirmSimilarName?: boolean;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requirePermission("manageProducts");
     const product = await upsertProduct({ ...input, userId: user.id });
     revalidatePath("/manager/products");
     revalidatePath("/manager/inventory");
+    revalidatePath("/manager/inventory/packaging");
     revalidatePath("/manager/inventory/product-names");
     revalidatePath("/waiter/orders/new");
     return ok({ id: product.id });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function saveProductPackagingAction(input: {
+  productId: string;
+  packageUnitId: string | null;
+  unitsPerPackage: number | null;
+  wholePackageTransfer: boolean;
+}): Promise<ActionResult<{ id: string }>> {
+  try {
+    const user = await requirePermission("manageInventory");
+    const product = await updateProductPackaging({ ...input, userId: user.id });
+    revalidatePath("/manager/inventory/packaging");
+    revalidatePath("/manager/inventory");
+    revalidatePath("/manager/inventory/move");
+    revalidatePath("/manager/products");
+    return ok({ id: product.id });
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function previewDeleteProductAction(input: {
+  id: string;
+}): Promise<ActionResult<{ id: string; name: string; mode: "deleted" | "deactivated"; message: string }>> {
+  try {
+    await requirePermission("manageProducts");
+    const result = await previewProductDelete(input);
+    return ok(result);
   } catch (error) {
     return fail(error);
   }
@@ -53,10 +87,24 @@ export async function deleteProductAction(input: {
   }
 }
 
+export async function deleteCategoryAction(input: {
+  id: string;
+}): Promise<ActionResult<{ id: string; message: string }>> {
+  try {
+    const user = await requirePermission("manageProducts");
+    const result = await deleteCategory({ id: input.id, userId: user.id });
+    revalidatePath("/manager/products");
+    return ok(result);
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 export async function saveCategoryAction(input: {
   id?: string;
   name: string;
   area: BusinessArea;
+  confirmSimilarName?: boolean;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     await requirePermission("manageProducts");

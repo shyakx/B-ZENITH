@@ -6,12 +6,14 @@ import {
   assertAllowedV1Transfer,
   assertPositiveQuantity,
   assertReceiptDestination,
+  assertWholePackageTransferQuantity,
   convertPackToBase,
   nextStockAfterAdjustment,
   nextStockAfterCount,
   nextStockAfterIncrease,
   nextStockAfterTransferOut,
   nextStockAfterWaste,
+  primaryPackBaseQuantity,
 } from "@/lib/domain/stock";
 import {
   accumulateMovementReport,
@@ -323,6 +325,19 @@ export async function transferStock(input: {
         await ensureTrackedProductStocks(tx, product.id);
         try {
           assertPositiveQuantity(line.baseQuantity, "Transfer quantity");
+          const packs = await tx.productPack.findMany({
+            where: { productId: product.id, active: true },
+            include: { unit: true },
+            orderBy: { createdAt: "asc" },
+          });
+          const primary = packs[0];
+          assertWholePackageTransferQuantity(line.baseQuantity, {
+            wholePackageTransfer: product.wholePackageTransfer,
+            packBaseQuantity: primaryPackBaseQuantity(packs),
+            productName: product.name,
+            packUnitName: primary?.unit.name,
+            stockUnitName: product.baseUnit?.name,
+          });
         } catch (error) {
           rethrowDomain(error);
         }
@@ -635,7 +650,7 @@ export async function upsertProductPack(input: {
   });
 }
 
-export async function listStock(lowOnly = false) {
+export const listStock = cache(async (lowOnly = false) => {
   const rows = await prisma.product.findMany({
     where: { trackInventory: true, active: true },
     select: {
@@ -645,8 +660,10 @@ export async function listStock(lowOnly = false) {
       stockQuantity: true,
       costPrice: true,
       managerReferenceName: true,
+      wholePackageTransfer: true,
       category: { select: { id: true, name: true } },
       baseUnit: { select: { id: true, code: true, name: true } },
+      defaultStockLocation: { select: { id: true, code: true, name: true } },
       packs: {
         where: { active: true },
         select: {
@@ -679,18 +696,30 @@ export async function listStock(lowOnly = false) {
         kitchen,
         cafe,
         total,
+        defaultLocationCode: product.defaultStockLocation?.code ?? null,
         costPrice: product.costPrice == null ? null : Number(product.costPrice.toString()),
         valuation: Number(costTimesQuantity(product.costPrice, total).toString()),
       };
     })
     .filter((product) => (lowOnly ? product.total <= 5 : true));
-}
+});
 
-export async function listMovements(take = 80, filter?: { type?: MovementType; locationId?: string }) {
+export async function listMovements(
+  take = 80,
+  filter?: { type?: MovementType; locationId?: string; from?: Date; to?: Date },
+) {
   return prisma.inventoryMovement.findMany({
     where: {
       type: filter?.type,
       locationId: filter?.locationId,
+      ...(filter?.from || filter?.to
+        ? {
+            createdAt: {
+              ...(filter.from ? { gte: filter.from } : {}),
+              ...(filter.to ? { lte: filter.to } : {}),
+            },
+          }
+        : {}),
     },
     include: {
       product: { select: { id: true, name: true, baseUnit: { select: { code: true } } } },
@@ -747,8 +776,15 @@ export async function listInventoryMaterials() {
   });
 }
 
-export async function inventoryValuation() {
-  const stock = await listStock();
+export function valuationFromStock(
+  stock: Array<{
+    costPrice: number | null;
+    main: number;
+    bar: number;
+    kitchen: number;
+    cafe: number;
+  }>,
+) {
   const byLocation = {
     MAIN: stock.reduce((sum, row) => sum + Number(costTimesQuantity(row.costPrice, row.main).toString()), 0),
     BAR: stock.reduce((sum, row) => sum + Number(costTimesQuantity(row.costPrice, row.bar).toString()), 0),
@@ -760,6 +796,10 @@ export async function inventoryValuation() {
     total: byLocation.MAIN + byLocation.BAR + byLocation.KITCHEN + byLocation.CAFE,
     method: "last-cost" as const,
   };
+}
+
+export async function inventoryValuation() {
+  return valuationFromStock(await listStock());
 }
 
 /**

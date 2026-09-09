@@ -20,7 +20,6 @@ export default async function PaymentsPage() {
       <div className="mt-2">
         <VisibleDate />
       </div>
-      <p className="mt-2 text-zenith-muted">Cash recorded on this Rwanda calendar date.</p>
       <p className="mt-4 font-display text-2xl text-zenith-gold">{formatRwf(cashToday)}</p>
 
       <div className="mt-6 space-y-3">

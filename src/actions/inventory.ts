@@ -15,9 +15,9 @@ import { updateManagerProductReference } from "@/services/products";
 import { setSupplierActive, upsertSupplier } from "@/services/suppliers";
 
 function refresh() {
+  // Combined Stock page is the live surface; avoid revalidating redirect-only paths.
   revalidatePath("/manager/inventory");
-  revalidatePath("/manager/purchases");
-  revalidatePath("/manager");
+  revalidatePath("/manager/inventory/movements");
 }
 
 export async function receivePurchaseAction(input: {

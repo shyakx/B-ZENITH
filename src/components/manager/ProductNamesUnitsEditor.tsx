@@ -62,19 +62,24 @@ function ProductReferenceRow({ product }: { product: Row }) {
     note.trim() !== (product.managerReferenceNote ?? "");
 
   async function save() {
+    const label = name.trim() || product.name;
+    if (!window.confirm(`Save manager reference for “${label}”?`)) return;
     setBusy(true);
     setMessage(null);
-    const result = await saveManagerProductReferenceAction({
-      productId: product.id,
-      managerReferenceName: name.trim() || null,
-      managerReferenceNote: note.trim() || null,
-    });
-    setBusy(false);
-    if (!result.ok) {
-      setMessage(result.error);
-      return;
+    try {
+      const result = await saveManagerProductReferenceAction({
+        productId: product.id,
+        managerReferenceName: name.trim() || null,
+        managerReferenceNote: note.trim() || null,
+      });
+      if (!result.ok) {
+        setMessage(result.error);
+        return;
+      }
+      setMessage("Saved");
+    } finally {
+      setBusy(false);
     }
-    setMessage("Saved");
   }
 
   return (

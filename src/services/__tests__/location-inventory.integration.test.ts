@@ -372,6 +372,51 @@ describe("phase 2 location inventory", () => {
     expect(await stockAt(other.id, "MAIN")).toBe(0);
   });
 
+  it("rejects partial bottle transfers when whole-package transfer is enabled", async () => {
+    const { manager } = await staff();
+    const product = await createTrackedDrink("WholeCrateBeer");
+    const crate = await prisma.unit.findUnique({ where: { code: "CRATE" } });
+    const bar = await prisma.stockLocation.findUnique({ where: { code: "BAR" } });
+    if (!crate || !bar) throw new Error("CRATE or BAR missing.");
+    await upsertProductPack({
+      productId: product.id,
+      unitId: crate.id,
+      baseQuantity: 24,
+      userId: manager.id,
+    });
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { wholePackageTransfer: true },
+    });
+    const supplier = await createSupplier(manager.id);
+    await receiveStock({
+      supplierId: supplier.id,
+      userId: manager.id,
+      idempotencyKey: `whole-recv-${product.id}`,
+      lines: [{ productId: product.id, packUnitId: crate.id, packQuantity: 2 }],
+    });
+    expect(await stockAt(product.id, "MAIN")).toBe(48);
+
+    await expect(
+      transferStock({
+        toLocationId: bar.id,
+        userId: manager.id,
+        idempotencyKey: `whole-partial-${product.id}`,
+        lines: [{ productId: product.id, baseQuantity: 1 }],
+      }),
+    ).rejects.toThrow(/whole/i);
+    expect(await stockAt(product.id, "MAIN")).toBe(48);
+
+    await transferStock({
+      toLocationId: bar.id,
+      userId: manager.id,
+      idempotencyKey: `whole-ok-${product.id}`,
+      lines: [{ productId: product.id, baseQuantity: 24 }],
+    });
+    expect(await stockAt(product.id, "MAIN")).toBe(24);
+    expect(await stockAt(product.id, "BAR")).toBe(24);
+  });
+
   it("replays receipt and transfer idempotency keys (tests 20-21)", async () => {
     const { manager } = await staff();
     const product = await createTrackedDrink("Idem");

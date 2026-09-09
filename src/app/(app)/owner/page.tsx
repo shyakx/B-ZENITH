@@ -3,7 +3,6 @@ import { staffControlCounts } from "@/lib/admin-control";
 import { formatRwf } from "@/lib/domain/money";
 import { endOfDay, startOfDay } from "@/lib/dates";
 import { VisibleDate } from "@/components/ui/VisibleDate";
-import { listStock } from "@/services/inventory";
 import { todayLiveOrderTotals } from "@/services/orders";
 import { listUsers } from "@/services/users";
 
@@ -20,11 +19,7 @@ export default async function OwnerHomePage() {
   await requireRole("OWNER");
   const from = startOfDay();
   const to = endOfDay();
-  const [liveTotals, lowStock, staff] = await Promise.all([
-    todayLiveOrderTotals(from, to),
-    listStock(true),
-    listUsers(),
-  ]);
+  const [liveTotals, staff] = await Promise.all([todayLiveOrderTotals(from, to), listUsers()]);
   const counts = staffControlCounts(staff);
 
   return (
@@ -33,21 +28,14 @@ export default async function OwnerHomePage() {
       <div className="mt-1">
         <VisibleDate />
       </div>
-      <p className="mt-3 text-sm">
-        Owner view of the whole business. Daily till work can still be done by a cashier.
-      </p>
 
       <section className="mt-6">
         <h2 className="text-base font-semibold">Today</h2>
-        <p className="mt-1 text-xs text-zenith-muted">
-          Collected and unpaid amounts are for today&apos;s sales, not all cash received today.
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-5">
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <CountCard label="Orders today" value={liveTotals.ordersToday} />
           <CountCard label="Sales today" value={formatRwf(liveTotals.salesToday)} />
-          <CountCard label="Collected on today's sales" value={formatRwf(liveTotals.paidToday)} />
-          <CountCard label="Unpaid on today's sales" value={formatRwf(liveTotals.outstanding)} />
-          <CountCard label="Low stock" value={lowStock.length} />
+          <CountCard label="Collected today" value={formatRwf(liveTotals.paidToday)} />
+          <CountCard label="Still unpaid" value={formatRwf(liveTotals.outstanding)} />
         </div>
       </section>
 

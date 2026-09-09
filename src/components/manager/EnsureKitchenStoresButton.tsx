@@ -13,6 +13,13 @@ export function EnsureKitchenStoresButton({ missing }: { missing: number }) {
   if (missing <= 0) return null;
 
   async function addStores() {
+    if (
+      !window.confirm(
+        `Add ${missing} kitchen store item${missing === 1 ? "" : "s"} to inventory? Existing stock will not change.`,
+      )
+    ) {
+      return;
+    }
     setBusy(true);
     setError("");
     try {

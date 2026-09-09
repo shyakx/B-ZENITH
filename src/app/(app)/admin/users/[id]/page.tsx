@@ -3,11 +3,10 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/current-user";
 import { staffActionFlags } from "@/lib/auth/staff-policy";
 import { roleLabel } from "@/lib/auth/roles";
-import { auditActionLabel, auditAffected } from "@/lib/admin-audit";
-import { formatDate, formatDateTime } from "@/lib/dates";
+import { formatDate } from "@/lib/dates";
 import { StaffActions } from "@/components/admin/UserForms";
 import { Badge } from "@/components/ui/Badge";
-import { countActiveOwners, getUserById, listUserAudit } from "@/services/users";
+import { countActiveOwners, getUserById } from "@/services/users";
 
 export default async function StaffDetailPage({
   params,
@@ -19,7 +18,7 @@ export default async function StaffDetailPage({
   const user = await getUserById(id);
   if (!user) notFound();
 
-  const [logs, ownerCount] = await Promise.all([listUserAudit(user.id), countActiveOwners()]);
+  const ownerCount = await countActiveOwners();
   const flags = staffActionFlags(actor, user, ownerCount);
 
   return (
@@ -49,26 +48,11 @@ export default async function StaffDetailPage({
         <StaffActions user={user} {...flags} />
       </div>
 
-      <section className="mt-8">
-        <h2 className="text-base font-semibold">Recent activity</h2>
-        {logs.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-zenith-border bg-white px-4 py-6">
-            No staff activity recorded yet.
-          </p>
-        ) : (
-          <div className="mt-3 grid gap-3">
-            {logs.map((log) => (
-              <div key={log.id} className="rounded-2xl border border-zenith-border bg-white p-4">
-                <div className="font-semibold">{auditActionLabel(log.action)}</div>
-                <div className="mt-1 text-sm">{auditAffected(log)}</div>
-                <div className="mt-1 text-sm">
-                  {log.user.name} · {formatDateTime(log.createdAt)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <p className="mt-6 text-sm">
+        <Link href={`/admin/audit?userId=${encodeURIComponent(user.id)}`} className="font-semibold text-zenith-gold">
+          View this staff member&apos;s audit log →
+        </Link>
+      </p>
     </div>
   );
 }

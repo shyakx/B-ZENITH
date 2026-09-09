@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatDateTime } from "@/lib/dates";
 import { costTimesQuantity, formatRwf } from "@/lib/domain/money";
@@ -11,7 +12,15 @@ export default async function PurchaseHistoryPage() {
 
   return (
     <div>
-      <PageHeader title="Purchase History" subtitle="Receipts are always into Main Stock." />
+      <PageHeader
+        title="Purchase receipts"
+        subtitle="Supplier deliveries into Main stock. Newest first."
+      />
+      <p className="mb-4 text-sm">
+        <Link href="/manager/inventory/movements" className="font-semibold text-zenith-gold">
+          All stock changes →
+        </Link>
+      </p>
       <Card>
         <div className="space-y-3 text-sm">
           {receipts.map((receipt) => (

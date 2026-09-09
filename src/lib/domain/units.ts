@@ -57,11 +57,31 @@ export function canReceiveProduct(product?: ProductUnitOption) {
 
 export function preferredStockInUnitId(product?: ProductUnitOption) {
   const units = stockInUnitsForProduct(product);
-  return units.find((unit) => unit.code === "CRATE")?.id ?? units[0]?.id ?? "";
+  // Prefer a configured package when one exists — never invent pack sizes.
+  return units.find((unit) => unit.isPack)?.id ?? units[0]?.id ?? "";
 }
 
 export function preferredTransferUnitId(product?: ProductUnitOption) {
   return product?.baseUnit?.id ?? transferUnitsForProduct(product)[0]?.id ?? "";
+}
+
+/** Units offered when transferring: whole-package products only get pack units. */
+export function transferUnitChoicesForProduct(
+  product?: ProductUnitOption & { wholePackageTransfer?: boolean },
+) {
+  const units = transferUnitsForProduct(product).filter((unit) => !isPourUnit(unit.code));
+  if (product?.wholePackageTransfer) {
+    const packsOnly = units.filter((unit) => unit.isPack);
+    return packsOnly.length > 0 ? packsOnly : units;
+  }
+  return units;
+}
+
+export function preferredWholePackageTransferUnitId(
+  product?: ProductUnitOption & { wholePackageTransfer?: boolean },
+) {
+  const choices = transferUnitChoicesForProduct(product);
+  return choices.find((unit) => unit.isPack)?.id ?? choices[0]?.id ?? "";
 }
 
 export function assertStockInReceiveUnit(codeOrName: string) {

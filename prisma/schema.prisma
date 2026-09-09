@@ -155,6 +155,8 @@ model Product {
   managerReferenceName   String?
   /// Optional manager note (e.g. pack size reminder). Never used in stock math.
   managerReferenceNote   String?
+  /// When true, transfers must use whole purchase packages (e.g. full crates), not loose bottles.
+  wholePackageTransfer   Boolean     @default(false)
   active                 Boolean     @default(true)
   sortOrder              Int         @default(0)
   createdAt              DateTime    @default(now())

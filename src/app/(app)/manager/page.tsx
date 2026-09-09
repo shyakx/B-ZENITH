@@ -4,28 +4,15 @@ import { formatDateTime, startOfDay, endOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
 import { VisibleDate } from "@/components/ui/VisibleDate";
-import { listStock, listMovements } from "@/services/inventory";
 import { listOrders, todayLiveOrderTotals } from "@/services/orders";
-import { listRecentPayments } from "@/services/payments";
 
 export default async function ManagerDashboardPage() {
   await requireRole("MANAGER");
   const from = startOfDay();
   const to = endOfDay();
-  const [
-    liveTotals,
-    openOrders,
-    lowStock,
-    recentOrders,
-    recentPayments,
-    movements,
-  ] = await Promise.all([
+  const [liveTotals, todayOrders] = await Promise.all([
     todayLiveOrderTotals(from, to),
-    listOrders({ openOnly: true, take: 20 }),
-    listStock(true),
-    listOrders({ take: 5 }),
-    listRecentPayments(5),
-    listMovements(5),
+    listOrders({ from, to, take: 20 }),
   ]);
 
   return (
@@ -35,7 +22,7 @@ export default async function ManagerDashboardPage() {
         <VisibleDate />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-5">
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-2xl font-semibold text-zenith-gold">{liveTotals.ordersToday}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
@@ -51,38 +38,31 @@ export default async function ManagerDashboardPage() {
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(liveTotals.paidToday)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Collected on today's sales
-          </div>
-          <div className="mt-1 text-xs font-medium normal-case tracking-normal text-zenith-muted">
-            Money collected against today&apos;s sales
+            Collected today
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-xl font-semibold text-zenith-gold sm:text-2xl">{formatRwf(liveTotals.outstanding)}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Unpaid on today's sales
-          </div>
-          <div className="mt-1 text-xs font-medium normal-case tracking-normal text-zenith-muted">
-            Amount still unpaid from today&apos;s sales
-          </div>
-        </div>
-        <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-2xl font-semibold text-zenith-gold">{lowStock.length}</div>
-          <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Low stock
+            Still unpaid
           </div>
         </div>
       </div>
 
       <section className="mt-6 min-w-0">
-        <h2 className="font-display text-xl">Open orders</h2>
-        {openOrders.length === 0 ? (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-display text-xl">Today&apos;s orders</h2>
+          <Link href="/manager/orders" className="text-sm font-semibold text-zenith-gold">
+            Today&apos;s orders →
+          </Link>
+        </div>
+        {todayOrders.length === 0 ? (
           <p className="mt-3 rounded-xl border border-zenith-border bg-white px-4 py-5 font-semibold">
-            No open orders.
+            No orders yet today.
           </p>
         ) : (
           <div className="mt-3 grid gap-2">
-            {openOrders.map((order) => (
+            {todayOrders.map((order) => (
               <Link
                 key={order.id}
                 href={`/manager/orders/${order.id}`}
@@ -123,78 +103,14 @@ export default async function ManagerDashboardPage() {
         )}
       </section>
 
-      <section className="mt-6 grid min-w-0 gap-5 lg:grid-cols-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-xl">Recent orders</h2>
-          <div className="mt-3 space-y-2">
-            {recentOrders.map((order) => (
-              <Link
-                key={order.id}
-                href={`/manager/orders/${order.id}`}
-                className="block rounded-xl border border-zenith-border bg-white p-3"
-              >
-                <div className="font-semibold">
-                  #{order.orderNumber} · {order.waiter.name}
-                </div>
-                <div className="text-sm">
-                  Table {order.table.name} · {formatDateTime(order.createdAt)}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-        <div className="min-w-0">
-          <h2 className="font-display text-xl">Recent payments</h2>
-          <p className="mt-1 text-sm text-zenith-muted">Payments recorded most recently</p>
-          <div className="mt-3 space-y-2">
-            {recentPayments.length === 0 ? <p className="text-sm">No payments yet.</p> : null}
-            {recentPayments.map((payment) => (
-              <div key={payment.id} className="rounded-xl border border-zenith-border bg-white p-3">
-                <div className="font-semibold">
-                  {formatRwf(payment.amount)} · #{payment.order.orderNumber}
-                </div>
-                <div className="text-sm">{formatDateTime(payment.createdAt)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="min-w-0">
-          <h2 className="font-display text-xl">Recent stock</h2>
-          <div className="mt-3 space-y-2">
-            {movements.length === 0 ? <p className="text-sm">No stock movements yet.</p> : null}
-            {movements.map((move) => (
-              <div key={move.id} className="rounded-xl border border-zenith-border bg-white p-3">
-                <div className="font-semibold">
-                  {move.product.name} · {move.type}
-                </div>
-                <div className="text-sm">
-                  {move.quantity > 0 ? "+" : ""}
-                  {move.quantity} · {formatDateTime(move.createdAt)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {lowStock.length > 0 ? (
-        <section className="mt-6 min-w-0">
-          <h2 className="font-display text-xl">Low stock</h2>
-          <div className="mt-3 grid gap-2">
-            {lowStock.slice(0, 8).map((product) => (
-              <div
-                key={product.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zenith-border bg-white p-3"
-              >
-                <span className="font-semibold">{product.name}</span>
-                <span className="font-semibold text-zenith-danger">
-                  Main {product.main} · Bar {product.bar} · Total {product.total}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <p className="mt-8 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold">
+        <Link href="/manager/reports" className="text-zenith-gold">
+          Reports & history →
+        </Link>
+        <Link href="/manager/inventory" className="text-zenith-gold">
+          Stock →
+        </Link>
+      </p>
     </div>
   );
 }

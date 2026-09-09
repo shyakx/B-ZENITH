@@ -615,6 +615,79 @@ body {
   padding: 1rem;
 }
 
+.print-page.print-report {
+  max-width: 960px;
+  margin: 0 auto;
+  background: white;
+}
+
+.stock-history-report {
+  color: #111;
+  background: white;
+  padding: 0.5rem 0 1rem;
+}
+
+.stock-history-report__header {
+  margin-bottom: 1rem;
+}
+
+.stock-history-report__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.stock-history-report h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.stock-history-report__meta {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.stock-history-report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.stock-history-report__table th,
+.stock-history-report__table td {
+  border: 1px solid #ccc;
+  padding: 0.4rem 0.5rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.stock-history-report__table th {
+  background: #f3f3f3;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stock-history-report__table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stock-history-report__table .nowrap {
+  white-space: nowrap;
+}
+
+.stock-history-report__table .muted {
+  color: #666;
+  font-size: 0.75rem;
+}
+
 .print-page[data-paper="58"] {
   --receipt-inner: 50mm;
 }
@@ -871,6 +944,20 @@ body {
     margin: 0;
     padding: 0;
     background: white;
+  }
+
+  .print-page.print-report {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  html[data-report-print="a4"] {
+    page: auto;
+  }
+
+  html[data-report-print="a4"] .print-page {
+    width: 100%;
   }
 
   .print-page[data-paper="80"] .facture,

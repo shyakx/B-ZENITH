@@ -1,115 +1,81 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { formatRwf } from "@/lib/domain/money";
-import { formatStockQty } from "@/lib/domain/units";
-import { EnsureKitchenStoresButton } from "@/components/manager/EnsureKitchenStoresButton";
-import { InventoryStockLists } from "@/components/manager/InventoryStockLists";
-import { Card } from "@/components/ui/Card";
+import {
+  StockMovementWorkspace,
+  type MoveKind,
+} from "@/components/manager/StockMovementWorkspace";
+import { StockWorkbench } from "@/components/manager/StockWorkbench";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { inventoryValuation, listMovements, listStock } from "@/services/inventory";
-import { kitchenStoresStatus } from "@/services/products";
+import { listLocations, listStock, valuationFromStock } from "@/services/inventory";
+import { listSuppliers } from "@/services/suppliers";
 
-export default async function InventoryOverviewPage() {
+const KINDS = new Set<MoveKind>(["receive", "transfer", "count", "adjust", "waste"]);
+
+export default async function InventoryOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kind?: string; productId?: string }>;
+}) {
   await requireRole("MANAGER");
-  const [stock, movements, valuation, kitchen] = await Promise.all([
+  const params = await searchParams;
+  const kind = (KINDS.has(params.kind as MoveKind) ? params.kind : "receive") as MoveKind;
+  const [stock, locations, suppliers] = await Promise.all([
     listStock(),
-    listMovements(12),
-    inventoryValuation(),
-    kitchenStoresStatus(),
+    listLocations(),
+    listSuppliers(),
   ]);
-  const totals = stock.reduce(
-    (sum, row) => ({
-      main: sum.main + row.main,
-      bar: sum.bar + row.bar,
-      kitchen: sum.kitchen + row.kitchen,
-      cafe: sum.cafe + row.cafe,
-    }),
-    { main: 0, bar: 0, kitchen: 0, cafe: 0 },
-  );
-  const packaged = stock.filter((row) => row.productType !== "RAW_MATERIAL");
-  const materials = stock.filter((row) => row.productType === "RAW_MATERIAL");
+  const valuation = valuationFromStock(stock);
+
+  const rows = stock.map((row) => ({
+    id: row.id,
+    name: row.name,
+    categoryName: row.category.name,
+    main: row.main,
+    bar: row.bar,
+    kitchen: row.kitchen,
+    cafe: row.cafe,
+    total: row.total,
+    unitCode: row.baseUnit?.code ?? null,
+    defaultLocationCode: row.defaultLocationCode,
+    managerReferenceName: row.managerReferenceName,
+  }));
 
   return (
     <div>
-      <PageHeader
-        title="Stock Overview"
-        subtitle="Buy into Main Stock, then move drinks to Bar and kitchen stores to Kitchen. Quantities always show the official stock unit."
-      />
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          ["Main Stock", totals.main, "Central store"],
-          ["Bar", totals.bar, "Ready to sell"],
-          ["Kitchen", totals.kitchen, "Kitchen use"],
-          ["Cafe", totals.cafe, "Cafe use"],
-        ].map(([label, value, hint]) => (
-          <div key={label as string} className="rounded-xl border border-zenith-border bg-white p-3">
-            <div className="text-xl font-semibold text-zenith-gold">{value as number}</div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label as string}</div>
-            <div className="mt-1 text-xs text-zenith-muted">{hint as string}</div>
-          </div>
-        ))}
-      </div>
-      <p className="mb-4 text-sm">Stock value: {formatRwf(valuation.total)}</p>
-      <div className="mb-4 flex flex-wrap gap-2 text-sm font-semibold">
-        <Link className="rounded-lg bg-zenith-gold px-3 py-1.5 text-white" href="/manager/purchases">
-          Receive Stock
-        </Link>
-        <Link className="rounded-lg border border-zenith-gold px-3 py-1.5 text-zenith-gold" href="/manager/inventory/transfer">
-          Move Stock
-        </Link>
-        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/locations">
-          Stock by Location
-        </Link>
-        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/product-names">
-          Product Names & Units
-        </Link>
+      <PageHeader title="Stock" subtitle="Receive, transfer, and check current levels." />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm font-semibold">
         <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/movements">
-          Stock Movements
+          Stock History
         </Link>
+        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/packaging">
+          Packaging
+        </Link>
+        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/suppliers">
+          Suppliers
+        </Link>
+        <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/products">
+          Products
+        </Link>
+        <span className="self-center text-zenith-muted">Stock value: {formatRwf(valuation.total)}</span>
       </div>
-      {kitchen.missing.length > 0 ? (
-        <div className="mb-4">
-          <EnsureKitchenStoresButton missing={kitchen.missing.length} />
-        </div>
-      ) : null}
-      <InventoryStockLists materials={materials} packaged={packaged} />
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-3 font-semibold">Running low</h2>
-          <div className="space-y-2 text-sm">
-            {stock.filter((row) => row.total <= 5).slice(0, 12).map((product) => (
-              <div key={product.id} className="flex justify-between gap-2">
-                <span>
-                  {product.name}
-                  {product.managerReferenceName ? (
-                    <span className="text-zenith-muted"> · {product.managerReferenceName}</span>
-                  ) : null}
-                </span>
-                <span className="font-semibold text-zenith-danger">
-                  {formatStockQty(product.total, product.baseUnit?.code)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-        <Card>
-          <h2 className="mb-3 font-semibold">Recent changes</h2>
-          <div className="space-y-2 text-sm">
-            {movements.map((move) => (
-              <div key={move.id} className="flex justify-between gap-2">
-                <span>
-                  {move.product.name}
-                  {move.location ? ` · ${move.location.name}` : ""}
-                </span>
-                <span className="font-semibold">
-                  {move.quantity > 0 ? "+" : ""}
-                  {formatStockQty(move.quantity, move.product.baseUnit?.code)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+
+      <section className="mb-6 min-w-0">
+        <h2 className="mb-3 font-display text-xl text-zenith-gold">Receive / Transfer</h2>
+        <StockMovementWorkspace
+          kind={kind}
+          productId={params.productId}
+          products={stock}
+          locations={locations}
+          suppliers={suppliers}
+        />
+      </section>
+
+      <section className="min-w-0">
+        <h2 className="mb-3 font-display text-xl text-zenith-gold">Current levels</h2>
+        <StockWorkbench rows={rows} />
+      </section>
     </div>
   );
 }

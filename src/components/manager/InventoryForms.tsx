@@ -16,10 +16,10 @@ import {
   canReceiveProduct,
   isPourUnit,
   preferredStockInUnitId,
-  preferredTransferUnitId,
+  preferredWholePackageTransferUnitId,
   quantityWithUnit,
   stockInUnitsForProduct,
-  transferUnitsForProduct,
+  transferUnitChoicesForProduct,
   unitLabel,
 } from "@/lib/domain/units";
 import { Button } from "@/components/ui/Button";
@@ -40,6 +40,7 @@ type ProductOption = {
   cafe?: number;
   total?: number;
   productType?: string;
+  wholePackageTransfer?: boolean;
   baseUnit?: { id: string; code: string; name: string } | null;
   packs?: ProductPackOption[];
 };
@@ -49,6 +50,43 @@ type SupplierOption = { id: string; name: string; active: boolean };
 
 function newKey(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+async function confirmStockAction(input: {
+  confirm: string;
+  run: () => Promise<{ ok: true } | { ok: false; error: string }>;
+  success: string;
+  setError: (value: string) => void;
+  setMessage: (value: string) => void;
+  setBusy: (value: boolean) => void;
+  router: { refresh: () => void };
+  afterOk?: () => void;
+}) {
+  if (!window.confirm(input.confirm)) return;
+  input.setBusy(true);
+  input.setError("");
+  input.setMessage("");
+  try {
+    const result = await input.run();
+    if (!result.ok) {
+      input.setError(result.error);
+      return;
+    }
+    input.setMessage(input.success);
+    input.afterOk?.();
+    input.router.refresh();
+  } finally {
+    input.setBusy(false);
+  }
+}
+
+function ActionFeedback({ error, message }: { error: string; message: string }) {
+  return (
+    <>
+      {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
+      {message ? <p className="text-sm font-semibold text-zenith-success">{message}</p> : null}
+    </>
+  );
 }
 
 function productOptionLabel(product: ProductOption, available?: (product: ProductOption) => number) {
@@ -161,17 +199,22 @@ function LocationSelect({
 export function PurchaseForm({
   products,
   suppliers,
+  initialProductId,
 }: {
   products: ProductOption[];
   suppliers: SupplierOption[];
+  initialProductId?: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [productId, setProductId] = useState("");
-  const [unitId, setUnitId] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const receivable = products.filter((row) => canReceiveProduct(row));
+  const starter = receivable.find((row) => row.id === initialProductId);
+  const [productId, setProductId] = useState(starter?.id ?? "");
+  const [unitId, setUnitId] = useState(preferredStockInUnitId(starter));
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
-  const receivable = products.filter((row) => canReceiveProduct(row));
   const product = receivable.find((row) => row.id === productId);
   const unitChoices = stockInUnitsForProduct(product);
   const selectedUnit = unitChoices.find((unit) => unit.id === unitId);
@@ -180,6 +223,7 @@ export function PurchaseForm({
   const paid = Number(price);
   const activeSuppliers = suppliers.filter((supplier) => supplier.active);
   const stockName = product?.baseUnit?.name ?? "units";
+  const stockCode = product?.baseUnit?.code ?? "UNIT";
 
   function chooseProduct(id: string) {
     setProductId(id);
@@ -188,24 +232,38 @@ export function PurchaseForm({
   }
 
   async function action(formData: FormData) {
-    const packUnitId = selectedUnit?.isPack ? selectedUnit.id : undefined;
-    const result = await receivePurchaseAction({
-      supplierId: String(formData.get("supplierId")),
-      reference: String(formData.get("reference") ?? ""),
-      notes: String(formData.get("notes") ?? ""),
-      idempotencyKey: newKey("receipt"),
-      lines: [
-        {
-          productId,
-          packUnitId,
-          packQuantity: Number(quantity),
-          packCost: price ? Number(price) : undefined,
-        },
-      ],
+    if (!product || !selectedUnit || !Number.isInteger(qty) || qty <= 0) {
+      setError("Choose a product, package, and quantity.");
+      return;
+    }
+    const packUnitId = selectedUnit.isPack ? selectedUnit.id : undefined;
+    await confirmStockAction({
+      confirm: `Receive ${quantityWithUnit(qty, selectedUnit.name)} of ${product.name} into Main Stock?`,
+      success: `Received ${quantityWithUnit(received, stockCode)} of ${product.name} into Main Stock.`,
+      setError,
+      setMessage,
+      setBusy,
+      router,
+      afterOk: () => {
+        setQuantity("");
+        setPrice("");
+      },
+      run: () =>
+        receivePurchaseAction({
+          supplierId: String(formData.get("supplierId")),
+          reference: String(formData.get("reference") ?? ""),
+          notes: String(formData.get("notes") ?? ""),
+          idempotencyKey: newKey("receipt"),
+          lines: [
+            {
+              productId,
+              packUnitId,
+              packQuantity: qty,
+              packCost: price ? Number(price) : undefined,
+            },
+          ],
+        }),
     });
-    if (!result.ok) return setError(result.error);
-    setError("");
-    router.refresh();
   }
 
   return (
@@ -233,6 +291,11 @@ export function PurchaseForm({
       <Field label="What did you receive?">
         <ProductSelect products={receivable} value={productId} onChange={chooseProduct} />
       </Field>
+      {product ? (
+        <p className="text-sm text-zenith-muted">
+          Main Stock: {quantityWithUnit(product.main ?? 0, stockName)} · Unit: {stockCode}
+        </p>
+      ) : null}
       <Field label="How many?">
         <Input
           name="quantity"
@@ -241,14 +304,21 @@ export function PurchaseForm({
           required
           value={quantity}
           onChange={(event) => setQuantity(event.target.value)}
+          disabled={!product}
         />
       </Field>
-      <Field label="Unit">
-        <Select value={unitId} onChange={(event) => setUnitId(event.target.value)} disabled={!product}>
-          <option value="">{product ? "Choose unit" : "Choose a product first"}</option>
+      <Field label="Package / unit">
+        <Select
+          value={unitId}
+          onChange={(event) => setUnitId(event.target.value)}
+          disabled={!product}
+          required
+        >
+          <option value="">{product ? "Choose package or stock unit" : "Choose a product first"}</option>
           {unitChoices.map((unit) => (
             <option key={unit.id} value={unit.id}>
               {unitLabel(unit.name)}
+              {unit.isPack ? ` (= ${unit.factor} ${stockName})` : ` (stock unit)`}
             </option>
           ))}
         </Select>
@@ -260,16 +330,25 @@ export function PurchaseForm({
           min={1}
           value={price}
           onChange={(event) => setPrice(event.target.value)}
+          disabled={!product}
         />
       </Field>
-      <div className="rounded-lg border border-zenith-gold bg-zenith-raised px-3 py-2 text-sm">
+      <div className="rounded-lg border border-zenith-border bg-white px-3 py-2 text-sm">
         <div className="font-semibold">Receive into: Main Stock</div>
-        <div className="mt-1 text-zenith-muted">
-          Buy full bottles, crates, and packs. Shots and glasses are moved to Bar or Kitchen from Move Stock.
-        </div>
-        {received > 0 && product ? (
-          <div className="mt-2 font-semibold">
-            You are receiving {quantityWithUnit(received, stockName)} into Main Stock.
+        {received > 0 && product && selectedUnit ? (
+          <div className="mt-2 space-y-1">
+            <div>
+              Received:{" "}
+              <span className="font-semibold">
+                {quantityWithUnit(qty, selectedUnit.name).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              Equivalent stock:{" "}
+              <span className="font-semibold">
+                {quantityWithUnit(received, stockCode).toUpperCase()}
+              </span>
+            </div>
           </div>
         ) : null}
         {Number.isInteger(paid) && paid > 0 ? (
@@ -280,11 +359,6 @@ export function PurchaseForm({
             Cost per {stockName}: {formatRwfPerUnit(unitCostFromTotalPrice(paid, received))}
           </div>
         ) : null}
-        {selectedUnit?.isPack && qty > 0 ? (
-          <div className="mt-1 text-zenith-muted">
-            1 {unitLabel(selectedUnit.name)} = {selectedUnit.factor} {stockName}
-          </div>
-        ) : null}
       </div>
       <Field label="Invoice / Reference">
         <Input name="reference" />
@@ -292,8 +366,10 @@ export function PurchaseForm({
       <Field label="Notes">
         <Input name="notes" />
       </Field>
-      {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}
-      <Button>Receive Stock</Button>
+      <ActionFeedback error={error} message={message} />
+      <Button disabled={busy || !product || !unitId || activeSuppliers.length === 0}>
+        {busy ? "Receiving…" : "Receive Stock"}
+      </Button>
     </form>
   );
 }
@@ -301,62 +377,99 @@ export function PurchaseForm({
 export function TransferForm({
   products,
   destinations,
+  initialProductId,
 }: {
   products: ProductOption[];
   destinations: LocationOption[];
+  initialProductId?: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [productId, setProductId] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const starter = products.find((row) => row.id === initialProductId);
+  const [productId, setProductId] = useState(starter?.id ?? "");
   const [toId, setToId] = useState("");
-  const [unitId, setUnitId] = useState("");
+  const [unitId, setUnitId] = useState(preferredWholePackageTransferUnitId(starter));
   const [quantity, setQuantity] = useState("");
   const product = products.find((row) => row.id === productId);
   const destination = destinations.find((row) => row.id === toId);
-  const unitChoices = transferUnitsForProduct(product);
-  const selectedUnit = unitChoices.find((unit) => unit.id === unitId);
+  const choices = transferUnitChoicesForProduct(product);
+  const selectedUnit = choices.find((unit) => unit.id === unitId);
   const qty = Number(quantity);
   const moved = Number.isInteger(qty) && qty > 0 && selectedUnit ? qty * selectedUnit.factor : 0;
   const unitName = product?.baseUnit?.name ?? "units";
+  const stockCode = product?.baseUnit?.code ?? "UNIT";
+  const wholeOnly = Boolean(product?.wholePackageTransfer);
 
   function chooseProduct(id: string) {
     setProductId(id);
     const next = products.find((row) => row.id === id);
-    setUnitId(preferredTransferUnitId(next));
+    setUnitId(preferredWholePackageTransferUnitId(next));
   }
 
   async function action(formData: FormData) {
-    if (!selectedUnit || moved <= 0) return setError("Choose how many to move and the unit.");
-    const result = await transferStockAction({
-      toLocationId: String(formData.get("toLocationId")),
-      notes: String(formData.get("notes") ?? ""),
-      idempotencyKey: newKey("transfer"),
-      lines: [{ productId, baseQuantity: moved }],
+    if (!selectedUnit || moved <= 0) return setError("Choose how many to transfer and the package.");
+    if (wholeOnly && !selectedUnit.isPack) {
+      return setError("This product allows whole packages only. Choose the package unit.");
+    }
+    if (!product || !destination) return setError("Choose a product and destination.");
+    const noteParts = [
+      String(formData.get("notes") ?? "").trim(),
+      selectedUnit.isPack
+        ? `Transferred ${quantityWithUnit(qty, selectedUnit.name)} (= ${quantityWithUnit(moved, stockCode)})`
+        : `Transferred ${quantityWithUnit(moved, stockCode)}`,
+    ].filter(Boolean);
+    await confirmStockAction({
+      confirm: `Transfer ${quantityWithUnit(qty, selectedUnit.name)} of ${product.name} from Main Stock to ${destination.name}?`,
+      success: `Transferred ${quantityWithUnit(moved, stockCode)} of ${product.name} to ${destination.name}.`,
+      setError,
+      setMessage,
+      setBusy,
+      router,
+      afterOk: () => setQuantity(""),
+      run: () =>
+        transferStockAction({
+          toLocationId: String(formData.get("toLocationId")),
+          notes: noteParts.join(" · "),
+          idempotencyKey: newKey("transfer"),
+          lines: [{ productId, baseQuantity: moved }],
+        }),
     });
-    if (!result.ok) return setError(result.error);
-    setError("");
-    router.refresh();
   }
 
   return (
     <form action={action} className="grid gap-3">
-      <Field label="What do you want to move?">
+      <Field label="From">
+        <Input value="Main Stock" disabled readOnly />
+      </Field>
+      <Field label="To">
+        <LocationSelect locations={destinations} name="toLocationId" value={toId} onChange={setToId} />
+      </Field>
+      <Field label="Product">
         <ProductSelect
           products={products}
           value={productId}
           onChange={chooseProduct}
           available={(row) => row.main ?? 0}
-          groupPour
         />
       </Field>
-      <div className="rounded-lg border border-zenith-gold bg-zenith-raised px-3 py-2 text-sm">
-        <div className="font-semibold">From: Main Stock</div>
-        <div className="mt-1 text-zenith-muted">Send full bottles or pieces such as shots to Bar, Kitchen, or Cafe.</div>
-      </div>
-      <Field label="To">
-        <LocationSelect locations={destinations} name="toLocationId" value={toId} onChange={setToId} />
-      </Field>
-      <Field label="How many?">
+      {product ? (
+        <p className="text-sm text-zenith-muted">
+          Main Stock: {quantityWithUnit(product.main ?? 0, unitName)}
+          {wholeOnly ? " · Whole package only" : ""}
+          {choices.some((unit) => unit.isPack)
+            ? ` · ${choices
+                .filter((unit) => unit.isPack)
+                .map((unit) => `1 ${unitLabel(unit.name)} = ${unit.factor} ${unitName}`)
+                .join(" · ")}`
+            : ""}
+        </p>
+      ) : null}
+      {product && wholeOnly && choices.filter((unit) => unit.isPack).length === 0 ? (
+        <p className="text-sm text-zenith-danger">Set packaging before transferring this product.</p>
+      ) : null}
+      <Field label="Quantity">
         <Input
           name="quantity"
           type="number"
@@ -364,30 +477,47 @@ export function TransferForm({
           required
           value={quantity}
           onChange={(event) => setQuantity(event.target.value)}
+          disabled={!product || choices.length === 0}
         />
       </Field>
-      <Field label="Unit">
-        <Select value={unitId} onChange={(event) => setUnitId(event.target.value)} disabled={!product}>
-          <option value="">{product ? "Choose unit" : "Choose a product first"}</option>
-          {unitChoices.map((unit) => (
+      <Field label="Package / unit">
+        <Select
+          value={unitId}
+          onChange={(event) => setUnitId(event.target.value)}
+          disabled={!product || choices.length === 0}
+          required
+        >
+          <option value="">{product ? "Choose package" : "Choose a product first"}</option>
+          {choices.map((unit) => (
             <option key={unit.id} value={unit.id}>
               {unitLabel(unit.name)}
-              {unit.isPack ? "" : isPourUnit(unit.code) ? " (pieces)" : ""}
+              {unit.isPack ? ` (= ${unit.factor} ${unitName})` : " (stock unit)"}
             </option>
           ))}
         </Select>
       </Field>
-      <Field label="Reason">
+      <Field label="Reason (optional)">
         <Input name="notes" />
       </Field>
-      {product && moved > 0 ? (
-        <p className="text-sm font-semibold">
-          Moving {selectedUnit?.isPack ? `${quantityWithUnit(qty, selectedUnit.name)} (${quantityWithUnit(moved, unitName)})` : quantityWithUnit(moved, unitName)} of {product.name}
-          {destination ? ` · Main Stock → ${destination.name}` : ""}
-        </p>
+      {product && moved > 0 && selectedUnit ? (
+        <div className="rounded-lg border border-zenith-border bg-white px-3 py-2 text-sm">
+          <div>
+            Transfer:{" "}
+            <span className="font-semibold">{quantityWithUnit(qty, selectedUnit.name).toUpperCase()}</span>
+          </div>
+          <div className="mt-1">
+            Equivalent:{" "}
+            <span className="font-semibold">{quantityWithUnit(moved, stockCode).toUpperCase()}</span>
+          </div>
+          {destination ? (
+            <div className="mt-1 text-zenith-muted">Main Stock → {destination.name}</div>
+          ) : null}
+        </div>
       ) : null}
-      {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}
-      <Button>Move Stock</Button>
+      <ActionFeedback error={error} message={message} />
+      <Button disabled={busy || !product || !unitId || choices.length === 0}>
+        {busy ? "Transferring…" : "Transfer Stock"}
+      </Button>
     </form>
   );
 }
@@ -395,44 +525,62 @@ export function TransferForm({
 export function WasteForm({
   products,
   locations,
+  initialProductId,
 }: {
   products: ProductOption[];
   locations: LocationOption[];
+  initialProductId?: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [productId, setProductId] = useState(initialProductId ?? "");
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const product = products.find((row) => row.id === productId);
 
   async function action(formData: FormData) {
-    const result = await recordWasteAction({
-      productId: String(formData.get("productId")),
-      locationId: String(formData.get("locationId")),
-      quantity: Number(formData.get("quantity")),
-      reason: String(formData.get("reason") ?? ""),
-      idempotencyKey,
+    const quantity = Number(formData.get("quantity"));
+    const locationId = String(formData.get("locationId"));
+    const location = locations.find((row) => row.id === locationId);
+    const name = product?.name ?? "this product";
+    await confirmStockAction({
+      confirm: `Record waste of ${quantity} ${product?.baseUnit?.code ?? "units"} of ${name} at ${location?.name ?? "this location"}?`,
+      success: `Waste recorded for ${name}.`,
+      setError,
+      setMessage,
+      setBusy,
+      router,
+      afterOk: () => setIdempotencyKey(crypto.randomUUID()),
+      run: () =>
+        recordWasteAction({
+          productId: String(formData.get("productId")),
+          locationId,
+          quantity,
+          reason: String(formData.get("reason") ?? ""),
+          idempotencyKey,
+        }),
     });
-    if (!result.ok) return setError(result.error);
-    setError("");
-    setIdempotencyKey(crypto.randomUUID());
-    router.refresh();
   }
 
   return (
     <form action={action} className="grid gap-3">
       <Field label="What was wasted?">
-        <ProductSelect products={products} />
+        <ProductSelect products={products} value={productId} onChange={setProductId} />
       </Field>
       <Field label="Where?">
         <LocationSelect locations={locations} />
       </Field>
-      <Field label="How many? (official stock units)">
+      <Field label={`How many?${product?.baseUnit ? ` (${product.baseUnit.code})` : ""}`}>
         <Input name="quantity" type="number" min={1} required />
       </Field>
       <Field label="Why?">
         <Input name="reason" required />
       </Field>
-      {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}
-      <Button variant="danger">Record Waste</Button>
+      <ActionFeedback error={error} message={message} />
+      <Button variant="danger" disabled={busy}>
+        {busy ? "Saving…" : "Record Waste"}
+      </Button>
     </form>
   );
 }
@@ -440,28 +588,44 @@ export function WasteForm({
 export function AdjustForm({
   products,
   locations,
+  initialProductId,
 }: {
   products: ProductOption[];
   locations: LocationOption[];
+  initialProductId?: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [productId, setProductId] = useState(initialProductId ?? "");
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const product = products.find((row) => row.id === productId);
 
   async function action(formData: FormData) {
     const quantity = Number(formData.get("quantity"));
     const direction = String(formData.get("direction"));
-    const result = await adjustStockAction({
-      productId: String(formData.get("productId")),
-      locationId: String(formData.get("locationId")),
-      delta: direction === "decrease" ? -quantity : quantity,
-      reason: String(formData.get("reason") ?? ""),
-      idempotencyKey,
+    const locationId = String(formData.get("locationId"));
+    const location = locations.find((row) => row.id === locationId);
+    const name = product?.name ?? "this product";
+    const delta = direction === "decrease" ? -quantity : quantity;
+    await confirmStockAction({
+      confirm: `${direction === "decrease" ? "Decrease" : "Increase"} ${name} by ${quantity} ${product?.baseUnit?.code ?? "units"} at ${location?.name ?? "this location"}?`,
+      success: `Stock adjusted for ${name}.`,
+      setError,
+      setMessage,
+      setBusy,
+      router,
+      afterOk: () => setIdempotencyKey(crypto.randomUUID()),
+      run: () =>
+        adjustStockAction({
+          productId: String(formData.get("productId")),
+          locationId,
+          delta,
+          reason: String(formData.get("reason") ?? ""),
+          idempotencyKey,
+        }),
     });
-    if (!result.ok) return setError(result.error);
-    setError("");
-    setIdempotencyKey(crypto.randomUUID());
-    router.refresh();
   }
 
   return (
@@ -470,7 +634,7 @@ export function AdjustForm({
         <LocationSelect locations={locations} />
       </Field>
       <Field label="Product">
-        <ProductSelect products={products} />
+        <ProductSelect products={products} value={productId} onChange={setProductId} />
       </Field>
       <Field label="Change">
         <Select name="direction" required defaultValue="increase">
@@ -478,14 +642,16 @@ export function AdjustForm({
           <option value="decrease">Decrease</option>
         </Select>
       </Field>
-      <Field label="Quantity (official stock units)">
+      <Field label={`Quantity${product?.baseUnit ? ` (${product.baseUnit.code})` : ""}`}>
         <Input name="quantity" type="number" min={1} required />
       </Field>
       <Field label="Reason">
         <Input name="reason" required />
       </Field>
-      {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}
-      <Button variant="secondary">Save Adjustment</Button>
+      <ActionFeedback error={error} message={message} />
+      <Button variant="secondary" disabled={busy}>
+        {busy ? "Saving…" : "Save Adjustment"}
+      </Button>
     </form>
   );
 }
@@ -493,25 +659,41 @@ export function AdjustForm({
 export function CountForm({
   products,
   locations,
+  initialProductId,
 }: {
   products: ProductOption[];
   locations: LocationOption[];
+  initialProductId?: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [productId, setProductId] = useState(initialProductId ?? "");
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const product = products.find((row) => row.id === productId);
 
   async function action(formData: FormData) {
-    const result = await countStockAction({
-      productId: String(formData.get("productId")),
-      locationId: String(formData.get("locationId")),
-      counted: Number(formData.get("counted")),
-      idempotencyKey,
+    const counted = Number(formData.get("counted"));
+    const locationId = String(formData.get("locationId"));
+    const location = locations.find((row) => row.id === locationId);
+    const name = product?.name ?? "this product";
+    await confirmStockAction({
+      confirm: `Save count of ${counted} ${product?.baseUnit?.code ?? "units"} for ${name} at ${location?.name ?? "this location"}?`,
+      success: `Count saved for ${name}.`,
+      setError,
+      setMessage,
+      setBusy,
+      router,
+      afterOk: () => setIdempotencyKey(crypto.randomUUID()),
+      run: () =>
+        countStockAction({
+          productId: String(formData.get("productId")),
+          locationId,
+          counted,
+          idempotencyKey,
+        }),
     });
-    if (!result.ok) return setError(result.error);
-    setError("");
-    setIdempotencyKey(crypto.randomUUID());
-    router.refresh();
   }
 
   return (
@@ -520,13 +702,15 @@ export function CountForm({
         <LocationSelect locations={locations} />
       </Field>
       <Field label="Product">
-        <ProductSelect products={products} />
+        <ProductSelect products={products} value={productId} onChange={setProductId} />
       </Field>
-      <Field label="What did you physically count? (official stock units)">
+      <Field label={`Counted${product?.baseUnit ? ` (${product.baseUnit.code})` : ""}`}>
         <Input name="counted" type="number" min={0} required />
       </Field>
-      {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}
-      <Button variant="secondary">Save Count</Button>
+      <ActionFeedback error={error} message={message} />
+      <Button variant="secondary" disabled={busy}>
+        {busy ? "Saving…" : "Save Count"}
+      </Button>
     </form>
   );
 }
@@ -538,18 +722,27 @@ export function SupplierForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function action(formData: FormData) {
-    const result = await saveSupplierAction({
-      id: supplier?.id,
-      name: String(formData.get("name") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      notes: String(formData.get("notes") ?? ""),
+    const name = String(formData.get("name") ?? "").trim();
+    await confirmStockAction({
+      confirm: supplier ? `Save changes to supplier “${name}”?` : `Add supplier “${name}”?`,
+      success: supplier ? "Supplier saved." : "Supplier added.",
+      setError,
+      setMessage,
+      setBusy,
+      router,
+      run: () =>
+        saveSupplierAction({
+          id: supplier?.id,
+          name,
+          phone: String(formData.get("phone") ?? ""),
+          email: String(formData.get("email") ?? ""),
+          notes: String(formData.get("notes") ?? ""),
+        }),
     });
-    if (!result.ok) return setError(result.error);
-    setError("");
-    router.refresh();
   }
 
   return (
@@ -566,8 +759,8 @@ export function SupplierForm({
       <Field label="Notes">
         <Input name="notes" defaultValue={supplier?.notes ?? ""} />
       </Field>
-      {error ? <p className="text-sm text-zenith-danger">{error}</p> : null}
-      <Button>{supplier ? "Save supplier" : "Add supplier"}</Button>
+      <ActionFeedback error={error} message={message} />
+      <Button disabled={busy}>{busy ? "Saving…" : supplier ? "Save supplier" : "Add supplier"}</Button>
     </form>
   );
 }
@@ -575,19 +768,27 @@ export function SupplierForm({
 export function SupplierActiveButton({ id, active }: { id: string; active: boolean }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function toggle() {
-    const result = await setSupplierActiveAction({ id, active: !active });
-    if (!result.ok) return setError(result.error);
-    router.refresh();
+    await confirmStockAction({
+      confirm: active ? "Deactivate this supplier?" : "Activate this supplier?",
+      success: active ? "Supplier deactivated." : "Supplier activated.",
+      setError,
+      setMessage,
+      setBusy,
+      router,
+      run: () => setSupplierActiveAction({ id, active: !active }),
+    });
   }
 
   return (
     <div>
-      <Button variant="secondary" onClick={toggle}>
-        {active ? "Deactivate" : "Activate"}
+      <Button variant="secondary" disabled={busy} onClick={toggle}>
+        {busy ? "Saving…" : active ? "Deactivate" : "Activate"}
       </Button>
-      {error ? <p className="mt-1 text-sm text-zenith-danger">{error}</p> : null}
+      <ActionFeedback error={error} message={message} />
     </div>
   );
 }

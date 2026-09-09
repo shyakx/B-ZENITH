@@ -6,8 +6,10 @@ import {
   isPourUnit,
   preferredStockInUnitId,
   preferredTransferUnitId,
+  preferredWholePackageTransferUnitId,
   quantityWithUnit,
   stockInUnitsForProduct,
+  transferUnitChoicesForProduct,
   transferUnitsForProduct,
   unitLabel,
 } from "@/lib/domain/units";
@@ -93,5 +95,21 @@ describe("stock in vs stock out units", () => {
     expect(stockInUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["BOTTLE"]);
     expect(transferUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["SHOT", "BOTTLE"]);
     expect(preferredTransferUnitId(countedInShots)).toBe(shot.id);
+  });
+
+  it("limits transfer choices to packages when whole-package transfer is on", () => {
+    const primus = {
+      baseUnit: bottle,
+      wholePackageTransfer: true,
+      packs: [{ unitId: crate.id, baseQuantity: 24, unit: crate }],
+    };
+    const champagne = {
+      baseUnit: bottle,
+      wholePackageTransfer: false,
+      packs: [],
+    };
+    expect(transferUnitChoicesForProduct(primus).map((unit) => unit.code)).toEqual(["CRATE"]);
+    expect(preferredWholePackageTransferUnitId(primus)).toBe(crate.id);
+    expect(transferUnitChoicesForProduct(champagne).map((unit) => unit.code)).toEqual(["BOTTLE"]);
   });
 });

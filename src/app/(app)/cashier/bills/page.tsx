@@ -14,9 +14,6 @@ export default async function BillsPage() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Orders / Bills</h1>
-      <p className="mt-1 text-zenith-muted">
-        Unpaid and partial bills by table. Customer credit (pay later) is under Customer credit.
-      </p>
 
       <div className="mt-6 space-y-4">
         {groups.length === 0 ? (

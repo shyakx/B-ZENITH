@@ -13,10 +13,7 @@ export default async function MaisonPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
-      <PageHeader
-        title="Maison de Passage"
-        subtitle="Guest stay — not included in POS sales. Simple usage records for wedding guests and similar bookings."
-      />
+      <PageHeader title="Maison de Passage" subtitle="Guest stays — separate from POS sales." />
       <div className="mb-6 max-w-3xl">
         <Card>
           <MaisonForm />

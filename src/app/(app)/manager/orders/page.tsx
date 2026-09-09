@@ -1,24 +1,34 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
-import { formatDateTime } from "@/lib/dates";
+import { endOfDay, formatDateTime, startOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { OrderBadge, PaymentBadge } from "@/components/ui/Badge";
+import { VisibleDate } from "@/components/ui/VisibleDate";
 import { listOrders } from "@/services/orders";
 
 export default async function ManagerOrdersPage() {
   await requireRole("MANAGER");
-  const orders = await listOrders({ take: 120 });
+  const from = startOfDay();
+  const to = endOfDay();
+  const orders = await listOrders({ from, to, take: 200 });
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Orders</h1>
-      <p className="mt-1 text-zenith-muted">All waiters. Each order stays separate.</p>
+      <div className="mt-1">
+        <VisibleDate />
+      </div>
+      <p className="mt-2 text-sm">
+        <Link href="/manager/reports" className="font-semibold text-zenith-gold">
+          Reports &amp; history →
+        </Link>
+      </p>
 
       <div className="mt-6 grid gap-3">
         {orders.length === 0 ? (
           <p className="rounded-2xl border border-zenith-border bg-white px-4 py-6 font-semibold">
-            No orders yet.
+            No orders yet today.
           </p>
         ) : null}
         {orders.map((order) => (

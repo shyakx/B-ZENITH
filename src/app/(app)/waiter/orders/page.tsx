@@ -1,33 +1,45 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
-import { formatDateTime } from "@/lib/dates";
+import { endOfDay, formatDateTime, startOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { Badge, PaymentBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PrintSlipLink } from "@/components/print/PrintFactureLink";
+import { VisibleDate } from "@/components/ui/VisibleDate";
 import { VoidOrderButton } from "@/components/waiter/VoidOrderButton";
 import { canWaiterVoidOrder } from "@/lib/domain/void-order";
 import { listOrders } from "@/services/orders";
 
 export default async function MyOrdersPage() {
   const user = await requireRole("WAITER");
-  const orders = await listOrders({ waiterId: user.id, take: 80, withItems: true });
+  const from = startOfDay();
+  const to = endOfDay();
+  const [todayOrders, openOrders] = await Promise.all([
+    listOrders({ waiterId: user.id, from, to, take: 80, withItems: true }),
+    listOrders({ waiterId: user.id, openOnly: true, take: 30, withItems: true }),
+  ]);
+  const olderOpen = openOrders.filter((order) => order.createdAt < from);
+  const seen = new Set(todayOrders.map((order) => order.id));
+  const orders = [
+    ...todayOrders,
+    ...olderOpen.filter((order) => !seen.has(order.id)),
+  ];
 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl text-zenith-gold">My orders</h1>
-          <p className="mt-1 text-zenith-muted">
-            Only your orders. Print a slip for the table or kitchen.
-          </p>
+          <div className="mt-1">
+            <VisibleDate />
+          </div>
         </div>
         <Link href="/waiter/orders/new">
           <Button>+ New order</Button>
         </Link>
       </div>
       <div className="space-y-3">
-        {orders.length === 0 ? <p className="text-zenith-muted">No orders yet.</p> : null}
+        {orders.length === 0 ? <p className="text-zenith-muted">No orders yet today.</p> : null}
         {orders.map((order) => (
           <article id={`order-${order.id}`} key={order.id} className="rounded-xl border border-zenith-border bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">

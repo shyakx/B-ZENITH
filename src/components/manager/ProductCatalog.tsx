@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { BusinessArea, ProductType } from "@prisma/client";
-import { EnsureKitchenStoresButton } from "@/components/manager/EnsureKitchenStoresButton";
 import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
 import { ProductEditor } from "@/components/manager/ProductForm";
 import { categoryAreaStaffLabel } from "@/lib/product-type-labels";
@@ -17,6 +16,7 @@ type CatalogItem = {
   sellOnPos: boolean;
   active: boolean;
   trackInventory: boolean;
+  stockUnit: string;
   stockLine: string;
   editor: {
     id: string;
@@ -32,6 +32,7 @@ type CatalogItem = {
     defaultStockLocationId: string | null;
     purchaseUnitId: string | null;
     purchaseContains: number | null;
+    wholePackageTransfer: boolean;
   };
 };
 
@@ -40,22 +41,18 @@ export function ProductCatalog({
   categories,
   locations,
   units,
-  kitchenMissing = 0,
 }: {
   items: CatalogItem[];
   categories: { id: string; name: string; area: BusinessArea }[];
   locations: { id: string; code: string; name: string }[];
   units: { id: string; code: string; name: string }[];
-  kitchenMissing?: number;
 }) {
   const [tab, setTab] = useState<"menu" | "materials">("menu");
   const [query, setQuery] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const menu = items.filter((item) => item.productType !== ProductType.RAW_MATERIAL);
   const materials = items.filter((item) => item.productType === ProductType.RAW_MATERIAL);
-  const pool = (tab === "menu" ? menu : materials).filter(
-    (item) => showInactive || item.active,
-  );
+  const pool = (tab === "menu" ? menu : materials).filter((item) => showInactive || item.active);
   const inactiveCount = (tab === "menu" ? menu : materials).filter((item) => !item.active).length;
   const visible = useMemo(
     () =>
@@ -65,9 +62,8 @@ export function ProductCatalog({
           product.name,
           product.categoryName,
           categoryAreaStaffLabel(product.categoryArea),
+          product.stockUnit,
           product.sellingPrice,
-          product.stockLine,
-          product.sellOnPos ? "on pos" : "not on pos",
           product.active ? "active" : "inactive",
         ),
       ),
@@ -75,8 +71,22 @@ export function ProductCatalog({
   );
 
   return (
-    <div className="mt-5">
-      <div className="mb-3 flex flex-wrap gap-2">
+    <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+      <div>
+        <h2 className="font-semibold text-zenith-ink">Product list</h2>
+      </div>
+
+      <div className="mt-4">
+        <ListSearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Search products (e.g. leffe)…"
+          label="Search products"
+          showLabel
+        />
+      </div>
+
+      <div className="mt-1 flex flex-wrap gap-2">
         <button
           type="button"
           className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
@@ -84,7 +94,7 @@ export function ProductCatalog({
           }`}
           onClick={() => setTab("menu")}
         >
-          Menu Products
+          Menu
         </button>
         <button
           type="button"
@@ -107,37 +117,29 @@ export function ProductCatalog({
           </button>
         ) : null}
       </div>
-      <ListSearchField
-        value={query}
-        onChange={setQuery}
-        placeholder={tab === "menu" ? "Search menu products…" : "Search stock items…"}
-      />
-      {tab === "materials" ? <EnsureKitchenStoresButton missing={kitchenMissing} /> : null}
-      <div className={`grid min-w-0 gap-2 ${tab === "materials" && kitchenMissing > 0 ? "mt-3" : ""}`}>
+
+      <div className="mt-3 grid max-h-[70vh] min-w-0 gap-2 overflow-y-auto pr-1">
         {visible.length === 0 ? (
-          <p className="text-sm text-zenith-muted">
+          <p className="rounded-lg border border-zenith-border px-3 py-4 text-sm text-zenith-muted">
             {query.trim()
               ? "No products match that search."
               : tab === "materials"
-                ? kitchenMissing === 0
-                  ? "No stock items yet."
-                  : null
+                ? "No stock items yet."
                 : "No menu products yet."}
           </p>
         ) : null}
         {visible.map((product) => (
-          <article key={product.id} className="min-w-0 rounded-xl border border-zenith-border bg-white p-3">
+          <article key={product.id} className="min-w-0 rounded-lg border border-zenith-border bg-zenith-raised/40 p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-semibold">{product.name}</div>
-                <div className="mt-1 inline-flex rounded-lg bg-zenith-raised px-2 py-1 text-xs font-semibold uppercase tracking-wide text-zenith-gold">
-                  {product.categoryName} · {categoryAreaStaffLabel(product.categoryArea)}
-                </div>
-                <div className="mt-1 text-sm">
-                  {product.sellingPrice} · {product.sellOnPos ? "On POS" : "Not on POS"} ·{" "}
+                <div className="mt-1 text-sm text-zenith-muted">
+                  {product.categoryName}
+                  {product.stockUnit ? ` · ${product.stockUnit}` : ""}
+                  {" · "}
                   {product.active ? "Active" : "Inactive"}
                 </div>
-                <div className="text-sm text-zenith-muted">Stock · {product.stockLine}</div>
+                <div className="mt-0.5 text-sm">{product.sellingPrice}</div>
               </div>
               <ProductEditor
                 categories={categories}
@@ -149,6 +151,6 @@ export function ProductCatalog({
           </article>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

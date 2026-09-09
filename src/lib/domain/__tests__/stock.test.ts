@@ -3,6 +3,7 @@ import { compatibilityStockTotal, legacyStockToLocations } from "@/lib/domain/lo
 import {
   assertAllowedV1Transfer,
   assertNonNegativeStock,
+  assertWholePackageTransferQuantity,
   convertPackToBase,
   isLowStock,
   nextStockAfterAdjustment,
@@ -12,6 +13,7 @@ import {
   nextStockAfterTransferOut,
   nextStockAfterWaste,
   assertReceiptDestination,
+  primaryPackBaseQuantity,
   saleStockMessage,
 } from "@/lib/domain/stock";
 
@@ -72,6 +74,48 @@ describe("inventory", () => {
     expect(() => assertAllowedV1Transfer("BAR", "MAIN")).toThrow(/Main Stock/);
     expect(() => assertAllowedV1Transfer("BAR", "KITCHEN")).toThrow(/Main Stock/);
     expect(() => assertAllowedV1Transfer("MAIN", "MAIN")).toThrow(/different/);
+  });
+
+  it("enforces whole-package transfer multiples without hardcoding crate size", () => {
+    expect(() =>
+      assertWholePackageTransferQuantity(48, {
+        wholePackageTransfer: true,
+        packBaseQuantity: 24,
+        productName: "Primus",
+        packUnitName: "Crate",
+        stockUnitName: "Bottle",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertWholePackageTransferQuantity(24, {
+        wholePackageTransfer: true,
+        packBaseQuantity: 24,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertWholePackageTransferQuantity(1, {
+        wholePackageTransfer: true,
+        packBaseQuantity: 24,
+        productName: "Primus",
+        packUnitName: "Crate",
+        stockUnitName: "Bottle",
+      }),
+    ).toThrow(/whole/i);
+    expect(() =>
+      assertWholePackageTransferQuantity(10, {
+        wholePackageTransfer: false,
+        packBaseQuantity: 24,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertWholePackageTransferQuantity(24, {
+        wholePackageTransfer: true,
+        packBaseQuantity: null,
+        productName: "Primus",
+      }),
+    ).toThrow(/Set Package/);
+    expect(primaryPackBaseQuantity([{ baseQuantity: 24 }, { baseQuantity: 12 }])).toBe(24);
+    expect(primaryPackBaseQuantity([])).toBeNull();
   });
 
   it("puts legacy stock on MAIN only", () => {

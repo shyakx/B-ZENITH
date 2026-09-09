@@ -17,10 +17,6 @@ export default async function AdminDataPage({
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Data control</h1>
-      <p className="mt-1 text-sm text-zenith-muted">
-        Owner and Admin can delete test sales and Maison stays from here. Staff, menu, tables, and
-        settings stay. The Audit page stays in the menu. Type DELETE before anything is removed.
-      </p>
       <div className="mt-6">
         <DataControlForm
           date={date}

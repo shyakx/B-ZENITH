@@ -151,8 +151,7 @@ export function NewOrderScreen({
   if (step === "table") {
     return (
       <div className="order-page">
-        <h2 className="mb-2 font-display text-2xl">Select table</h2>
-        <p className="mb-5 text-sm text-zenith-muted">Any waiter can serve any table.</p>
+        <h2 className="mb-5 font-display text-2xl">Select table</h2>
         <div className="order-tables">
           {tables.map((item) => (
             <button
