@@ -7,6 +7,7 @@ import {
 } from "@/components/manager/StockMovementWorkspace";
 import { StockWorkbench } from "@/components/manager/StockWorkbench";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { canReceiveProduct, transferUnitChoicesForProduct } from "@/lib/domain/units";
 import { listLocations, listStock, valuationFromStock } from "@/services/inventory";
 import { listSuppliers } from "@/services/suppliers";
 
@@ -37,6 +38,8 @@ export default async function InventoryOverviewPage({
     cafe: row.cafe,
     total: row.total,
     unitCode: row.baseUnit?.code ?? null,
+    canReceive: canReceiveProduct(row),
+    canTransfer: transferUnitChoicesForProduct(row).length > 0,
     defaultLocationCode: row.defaultLocationCode,
     managerReferenceName: row.managerReferenceName,
   }));

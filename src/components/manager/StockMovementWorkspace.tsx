@@ -43,10 +43,6 @@ const KINDS: { id: MoveKind; label: string }[] = [
   { id: "waste", label: "Waste" },
 ];
 
-function tangibleProducts(products: ProductOption[]) {
-  return products.filter(canAppearInStockOperations);
-}
-
 export function StockMovementWorkspace({
   kind,
   productId,
@@ -60,10 +56,11 @@ export function StockMovementWorkspace({
   locations: LocationOption[];
   suppliers: SupplierOption[];
 }) {
-  const stockProducts = useMemo(() => tangibleProducts(products), [products]);
+  const stockProducts = useMemo(() => products.filter(canAppearInStockOperations), [products]);
+  const trackedProducts = products;
   const receivable = useMemo(
-    () => stockProducts.filter((row) => canReceiveProduct(row)),
-    [stockProducts],
+    () => trackedProducts.filter((row) => canReceiveProduct(row)),
+    [trackedProducts],
   );
   const destinations = locations.filter((location) => location.code !== "MAIN");
   const current = KINDS.find((entry) => entry.id === kind) ?? KINDS[0];
@@ -105,13 +102,13 @@ export function StockMovementWorkspace({
           />
         ) : null}
         {kind === "count" ? (
-          <CountForm products={stockProducts} locations={locations} initialProductId={productId} />
+          <CountForm products={trackedProducts} locations={locations} initialProductId={productId} />
         ) : null}
         {kind === "adjust" ? (
-          <AdjustForm products={stockProducts} locations={locations} initialProductId={productId} />
+          <AdjustForm products={trackedProducts} locations={locations} initialProductId={productId} />
         ) : null}
         {kind === "waste" ? (
-          <WasteForm products={stockProducts} locations={locations} initialProductId={productId} />
+          <WasteForm products={trackedProducts} locations={locations} initialProductId={productId} />
         ) : null}
       </Card>
     </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatStockQty, isPourUnit } from "@/lib/domain/units";
+import { formatStockQty } from "@/lib/domain/units";
 import { locationStaffLabel, visibleStockLocations } from "@/lib/domain/locations";
 import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
 import { Card } from "@/components/ui/Card";
@@ -17,6 +17,8 @@ export type StockWorkbenchRow = {
   cafe: number;
   total: number;
   unitCode: string | null;
+  canReceive: boolean;
+  canTransfer: boolean;
   defaultLocationCode?: string | null;
   managerReferenceName?: string | null;
 };
@@ -27,13 +29,9 @@ function moveHref(kind: string, productId: string) {
 
 export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
   const [query, setQuery] = useState("");
-  const tangible = useMemo(
-    () => rows.filter((row) => !isPourUnit(row.unitCode ?? "")),
-    [rows],
-  );
   const visible = useMemo(
     () =>
-      tangible.filter((row) =>
+      rows.filter((row) =>
         matchesSearch(
           query,
           row.name,
@@ -44,7 +42,7 @@ export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
           row.defaultLocationCode ? locationStaffLabel(row.defaultLocationCode) : null,
         ),
       ),
-    [tangible, query],
+    [rows, query],
   );
 
   return (
@@ -74,7 +72,7 @@ export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
             {visible.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-4 text-zenith-muted">
-                  {query.trim() ? "No products match that search." : "No tangible stock products yet."}
+                  {query.trim() ? "No products match that search." : "No tracked stock products yet."}
                 </td>
               </tr>
             ) : (
@@ -117,18 +115,22 @@ export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex flex-wrap gap-1.5">
-                        <Link
-                          href={moveHref("receive", row.id)}
-                          className="rounded-md border border-zenith-border px-2 py-1 text-xs font-semibold"
-                        >
-                          Receive
-                        </Link>
-                        <Link
-                          href={moveHref("transfer", row.id)}
-                          className="rounded-md border border-zenith-border px-2 py-1 text-xs font-semibold"
-                        >
-                          Move
-                        </Link>
+                        {row.canReceive ? (
+                          <Link
+                            href={moveHref("receive", row.id)}
+                            className="rounded-md border border-zenith-border px-2 py-1 text-xs font-semibold"
+                          >
+                            Receive
+                          </Link>
+                        ) : null}
+                        {row.canTransfer ? (
+                          <Link
+                            href={moveHref("transfer", row.id)}
+                            className="rounded-md border border-zenith-border px-2 py-1 text-xs font-semibold"
+                          >
+                            Move
+                          </Link>
+                        ) : null}
                         <Link
                           href={moveHref("count", row.id)}
                           className="rounded-md border border-zenith-border px-2 py-1 text-xs font-semibold"
