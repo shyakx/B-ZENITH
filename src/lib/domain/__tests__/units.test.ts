@@ -97,6 +97,7 @@ describe("stock in vs stock out units", () => {
     expect(canAppearInStockOperations(countedInShots)).toBe(true);
     expect(stockInUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["SHOT", "BOTTLE"]);
     expect(transferUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["SHOT", "BOTTLE"]);
+    expect(transferUnitChoicesForProduct(countedInShots).map((unit) => unit.code)).toEqual(["SHOT", "BOTTLE"]);
     expect(preferredTransferUnitId(countedInShots)).toBe(shot.id);
   });
 

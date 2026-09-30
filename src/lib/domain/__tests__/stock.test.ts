@@ -67,10 +67,11 @@ describe("inventory", () => {
     expect(() => assertReceiptDestination("BAR")).toThrow(/Main Stock/);
   });
 
-  it("allows only MAIN to operational transfers in v1", () => {
+  it("allows Main Stock transfers to every operational stock location", () => {
     expect(() => assertAllowedV1Transfer("MAIN", "BAR")).not.toThrow();
     expect(() => assertAllowedV1Transfer("MAIN", "KITCHEN")).not.toThrow();
     expect(() => assertAllowedV1Transfer("MAIN", "CAFE")).not.toThrow();
+    expect(() => assertAllowedV1Transfer("MAIN", "CELLAR")).not.toThrow();
     expect(() => assertAllowedV1Transfer("BAR", "MAIN")).toThrow(/Main Stock/);
     expect(() => assertAllowedV1Transfer("BAR", "KITCHEN")).toThrow(/Main Stock/);
     expect(() => assertAllowedV1Transfer("MAIN", "MAIN")).toThrow(/different/);

@@ -72,7 +72,7 @@ export function preferredTransferUnitId(product?: ProductUnitOption) {
 export function transferUnitChoicesForProduct(
   product?: ProductUnitOption & { wholePackageTransfer?: boolean },
 ) {
-  const units = transferUnitsForProduct(product).filter((unit) => !isPourUnit(unit.code));
+  const units = transferUnitsForProduct(product);
   if (product?.wholePackageTransfer) {
     const packsOnly = units.filter((unit) => unit.isPack);
     return packsOnly.length > 0 ? packsOnly : units;

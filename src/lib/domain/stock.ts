@@ -86,9 +86,6 @@ export function assertAllowedV1Transfer(fromCode: string, toCode: string): void 
   if (fromCode !== "MAIN") {
     throw new Error("Stock can only be transferred from Main Stock.");
   }
-  if (toCode !== "BAR" && toCode !== "KITCHEN" && toCode !== "CAFE") {
-    throw new Error("Stock can only be transferred to Bar, Kitchen, or Cafe.");
-  }
 }
 
 /**
