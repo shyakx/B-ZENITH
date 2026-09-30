@@ -15,7 +15,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:production-setup": "tsx prisma/production-setup.ts",
     "db:production-catalog": "tsx prisma/production-catalog-import.ts",
-    "db:setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
+    "db:setup": "prisma generate && prisma db push && tsx prisma/ensure-inventory-reference-data.ts && tsx prisma/seed.ts",
+    "db:inventory-references": "tsx prisma/ensure-inventory-reference-data.ts",
     "db:studio": "prisma studio",
     "db:start": "powershell -File scripts/start-db.ps1",
     "postinstall": "prisma generate"
@@ -24,7 +25,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "6.19.0",
+    "@prisma/client": "6.12.0",
     "bcryptjs": "^3.0.2",
     "jose": "^6.1.0",
     "lucide-react": "^0.544.0",
@@ -41,7 +42,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
-    "prisma": "6.19.0",
+    "prisma": "6.12.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.5",
     "typescript": "^5",

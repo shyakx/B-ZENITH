@@ -4,9 +4,9 @@ import { productTypeStaffHelp, productTypeStaffLabel } from "@/lib/product-type-
 
 describe("staff-facing product type wording", () => {
   it("does not expose database enum names to ordinary staff", () => {
-    expect(productTypeStaffLabel(ProductType.MENU_ITEM)).toBe("Menu product");
-    expect(productTypeStaffLabel(ProductType.PACKAGED_GOOD)).toBe("Bottled / packaged for sale");
-    expect(productTypeStaffLabel(ProductType.RAW_MATERIAL)).toBe("Stock item (not sold)");
+    expect(productTypeStaffLabel(ProductType.MENU_ITEM)).toBe("Prepared item");
+    expect(productTypeStaffLabel(ProductType.PACKAGED_GOOD)).toBe("Bottled / packaged item");
+    expect(productTypeStaffLabel(ProductType.RAW_MATERIAL)).toBe("Stock item");
     expect(productTypeStaffLabel(ProductType.PACKAGED_GOOD)).not.toContain("Packaged good");
     expect(productTypeStaffLabel(ProductType.RAW_MATERIAL)).not.toContain("Raw material");
   });
@@ -16,10 +16,10 @@ describe("staff-facing product type wording", () => {
     const packaged = productTypeStaffHelp(ProductType.PACKAGED_GOOD);
     const stock = productTypeStaffHelp(ProductType.RAW_MATERIAL);
 
-    expect(menu).toBe("Sold on POS. Use for what customers order from the menu.");
-    expect(packaged).toBe("Sold on POS. The stock count is the bottle, can, or pack.");
+    expect(menu).toBe("Prepared or served individually, such as meals and drinks.");
+    expect(packaged).toBe("Count bottles, cans, or packs as complete units.");
     expect(stock).toBe(
-      "Not sold on POS. Use for rice, oil, charcoal, soap, tissue, detergent, and other counted supplies.",
+      "Ingredients and supplies such as rice, oil, charcoal, soap, tissue, and detergent.",
     );
 
     expect(menu).not.toEqual(packaged);

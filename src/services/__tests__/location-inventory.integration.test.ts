@@ -9,6 +9,7 @@ import { cancelOrder, createOrder } from "@/services/orders";
 import {
   adjustStock,
   countStock,
+  listStock,
   receiveStock,
   recordWaste,
   transferStock,
@@ -301,6 +302,7 @@ describe("phase 2 location inventory", () => {
     });
     createdProductIds.push(potatoes.id);
     expect(potatoes.sellOnPos).toBe(false);
+    expect((await listStock()).some((product) => product.id === potatoes.id)).toBe(true);
     const supplier = await createSupplier(manager.id);
     await receiveStock({
       supplierId: supplier.id,

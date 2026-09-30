@@ -53,7 +53,7 @@ export function ProductForm({
   const [contains, setContains] = useState(String(product?.purchaseContains ?? 1));
   const [stockUnitId, setStockUnitId] = useState(product?.baseUnitId ?? "");
   const [productType, setProductType] = useState<ProductType>(product?.productType ?? ProductType.MENU_ITEM);
-  const [trackInventory, setTrackInventory] = useState(product?.trackInventory ?? false);
+  const [trackInventory, setTrackInventory] = useState(product?.trackInventory ?? true);
   const [sellOnPos, setSellOnPos] = useState(product?.sellOnPos ?? true);
   const [wholePackageTransfer, setWholePackageTransfer] = useState(product?.wholePackageTransfer ?? false);
   const [pendingName, setPendingName] = useState("");
@@ -144,11 +144,11 @@ export function ProductForm({
         </Select>
         {selectedCategory ? (
           <span className="mt-1 block rounded-lg border border-zenith-gold bg-zenith-raised px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zenith-gold">
-            Falls under {selectedCategory.name} · {categoryAreaStaffLabel(selectedCategory.area)} menu
+            Category: {selectedCategory.name} · {categoryAreaStaffLabel(selectedCategory.area)} area
           </span>
         ) : (
           <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-zenith-muted">
-            Pick Breakfast, Drinks, or another category so staff know where it appears.
+            Pick a category to show where this product belongs.
           </span>
         )}
       </Field>
@@ -204,8 +204,13 @@ export function ProductForm({
             disabled={isStockItem}
             onChange={(event) => setSellOnPos(event.target.checked)}
           />
-          Sell on POS
+          Show on sales menu
         </label>
+        <p className="text-xs text-zenith-muted md:w-full">
+          {isStockItem
+            ? "Stock items stay off the sales menu and remain available for stock operations."
+            : "When on, staff can add this product to customer orders. This does not change stock tracking."}
+        </p>
         <label className="flex items-center gap-2">
           <input type="checkbox" name="active" defaultChecked={product?.active ?? true} />
           Active

@@ -94,7 +94,7 @@ export function ProductCatalog({
           }`}
           onClick={() => setTab("menu")}
         >
-          Menu
+          Products
         </button>
         <button
           type="button"
@@ -125,7 +125,7 @@ export function ProductCatalog({
               ? "No products match that search."
               : tab === "materials"
                 ? "No stock items yet."
-                : "No menu products yet."}
+                : "No products yet."}
           </p>
         ) : null}
         {visible.map((product) => (
@@ -136,6 +136,8 @@ export function ProductCatalog({
                 <div className="mt-1 text-sm text-zenith-muted">
                   {product.categoryName}
                   {product.stockUnit ? ` · ${product.stockUnit}` : ""}
+                  {" · "}
+                  {product.sellOnPos ? "On sales menu" : "Not on sales menu"}
                   {" · "}
                   {product.active ? "Active" : "Inactive"}
                 </div>

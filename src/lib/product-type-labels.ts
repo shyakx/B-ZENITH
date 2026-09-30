@@ -4,11 +4,11 @@ import { BusinessArea, ProductType } from "@prisma/client";
 export function productTypeStaffLabel(type: ProductType): string {
   switch (type) {
     case ProductType.MENU_ITEM:
-      return "Menu product";
+      return "Prepared item";
     case ProductType.PACKAGED_GOOD:
-      return "Bottled / packaged for sale";
+      return "Bottled / packaged item";
     case ProductType.RAW_MATERIAL:
-      return "Stock item (not sold)";
+      return "Stock item";
   }
 }
 
@@ -16,11 +16,11 @@ export function productTypeStaffLabel(type: ProductType): string {
 export function productTypeStaffHelp(type: ProductType): string {
   switch (type) {
     case ProductType.MENU_ITEM:
-      return "Sold on POS. Use for what customers order from the menu.";
+      return "Prepared or served individually, such as meals and drinks.";
     case ProductType.PACKAGED_GOOD:
-      return "Sold on POS. The stock count is the bottle, can, or pack.";
+      return "Count bottles, cans, or packs as complete units.";
     case ProductType.RAW_MATERIAL:
-      return "Not sold on POS. Use for rice, oil, charcoal, soap, tissue, detergent, and other counted supplies.";
+      return "Ingredients and supplies such as rice, oil, charcoal, soap, tissue, and detergent.";
   }
 }
 

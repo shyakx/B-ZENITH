@@ -13,6 +13,7 @@ import {
   assertCatalogIntegrity,
   flattenCatalogProducts,
 } from "./catalog-data";
+import { ensureInventoryReferenceData } from "./inventory-reference-data";
 
 const prisma = new PrismaClient();
 
@@ -45,6 +46,8 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.setting.deleteMany();
   await prisma.orderSequence.deleteMany();
+
+  await ensureInventoryReferenceData(prisma);
 
   await Promise.all([
     prisma.user.create({
