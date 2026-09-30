@@ -13,7 +13,6 @@ import {
 } from "@/actions/inventory";
 import { formatRwf, formatRwfPerUnit, unitCostFromTotalPrice } from "@/lib/domain/money";
 import {
-  canReceiveProduct,
   isPourUnit,
   preferredStockInUnitId,
   preferredWholePackageTransferUnitId,
@@ -209,7 +208,9 @@ export function PurchaseForm({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const receivable = products.filter((row) => canReceiveProduct(row));
+  // All tracked products supplied by the inventory page can be received. A product
+  // may be counted in shots or glasses without having a bottle/package conversion.
+  const receivable = products;
   const starter = receivable.find((row) => row.id === initialProductId);
   const [productId, setProductId] = useState(starter?.id ?? "");
   const [unitId, setUnitId] = useState(preferredStockInUnitId(starter));

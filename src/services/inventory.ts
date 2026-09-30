@@ -20,7 +20,6 @@ import {
   emptyMovementBuckets,
 } from "@/lib/domain/inventory-movement-report";
 import { costTimesQuantity, toDecimal, unitCostFromTotalPrice } from "@/lib/domain/money";
-import { assertStockInReceiveUnit } from "@/lib/domain/units";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { lockProductStockForUpdate, lockProductStocksForUpdate } from "@/lib/stock-lock";
@@ -146,7 +145,6 @@ export async function receiveStock(input: {
           rethrowDomain(error);
         }
         let baseQuantity = line.packQuantity;
-        let receiveUnitCode = product.baseUnit?.code ?? "";
         if (line.packUnitId) {
           const pack = await tx.productPack.findUnique({
             where: { productId_unitId: { productId: product.id, unitId: line.packUnitId } },
@@ -160,17 +158,11 @@ export async function receiveStock(input: {
               `${product.name} does not have a conversion for ${purchaseName} yet. Set how many ${countedAs.toLowerCase()} are in 1 ${purchaseName.toLowerCase()} under Products → ${product.name}.`,
             );
           }
-          receiveUnitCode = pack.unit.code;
           try {
             baseQuantity = convertPackToBase(line.packQuantity, pack.baseQuantity);
           } catch (error) {
             rethrowDomain(error);
           }
-        }
-        try {
-          assertStockInReceiveUnit(receiveUnitCode);
-        } catch (error) {
-          rethrowDomain(error);
         }
         let unitCost: Prisma.Decimal | null = null;
         if (line.packCost != null) {

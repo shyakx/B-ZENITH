@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { flattenCatalogProducts, trackedProductBaseUnitCode } from "../../../../prisma/catalog-data";
 import {
-  assertStockInReceiveUnit,
   canAppearInStockOperations,
   canReceiveProduct,
   isPourUnit,
@@ -70,22 +69,22 @@ describe("stock in vs stock out units", () => {
   const bottle = { id: "u-bottle", code: "BOTTLE", name: "Bottle" };
   const crate = { id: "u-crate", code: "CRATE", name: "Crate" };
 
-  it("treats shots and glasses as pieces, not stock-in units", () => {
+  it("recognizes pour units while allowing them to be received", () => {
     expect(isPourUnit("SHOT")).toBe(true);
     expect(isPourUnit("Glass")).toBe(true);
     expect(isPourUnit("BOTTLE")).toBe(false);
-    expect(() => assertStockInReceiveUnit("SHOT")).toThrow(/full bottles or packs/);
-    expect(() => assertStockInReceiveUnit("BOTTLE")).not.toThrow();
+    expect(canReceiveProduct({ baseUnit: shot })).toBe(true);
   });
 
-  it("lets you receive a bottle product, not a shot-only SKU", () => {
+  it("lets you receive products in their stock unit", () => {
     const ginBottle = { baseUnit: bottle, packs: [{ unitId: crate.id, baseQuantity: 12, unit: crate }] };
     const ginShot = { baseUnit: shot, packs: [] };
     expect(canReceiveProduct(ginBottle)).toBe(true);
-    expect(canReceiveProduct(ginShot)).toBe(false);
+    expect(canReceiveProduct(ginShot)).toBe(true);
     expect(canAppearInStockOperations(ginBottle)).toBe(true);
-    expect(canAppearInStockOperations(ginShot)).toBe(false);
+    expect(canAppearInStockOperations(ginShot)).toBe(true);
     expect(stockInUnitsForProduct(ginBottle).map((unit) => unit.code)).toEqual(["BOTTLE", "CRATE"]);
+    expect(stockInUnitsForProduct(ginShot).map((unit) => unit.code)).toEqual(["SHOT"]);
     expect(preferredStockInUnitId(ginBottle)).toBe(crate.id);
   });
 
@@ -96,7 +95,7 @@ describe("stock in vs stock out units", () => {
     };
     expect(canReceiveProduct(countedInShots)).toBe(true);
     expect(canAppearInStockOperations(countedInShots)).toBe(true);
-    expect(stockInUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["BOTTLE"]);
+    expect(stockInUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["SHOT", "BOTTLE"]);
     expect(transferUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["SHOT", "BOTTLE"]);
     expect(preferredTransferUnitId(countedInShots)).toBe(shot.id);
   });

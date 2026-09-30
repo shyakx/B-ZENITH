@@ -31,32 +31,27 @@ export function isPourUnit(codeOrName: string) {
 }
 
 export function canAppearInStockOperations(product?: ProductUnitOption) {
-  if (!product) return false;
-  return (
-    !isPourUnit(product.baseUnit?.code ?? "") ||
-    (product.packs ?? []).some((pack) => !isPourUnit(pack.unit.code))
-  );
+  return Boolean(product?.baseUnit);
 }
 
-function collectUnits(product?: ProductUnitOption, stockInOnly = false): UnitChoice[] {
+function collectUnits(product?: ProductUnitOption): UnitChoice[] {
   if (!product) return [];
   const units = new Map<string, UnitChoice>();
-  if (product.baseUnit && (!stockInOnly || !isPourUnit(product.baseUnit.code))) {
+  if (product.baseUnit) {
     units.set(product.baseUnit.id, { ...product.baseUnit, factor: 1, isPack: false });
   }
   for (const pack of product.packs ?? []) {
-    if (stockInOnly && isPourUnit(pack.unit.code)) continue;
     units.set(pack.unitId, { ...pack.unit, factor: pack.baseQuantity, isPack: true });
   }
   return [...units.values()];
 }
 
 export function stockInUnitsForProduct(product?: ProductUnitOption) {
-  return collectUnits(product, true);
+  return collectUnits(product);
 }
 
 export function transferUnitsForProduct(product?: ProductUnitOption) {
-  return collectUnits(product, false);
+  return collectUnits(product);
 }
 
 export function canReceiveProduct(product?: ProductUnitOption) {
@@ -92,13 +87,6 @@ export function preferredWholePackageTransferUnitId(
   return choices.find((unit) => unit.isPack)?.id ?? choices[0]?.id ?? "";
 }
 
-export function assertStockInReceiveUnit(codeOrName: string) {
-  if (isPourUnit(codeOrName)) {
-    throw new Error(
-      "Receive full bottles or packs into Main Stock. Move shots and glasses to Bar or Kitchen from Move Stock.",
-    );
-  }
-}
 
 export function quantityWithUnit(quantity: number, codeOrName: string) {
   const label = unitLabel(codeOrName);
