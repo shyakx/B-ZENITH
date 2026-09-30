@@ -30,6 +30,14 @@ export function isPourUnit(codeOrName: string) {
   return key === "SHOT" || key === "GLASS";
 }
 
+export function canAppearInStockOperations(product?: ProductUnitOption) {
+  if (!product) return false;
+  return (
+    !isPourUnit(product.baseUnit?.code ?? "") ||
+    (product.packs ?? []).some((pack) => !isPourUnit(pack.unit.code))
+  );
+}
+
 function collectUnits(product?: ProductUnitOption, stockInOnly = false): UnitChoice[] {
   if (!product) return [];
   const units = new Map<string, UnitChoice>();

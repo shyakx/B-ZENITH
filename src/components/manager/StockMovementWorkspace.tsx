@@ -10,7 +10,7 @@ import {
   WasteForm,
 } from "@/components/manager/InventoryForms";
 import { Card } from "@/components/ui/Card";
-import { canReceiveProduct, isPourUnit } from "@/lib/domain/units";
+import { canAppearInStockOperations, canReceiveProduct } from "@/lib/domain/units";
 
 export type MoveKind = "receive" | "transfer" | "count" | "adjust" | "waste";
 
@@ -44,7 +44,7 @@ const KINDS: { id: MoveKind; label: string }[] = [
 ];
 
 function tangibleProducts(products: ProductOption[]) {
-  return products.filter((product) => !isPourUnit(product.baseUnit?.code ?? ""));
+  return products.filter(canAppearInStockOperations);
 }
 
 export function StockMovementWorkspace({

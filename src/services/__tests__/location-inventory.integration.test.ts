@@ -3,6 +3,7 @@ import { BusinessArea, MovementType, PaymentStatus, ProductType } from "@prisma/
 import { afterAll, describe, expect, it } from "vitest";
 import { hasPermission } from "@/lib/auth/roles";
 import { KITCHEN_STORES_CATEGORY } from "@/lib/domain/kitchen-stores";
+import { canAppearInStockOperations } from "@/lib/domain/units";
 import { prisma } from "@/lib/prisma";
 import { listPosCatalog, upsertProduct, ensureKitchenStoreCatalog } from "@/services/products";
 import { cancelOrder, createOrder } from "@/services/orders";
@@ -334,6 +335,48 @@ describe("phase 2 location inventory", () => {
     });
     expect(await stockAt(potatoes.id, "KITCHEN")).toBe(5);
     expect(await stockAt(potatoes.id, "MAIN")).toBe(12);
+  });
+
+  it("lists and receives shot products by their full bottle package", async () => {
+    const { manager } = await staff();
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const category = await prisma.category.create({
+      data: { name: `Shot ${stamp}`, area: BusinessArea.BAR },
+    });
+    createdCategoryIds.push(category.id);
+    const [shot, bottle] = await Promise.all([
+      prisma.unit.findUnique({ where: { code: "SHOT" } }),
+      prisma.unit.findUnique({ where: { code: "BOTTLE" } }),
+    ]);
+    if (!shot || !bottle) throw new Error("Shot and Bottle units are required.");
+
+    const product = await upsertProduct({
+      name: `Gordon Gin Shot ${stamp}`,
+      categoryId: category.id,
+      sellingPrice: 1000,
+      trackInventory: true,
+      active: true,
+      productType: ProductType.PACKAGED_GOOD,
+      baseUnitId: shot.id,
+      purchaseUnitId: bottle.id,
+      purchaseContains: 30,
+      userId: manager.id,
+    });
+    createdProductIds.push(product.id);
+
+    const stockProduct = (await listStock()).find((row) => row.id === product.id);
+    expect(stockProduct).toBeTruthy();
+    expect(canAppearInStockOperations(stockProduct)).toBe(true);
+    expect(stockProduct?.packs.map((pack) => pack.unit.code)).toContain("BOTTLE");
+
+    const supplier = await createSupplier(manager.id);
+    await receiveStock({
+      supplierId: supplier.id,
+      userId: manager.id,
+      idempotencyKey: `shot-receipt-${product.id}`,
+      lines: [{ productId: product.id, packUnitId: bottle.id, packQuantity: 2 }],
+    });
+    expect(await stockAt(product.id, "MAIN")).toBe(60);
   });
 
   it("converts packs using ProductPack only (tests 16-19)", async () => {

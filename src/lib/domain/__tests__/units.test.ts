@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { flattenCatalogProducts, trackedProductBaseUnitCode } from "../../../../prisma/catalog-data";
 import {
   assertStockInReceiveUnit,
+  canAppearInStockOperations,
   canReceiveProduct,
   isPourUnit,
   preferredStockInUnitId,
@@ -82,6 +83,8 @@ describe("stock in vs stock out units", () => {
     const ginShot = { baseUnit: shot, packs: [] };
     expect(canReceiveProduct(ginBottle)).toBe(true);
     expect(canReceiveProduct(ginShot)).toBe(false);
+    expect(canAppearInStockOperations(ginBottle)).toBe(true);
+    expect(canAppearInStockOperations(ginShot)).toBe(false);
     expect(stockInUnitsForProduct(ginBottle).map((unit) => unit.code)).toEqual(["BOTTLE", "CRATE"]);
     expect(preferredStockInUnitId(ginBottle)).toBe(crate.id);
   });
@@ -92,6 +95,7 @@ describe("stock in vs stock out units", () => {
       packs: [{ unitId: bottle.id, baseQuantity: 16, unit: bottle }],
     };
     expect(canReceiveProduct(countedInShots)).toBe(true);
+    expect(canAppearInStockOperations(countedInShots)).toBe(true);
     expect(stockInUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["BOTTLE"]);
     expect(transferUnitsForProduct(countedInShots).map((unit) => unit.code)).toEqual(["SHOT", "BOTTLE"]);
     expect(preferredTransferUnitId(countedInShots)).toBe(shot.id);

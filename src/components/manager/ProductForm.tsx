@@ -7,6 +7,7 @@ import { deleteCategoryAction, deleteProductAction, previewDeleteProductAction, 
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Input";
 import type { SimilarNameMatch } from "@/lib/errors";
+import { isPourUnit } from "@/lib/domain/units";
 import {
   categoryAreaStaffLabel,
   categoryOptionLabel,
@@ -64,6 +65,9 @@ export function ProductForm({
   const stockUnit = units.find((unit) => unit.id === stockUnitId);
   const selectedCategory = categories.find((category) => category.id === categoryId);
   const showContains = Boolean(purchaseUnitId && stockUnitId && purchaseUnitId !== stockUnitId);
+  const pourStockNeedsPackage =
+    isPourUnit(stockUnit?.code ?? "") &&
+    (!showContains || isPourUnit(purchaseUnit?.code ?? ""));
 
   async function submitProduct(formData: FormData, confirmSimilarName = false) {
     setBusy(true);
@@ -241,7 +245,9 @@ export function ProductForm({
           ))}
         </Select>
         <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-zenith-muted">
-          How you usually buy it (Crate, Carton, or same as stock unit).
+          {pourStockNeedsPackage
+            ? "To receive a Shot or Glass item, choose its full purchase package (for example Bottle) and set how many shots or glasses it contains."
+            : "How you usually buy it (Crate, Carton, or same as stock unit)."}
         </span>
       </Field>
       {showContains ? (
