@@ -14,6 +14,8 @@ export function CategoryCatalog({
 }) {
   const [adding, setAdding] = useState(true);
   const [query, setQuery] = useState("");
+  const [area, setArea] = useState("");
+  const [productPresence, setProductPresence] = useState("");
 
   const visible = useMemo(
     () =>
@@ -23,9 +25,11 @@ export function CategoryCatalog({
           category.name,
           categoryAreaStaffLabel(category.area),
           String(category.productCount),
-        ),
+        ) &&
+        (!area || category.area === area) &&
+        (!productPresence || (category.productCount > 0) === (productPresence === "hasProducts")),
       ),
-    [categories, query],
+    [categories, query, area, productPresence],
   );
 
   return (
@@ -54,11 +58,31 @@ export function CategoryCatalog({
           showLabel
         />
       </div>
+      <div className="mb-3 flex flex-wrap gap-3">
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Area</span>
+          <select value={area} onChange={(event) => setArea(event.target.value)} className="rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">All areas</option>
+            {Object.values(BusinessArea).map((value) => (
+              <option key={value} value={value}>{categoryAreaStaffLabel(value)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Products</span>
+          <select value={productPresence} onChange={(event) => setProductPresence(event.target.value)} className="rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">Any product count</option>
+            <option value="hasProducts">Has products</option>
+            <option value="empty">No products</option>
+          </select>
+        </label>
+      </div>
+      <p className="mb-2 text-xs text-zenith-muted">{visible.length} categories shown.</p>
 
       <ul className="mt-1 grid max-h-[70vh] min-w-0 gap-2 overflow-y-auto pr-1">
         {visible.length === 0 ? (
           <li className="rounded-lg border border-zenith-border px-3 py-4 text-sm text-zenith-muted">
-            {query.trim() ? "No categories match that search." : "No categories yet."}
+            {query.trim() || area || productPresence ? "No categories match these filters." : "No categories yet."}
           </li>
         ) : null}
         {visible.map((category) => (

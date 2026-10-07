@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { formatStockQty } from "@/lib/domain/units";
 import { locationStaffLabel, visibleStockLocations } from "@/lib/domain/locations";
 import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
@@ -29,21 +29,38 @@ function moveHref(kind: string, productId: string) {
 
 export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
   const [query, setQuery] = useState("");
-  const visible = useMemo(
-    () =>
-      rows.filter((row) =>
-        matchesSearch(
-          query,
-          row.name,
-          row.categoryName,
-          row.unitCode,
-          row.managerReferenceName,
-          row.defaultLocationCode,
-          row.defaultLocationCode ? locationStaffLabel(row.defaultLocationCode) : null,
-        ),
-      ),
-    [rows, query],
-  );
+  const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
+  const [stockLevel, setStockLevel] = useState("");
+  const categories = [...new Set(rows.map((row) => row.categoryName))].sort((a, b) => a.localeCompare(b));
+  const visible = rows.filter((row) => {
+        const quantityByLocation: Record<string, number> = {
+          MAIN: row.main,
+          BAR: row.bar,
+          KITCHEN: row.kitchen,
+          CAFE: row.cafe,
+        };
+        const stockToCheck = location ? quantityByLocation[location] ?? 0 : row.total;
+        const matchesLevel =
+          !stockLevel ||
+          (stockLevel === "zero" && stockToCheck === 0) ||
+          (stockLevel === "low" && stockToCheck > 0 && stockToCheck <= 5) ||
+          (stockLevel === "available" && stockToCheck > 5);
+        return (
+          matchesSearch(
+            query,
+            row.name,
+            row.categoryName,
+            row.unitCode,
+            row.managerReferenceName,
+            row.defaultLocationCode,
+            row.defaultLocationCode ? locationStaffLabel(row.defaultLocationCode) : null,
+          ) &&
+          (!category || row.categoryName === category) &&
+          (!location || Boolean(stockLevel) || stockToCheck > 0) &&
+          matchesLevel
+        );
+      });
 
   return (
     <Card>
@@ -57,6 +74,47 @@ export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
         label="Search stock"
         showLabel
       />
+      <div className="mb-3 flex flex-wrap gap-3">
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Category</span>
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className="min-w-40 rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
+          >
+            <option value="">All categories</option>
+            {categories.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Location</span>
+          <select
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
+            className="min-w-40 rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
+          >
+            <option value="">All locations</option>
+            <option value="MAIN">Main</option>
+            <option value="BAR">Bar</option>
+            <option value="KITCHEN">Kitchen</option>
+            <option value="CAFE">Cafe</option>
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Stock level</span>
+          <select
+            value={stockLevel}
+            onChange={(event) => setStockLevel(event.target.value)}
+            className="min-w-40 rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
+          >
+            <option value="">All levels</option>
+            <option value="zero">Out of stock</option>
+            <option value="low">Low (1-5)</option>
+            <option value="available">Available (&gt;5)</option>
+          </select>
+        </label>
+      </div>
+      <p className="mb-2 text-xs text-zenith-muted">{visible.length} products shown.</p>
       <div className="overflow-x-auto text-sm">
         <table className="w-full min-w-[720px] border-collapse text-left">
           <thead>
@@ -72,7 +130,9 @@ export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
             {visible.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-4 text-zenith-muted">
-                  {query.trim() ? "No products match that search." : "No tracked stock products yet."}
+                  {query.trim() || category || location || stockLevel
+                    ? "No products match these filters."
+                    : "No tracked stock products yet."}
                 </td>
               </tr>
             ) : (

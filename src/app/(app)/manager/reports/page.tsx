@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { hasPermission } from "@/lib/auth/roles";
-import { endOfDay, formatDateTime, parseDateInput, startOfDay, toDateInput } from "@/lib/dates";
+import { PaymentMethod } from "@prisma/client";
+import { formatDateTime } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { currentOutstandingAmount } from "@/lib/manager-dashboard";
 import { formatStockQty } from "@/lib/domain/units";
@@ -12,26 +13,88 @@ import { listStock, valuationFromStock } from "@/services/inventory";
 import { listOrders, payableOutstandingBalance } from "@/services/orders";
 import { listOutstanding, listPayments, unsettledCreditTotal } from "@/services/payments";
 import { salesSummary } from "@/services/reports";
+import { ListFilterForm, type ListFilterField } from "@/components/ui/ListFilterForm";
+import { dateRange, singleParam, type SearchParams } from "@/lib/list-filters";
+import { listCategories, listProductOptions, listTables } from "@/services/products";
+import { listUsers } from "@/services/users";
 
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   const user = await requireRole("MANAGER");
   const params = await searchParams;
-  const from = params.from ? parseDateInput(params.from) : startOfDay();
-  const to = params.to ? endOfDay(params.to) : endOfDay();
-  const [summary, outstandingCredits, payableDue, creditDue, stock, orders, payments] =
+  const { from, to, fromValue, toValue } = dateRange(params);
+  const waiterId = singleParam(params, "waiterId");
+  const cashierId = singleParam(params, "cashierId");
+  const tableId = singleParam(params, "tableId");
+  const productId = singleParam(params, "productId");
+  const categoryId = singleParam(params, "categoryId");
+  const method = Object.values(PaymentMethod).find((value) => value === singleParam(params, "method"));
+  const search = singleParam(params, "q");
+  const filter = { waiterId, cashierId, tableId, productId, categoryId, method };
+  const [summary, outstandingCredits, payableDue, creditDue, stock, orders, payments, users, tables, categories, products] =
     await Promise.all([
-      salesSummary(from, to),
+      salesSummary(from, to, filter),
       listOutstanding(),
       payableOutstandingBalance(),
       unsettledCreditTotal(),
       listStock(),
-      listOrders({ from, to, take: 40 }),
-      listPayments(from, to),
+      listOrders({ from, to, take: 40, waiterId, tableId, search, productId, categoryId }),
+      listPayments(from, to, { cashierId, waiterId, tableId, method, search }),
+      listUsers(),
+      listTables(),
+      listCategories(),
+      listProductOptions(),
     ]);
+  const fields: ListFilterField[] = [
+    { name: "from", label: "From", type: "date", value: fromValue },
+    { name: "to", label: "To", type: "date", value: toValue },
+    { name: "q", label: "Order/payment search", type: "search", value: search, placeholder: "Order, waiter, or table" },
+    {
+      name: "waiterId",
+      label: "Waiter",
+      type: "select",
+      value: waiterId,
+      options: [{ value: "", label: "All waiters" }, ...users.filter((entry) => entry.role === "WAITER").map((entry) => ({ value: entry.id, label: entry.name }))],
+    },
+    {
+      name: "cashierId",
+      label: "Cashier",
+      type: "select",
+      value: cashierId,
+      options: [{ value: "", label: "All cashiers" }, ...users.filter((entry) => entry.role === "CASHIER").map((entry) => ({ value: entry.id, label: entry.name }))],
+    },
+    {
+      name: "tableId",
+      label: "Table",
+      type: "select",
+      value: tableId,
+      options: [{ value: "", label: "All tables" }, ...tables.map((entry) => ({ value: entry.id, label: entry.name }))],
+    },
+    {
+      name: "method",
+      label: "Payment method",
+      type: "select",
+      value: method ?? "",
+      options: [{ value: "", label: "All methods" }, ...Object.values(PaymentMethod).map((value) => ({ value, label: value.replaceAll("_", " ") }))],
+    },
+    {
+      name: "categoryId",
+      label: "Product category",
+      type: "select",
+      value: categoryId,
+      options: [{ value: "", label: "All categories" }, ...categories.map((entry) => ({ value: entry.id, label: entry.name }))],
+    },
+    {
+      name: "productId",
+      label: "Product",
+      type: "select",
+      value: productId,
+      options: [{ value: "", label: "All products" }, ...products.map((entry) => ({ value: entry.id, label: entry.name }))],
+    },
+  ];
   const valuation = valuationFromStock(stock);
   const outstanding = currentOutstandingAmount([{ total: payableDue, paidAmount: 0 }], [
     { amountOwed: creditDue },
@@ -65,27 +128,10 @@ export default async function ReportsPage({
         ) : null}
       </nav>
 
-      <form className="mb-6 flex flex-wrap items-end gap-3">
-        <label className="space-y-1">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">From</span>
-          <input
-            type="date"
-            name="from"
-            defaultValue={toDateInput(from)}
-            className="rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
-          />
-        </label>
-        <label className="space-y-1">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">To</span>
-          <input
-            type="date"
-            name="to"
-            defaultValue={toDateInput(to)}
-            className="rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
-          />
-        </label>
-        <button className="rounded-xl bg-zenith-gold px-4 py-2 font-semibold text-white">Apply</button>
-      </form>
+      <ListFilterForm fields={fields} action="/manager/reports" />
+      <p className="-mt-3 mb-5 text-xs text-zenith-muted">
+        Filters affect matching sales and payment sections; current outstanding balances and stock value remain all-time figures.
+      </p>
 
       <div className="mb-6 grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Sales (orders created)" value={formatRwf(summary.orderTotal)} hint={`${summary.orderCount} orders`} />

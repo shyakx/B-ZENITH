@@ -1,26 +1,85 @@
 import { requireRole } from "@/lib/auth/current-user";
-import { endOfDay, formatDateTime, startOfDay } from "@/lib/dates";
+import { formatDateTime } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { PrintFactureLink } from "@/components/print/PrintFactureLink";
-import { VisibleDate } from "@/components/ui/VisibleDate";
+import { VisibleDateRange } from "@/components/ui/VisibleDate";
 import { listPayments } from "@/services/payments";
+import { PaymentMethod } from "@prisma/client";
+import { ListFilterForm, type ListFilterField } from "@/components/ui/ListFilterForm";
+import { dateRange, singleParam, validAmountParam, type SearchParams } from "@/lib/list-filters";
+import { listUsers } from "@/services/users";
+import { listTables } from "@/services/products";
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   await requireRole("CASHIER");
-  const from = startOfDay();
-  const to = endOfDay();
-  const payments = await listPayments(from, to);
+  const params = await searchParams;
+  const { from, to, fromValue, toValue } = dateRange(params);
+  const method = Object.values(PaymentMethod).find((value) => value === singleParam(params, "method"));
+  const cashierId = singleParam(params, "cashierId");
+  const waiterId = singleParam(params, "waiterId");
+  const tableId = singleParam(params, "tableId");
+  const search = singleParam(params, "q");
+  const minAmount = validAmountParam(singleParam(params, "minAmount"));
+  const maxAmount = validAmountParam(singleParam(params, "maxAmount"));
+  const [payments, users, tables] = await Promise.all([
+    listPayments(from, to, { method, cashierId, waiterId, tableId, search, minAmount, maxAmount }),
+    listUsers(),
+    listTables(),
+  ]);
   const cashToday = payments
     .filter((payment) => payment.method === "CASH")
     .reduce((sum, payment) => sum + payment.amount, 0);
+  const fields: ListFilterField[] = [
+    { name: "from", label: "From", type: "date", value: fromValue },
+    { name: "to", label: "To", type: "date", value: toValue },
+    { name: "q", label: "Search", type: "search", value: search, placeholder: "Order, cashier, waiter, table" },
+    {
+      name: "method",
+      label: "Method",
+      type: "select",
+      value: method ?? "",
+      options: [{ value: "", label: "All methods" }, ...Object.values(PaymentMethod).map((value) => ({ value, label: value.replaceAll("_", " ") }))],
+    },
+    {
+      name: "cashierId",
+      label: "Cashier",
+      type: "select",
+      value: cashierId,
+      options: [{ value: "", label: "All cashiers" }, ...users.filter((user) => user.role === "CASHIER").map((user) => ({ value: user.id, label: user.name }))],
+    },
+    {
+      name: "waiterId",
+      label: "Waiter",
+      type: "select",
+      value: waiterId,
+      options: [{ value: "", label: "All waiters" }, ...users.filter((user) => user.role === "WAITER").map((user) => ({ value: user.id, label: user.name }))],
+    },
+    {
+      name: "tableId",
+      label: "Table",
+      type: "select",
+      value: tableId,
+      options: [{ value: "", label: "All tables" }, ...tables.map((table) => ({ value: table.id, label: table.name }))],
+    },
+    { name: "minAmount", label: "Min amount", type: "number", value: singleParam(params, "minAmount") },
+    { name: "maxAmount", label: "Max amount", type: "number", value: singleParam(params, "maxAmount") },
+  ];
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Payments</h1>
       <div className="mt-2">
-        <VisibleDate />
+        <VisibleDateRange from={from} to={to} />
       </div>
-      <p className="mt-4 font-display text-2xl text-zenith-gold">{formatRwf(cashToday)}</p>
+      <div className="mt-5">
+        <ListFilterForm fields={fields} action="/cashier/payments" />
+      </div>
+      <p className="mt-4 font-display text-2xl text-zenith-gold">{formatRwf(cashToday)} cash in results</p>
+      <p className="mt-1 text-xs text-zenith-muted">{payments.length} payments shown.</p>
 
       <div className="mt-6 space-y-3">
         {payments.length === 0 ? (

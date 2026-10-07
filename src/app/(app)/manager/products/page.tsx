@@ -30,6 +30,7 @@ export default async function ProductsPage() {
       sellOnPos: product.sellOnPos,
       active: product.active,
       trackInventory: product.trackInventory,
+      defaultLocationName: product.defaultStockLocation?.name ?? "",
       stockUnit: product.baseUnit?.name ?? product.baseUnit?.code ?? "",
       stockLine: product.trackInventory
         ? `Main: ${byCode[LOCATION_CODES.MAIN] ?? 0} · Bar: ${byCode[LOCATION_CODES.BAR] ?? 0} · Kitchen: ${byCode[LOCATION_CODES.KITCHEN] ?? 0} · Cafe: ${byCode[LOCATION_CODES.CAFE] ?? 0}`

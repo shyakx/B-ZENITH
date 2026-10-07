@@ -406,9 +406,43 @@ export async function settleCredit(input: {
   }
 }
 
-export async function listOutstanding() {
+export async function listOutstanding(filter: {
+  search?: string;
+  tableId?: string;
+  waiterId?: string;
+  from?: Date;
+  to?: Date;
+  minAmount?: number;
+  maxAmount?: number;
+} = {}) {
+  const search = filter.search?.trim();
+  const orderNumber = search && /^\d+$/.test(search) ? Number(search) : undefined;
   return prisma.creditRecord.findMany({
-    where: { settled: false },
+    where: {
+      settled: false,
+      ...(filter.tableId || filter.waiterId
+        ? { order: { tableId: filter.tableId || undefined, waiterId: filter.waiterId || undefined } }
+        : {}),
+      ...(filter.from || filter.to
+        ? { createdAt: { gte: filter.from, lte: filter.to } }
+        : {}),
+      ...(filter.minAmount != null || filter.maxAmount != null
+        ? { amountOwed: { gte: filter.minAmount, lte: filter.maxAmount } }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { customerName: { contains: search, mode: "insensitive" as const } },
+              { customerPhone: { contains: search, mode: "insensitive" as const } },
+              ...(orderNumber != null && Number.isSafeInteger(orderNumber)
+                ? [{ order: { orderNumber } }]
+                : []),
+              { order: { table: { name: { contains: search, mode: "insensitive" as const } } } },
+              { order: { waiter: { name: { contains: search, mode: "insensitive" as const } } } },
+            ],
+          }
+        : {}),
+    },
     select: {
       id: true,
       customerName: true,
@@ -453,9 +487,50 @@ export async function sumPaymentsReceived(from: Date, to: Date, method?: Payment
   return result._sum.amount ?? 0;
 }
 
-export async function listPayments(from: Date, to: Date) {
+export async function listPayments(
+  from: Date,
+  to: Date,
+  filter: {
+    method?: PaymentMethod;
+    cashierId?: string;
+    waiterId?: string;
+    tableId?: string;
+    search?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  } = {},
+) {
+  const search = filter.search?.trim();
+  const orderNumber = search && /^\d+$/.test(search) ? Number(search) : undefined;
   return prisma.payment.findMany({
-    where: { createdAt: { gte: from, lte: to } },
+    where: {
+      createdAt: { gte: from, lte: to },
+      method: filter.method,
+      cashierId: filter.cashierId || undefined,
+      ...(filter.waiterId || filter.tableId
+        ? {
+            order: {
+              waiterId: filter.waiterId || undefined,
+              tableId: filter.tableId || undefined,
+            },
+          }
+        : {}),
+      ...(filter.minAmount != null || filter.maxAmount != null
+        ? { amount: { gte: filter.minAmount, lte: filter.maxAmount } }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              ...(orderNumber != null && Number.isSafeInteger(orderNumber)
+                ? [{ order: { orderNumber } }]
+                : []),
+              { cashier: { name: { contains: search, mode: "insensitive" as const } } },
+              { order: { waiter: { name: { contains: search, mode: "insensitive" as const } } } },
+              { order: { table: { name: { contains: search, mode: "insensitive" as const } } } },
+            ],
+          }
+        : {}),
+    },
     include: {
       cashier: { select: { id: true, name: true } },
       order: {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
-import { SupplierActiveButton, SupplierForm } from "@/components/manager/InventoryForms";
+import { SupplierForm } from "@/components/manager/InventoryForms";
+import { SupplierDirectory } from "@/components/manager/FilterableDirectories";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { listSuppliers } from "@/services/suppliers";
@@ -24,20 +25,7 @@ export default async function SuppliersPage() {
         </Card>
         <Card>
           <h2 className="mb-3 font-semibold">Directory</h2>
-          <div className="space-y-3">
-            {suppliers.map((supplier) => (
-              <div key={supplier.id} className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-semibold">{supplier.name}</div>
-                  <div className="text-sm text-zenith-muted">
-                    {supplier.active ? "Active" : "Inactive"}
-                    {supplier.phone ? ` · ${supplier.phone}` : ""}
-                  </div>
-                </div>
-                <SupplierActiveButton id={supplier.id} active={supplier.active} />
-              </div>
-            ))}
-          </div>
+          <SupplierDirectory suppliers={suppliers} />
         </Card>
       </div>
     </div>

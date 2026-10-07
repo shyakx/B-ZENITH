@@ -1,4 +1,4 @@
-import { OrderStatus, Prisma } from "@prisma/client";
+import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import { LOCATION_CODES } from "@/lib/domain/locations";
 import { nextStockAfterIncrease } from "@/lib/domain/stock";
@@ -15,9 +15,41 @@ export function requirePurgeConfirm(confirm: string) {
   }
 }
 
-export async function listSalesForDay(from: Date, to: Date) {
+export async function listSalesForDay(
+  from: Date,
+  to: Date,
+  filter: {
+    waiterId?: string;
+    tableId?: string;
+    status?: OrderStatus;
+    paymentStatus?: PaymentStatus;
+    minTotal?: number;
+    maxTotal?: number;
+    search?: string;
+  } = {},
+) {
+  const search = filter.search?.trim();
+  const orderNumber = search && /^\d+$/.test(search) ? Number(search) : undefined;
   return prisma.order.findMany({
-    where: { createdAt: { gte: from, lte: to } },
+    where: {
+      createdAt: { gte: from, lte: to },
+      waiterId: filter.waiterId || undefined,
+      tableId: filter.tableId || undefined,
+      status: filter.status,
+      paymentStatus: filter.paymentStatus,
+      ...(filter.minTotal != null || filter.maxTotal != null
+        ? { total: { gte: filter.minTotal, lte: filter.maxTotal } }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              ...(orderNumber != null && Number.isSafeInteger(orderNumber) ? [{ orderNumber }] : []),
+              { waiter: { name: { contains: search, mode: "insensitive" as const } } },
+              { table: { name: { contains: search, mode: "insensitive" as const } } },
+            ],
+          }
+        : {}),
+    },
     include: {
       waiter: { select: { name: true } },
       table: { select: { name: true } },

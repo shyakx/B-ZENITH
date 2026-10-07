@@ -5,16 +5,75 @@ import { combinedBill } from "@/lib/domain/payments";
 import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { PaymentBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ListFilterForm, type ListFilterField } from "@/components/ui/ListFilterForm";
+import { dateRange, singleParam, validAmountParam, type SearchParams } from "@/lib/list-filters";
+import { PaymentStatus } from "@prisma/client";
 import { listOpenOrdersByTable } from "@/services/orders";
+import { listTables } from "@/services/products";
+import { listUsers } from "@/services/users";
 
-export default async function BillsPage() {
+export default async function BillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   await requireRole("CASHIER");
-  const groups = await listOpenOrdersByTable();
+  const params = await searchParams;
+  const { from, to, fromValue, toValue } = dateRange(params);
+  const paymentStatus = [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID].find(
+    (value) => value === singleParam(params, "paymentStatus"),
+  );
+  const search = singleParam(params, "q");
+  const tableId = singleParam(params, "tableId");
+  const waiterId = singleParam(params, "waiterId");
+  const minBalance = validAmountParam(singleParam(params, "minBalance"));
+  const maxBalance = validAmountParam(singleParam(params, "maxBalance"));
+  const [groups, tables, users] = await Promise.all([
+    listOpenOrdersByTable({ from, to, paymentStatus, search, tableId, waiterId, minBalance, maxBalance }),
+    listTables(),
+    listUsers(),
+  ]);
+  const fields: ListFilterField[] = [
+    { name: "from", label: "Order from", type: "date", value: fromValue },
+    { name: "to", label: "Order to", type: "date", value: toValue },
+    { name: "q", label: "Search", type: "search", value: search, placeholder: "Order, waiter, or table" },
+    {
+      name: "paymentStatus",
+      label: "Payment status",
+      type: "select",
+      value: paymentStatus ?? "",
+      options: [
+        { value: "", label: "All open bills" },
+        { value: PaymentStatus.UNPAID, label: "Unpaid" },
+        { value: PaymentStatus.PARTIALLY_PAID, label: "Partially paid" },
+      ],
+    },
+    {
+      name: "tableId",
+      label: "Table",
+      type: "select",
+      value: tableId,
+      options: [{ value: "", label: "All tables" }, ...tables.map((table) => ({ value: table.id, label: table.name }))],
+    },
+    {
+      name: "waiterId",
+      label: "Waiter",
+      type: "select",
+      value: waiterId,
+      options: [{ value: "", label: "All waiters" }, ...users.filter((user) => user.role === "WAITER").map((user) => ({ value: user.id, label: user.name }))],
+    },
+    { name: "minBalance", label: "Min order balance", type: "number", value: singleParam(params, "minBalance") },
+    { name: "maxBalance", label: "Max order balance", type: "number", value: singleParam(params, "maxBalance") },
+  ];
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <h1 className="font-display text-2xl text-zenith-gold">Orders / Bills</h1>
 
+      <div className="mt-5">
+        <ListFilterForm fields={fields} action="/cashier/bills" />
+      </div>
+      <p className="mb-2 text-xs text-zenith-muted">{groups.length} tables with matching open bills.</p>
       <div className="mt-6 space-y-4">
         {groups.length === 0 ? (
           <p className="rounded-2xl border border-zenith-border bg-white px-4 py-6 font-semibold">

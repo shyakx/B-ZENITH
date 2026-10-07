@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PaymentMethod } from "@prisma/client";
+import { PaymentMethod, PaymentStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth/current-user";
 import { endOfDay, startOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
@@ -9,16 +9,28 @@ import { PaymentBadge } from "@/components/ui/Badge";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { countOpenBillsByStatus, listOpenOrdersByTable } from "@/services/orders";
 import { countOutstandingCredits, sumPaymentsReceived } from "@/services/payments";
+import { ListFilterForm, type ListFilterField } from "@/components/ui/ListFilterForm";
+import { dateRange, singleParam, type SearchParams } from "@/lib/list-filters";
 
-export default async function CashierHomePage() {
+export default async function CashierHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const user = await requireRole("CASHIER");
-  const from = startOfDay();
-  const to = endOfDay();
+  const params = await searchParams;
+  const search = singleParam(params, "q");
+  const { from, to, fromValue, toValue } = dateRange(params);
+  const todayFrom = startOfDay();
+  const todayTo = endOfDay();
+  const paymentStatus = [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID].find(
+    (value) => value === singleParam(params, "paymentStatus"),
+  );
   const [groups, billCounts, outstandingCount, cashReceivedToday] = await Promise.all([
-    listOpenOrdersByTable(),
+    listOpenOrdersByTable({ from, to, search, paymentStatus }),
     countOpenBillsByStatus(),
     countOutstandingCredits(),
-    sumPaymentsReceived(from, to, PaymentMethod.CASH),
+    sumPaymentsReceived(todayFrom, todayTo, PaymentMethod.CASH),
   ]);
 
   const openOrders = groups.flatMap((group) => group.orders);
@@ -28,6 +40,22 @@ export default async function CashierHomePage() {
     payLater: outstandingCount,
     cashReceivedToday,
   };
+  const filterFields: ListFilterField[] = [
+    { name: "from", label: "Order from", type: "date", value: fromValue },
+    { name: "to", label: "Order to", type: "date", value: toValue },
+    { name: "q", label: "Search bills", type: "search", value: search, placeholder: "Order, waiter, or table" },
+    {
+      name: "paymentStatus",
+      label: "Payment status",
+      type: "select",
+      value: paymentStatus ?? "",
+      options: [
+        { value: "", label: "All open bills" },
+        { value: PaymentStatus.UNPAID, label: "Unpaid" },
+        { value: PaymentStatus.PARTIALLY_PAID, label: "Partially paid" },
+      ],
+    },
+  ];
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
@@ -73,6 +101,12 @@ export default async function CashierHomePage() {
             Today&apos;s payments →
           </Link>
         </div>
+        <div className="mt-4">
+          <ListFilterForm fields={filterFields} action="/cashier" />
+        </div>
+        <p className="mb-2 text-xs text-zenith-muted">
+          {openOrders.length} matching open bills. Outstanding bill and credit counts above include earlier days; cash is for today.
+        </p>
         {openOrders.length === 0 ? (
           <div className="mt-3 rounded-xl border border-zenith-border bg-white px-4 py-5">
             <p className="font-semibold">No unpaid bills right now.</p>

@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth/current-user";
 import { listUsers } from "@/services/users";
 import { roleLabel, type Role } from "@/lib/auth/roles";
+import { StaffDirectory } from "@/components/admin/StaffDirectory";
 
 const ACCESS: {
   role: Role;
@@ -109,17 +110,7 @@ export default async function AccessPage() {
 
       <section className="mt-8 rounded-2xl border border-zenith-border bg-white p-5">
         <h2 className="mb-3 text-base font-semibold">Current assignments</h2>
-        <div className="space-y-2">
-          {users.map((user) => (
-            <div key={user.id} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-              <span className="font-semibold">{user.name}</span>
-              <span className="font-semibold uppercase tracking-wider text-zenith-gold">
-                {roleLabel(user.role)}
-                {user.active ? "" : " · inactive"}
-              </span>
-            </div>
-          ))}
-        </div>
+        <StaffDirectory users={users} view="assignments" />
       </section>
     </div>
   );

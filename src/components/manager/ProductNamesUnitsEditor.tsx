@@ -18,9 +18,17 @@ type Row = {
 
 export function ProductNamesUnitsEditor({ products }: { products: Row[] }) {
   const [query, setQuery] = useState("");
+  const [inventory, setInventory] = useState("");
+  const [reference, setReference] = useState("");
+  const [unit, setUnit] = useState("");
   const visible = useMemo(
     () =>
       products.filter((product) =>
+        (!inventory || product.trackInventory === (inventory === "tracked")) &&
+        (!reference ||
+          Boolean(product.managerReferenceName || product.managerReferenceNote) ===
+            (reference === "configured")) &&
+        (!unit || Boolean(product.unitCode) === (unit === "hasUnit")) &&
         matchesSearch(
           query,
           product.name,
@@ -30,7 +38,7 @@ export function ProductNamesUnitsEditor({ products }: { products: Row[] }) {
           product.managerReferenceNote,
         ),
       ),
-    [products, query],
+    [products, query, inventory, reference, unit],
   );
 
   return (
@@ -40,6 +48,33 @@ export function ProductNamesUnitsEditor({ products }: { products: Row[] }) {
         onChange={setQuery}
         placeholder="Search by product, nickname, category, or unit…"
       />
+      <div className="mb-3 grid gap-3 sm:grid-cols-3">
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Inventory</span>
+          <select value={inventory} onChange={(event) => setInventory(event.target.value)} className="w-full rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">Tracked and untracked</option>
+            <option value="tracked">Tracked only</option>
+            <option value="untracked">Not tracked</option>
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Manager reference</span>
+          <select value={reference} onChange={(event) => setReference(event.target.value)} className="w-full rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">All references</option>
+            <option value="configured">Has reference or note</option>
+            <option value="missing">Missing reference and note</option>
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Stock unit</span>
+          <select value={unit} onChange={(event) => setUnit(event.target.value)} className="w-full rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">All unit settings</option>
+            <option value="hasUnit">Has stock unit</option>
+            <option value="noUnit">No stock unit</option>
+          </select>
+        </label>
+      </div>
+      <p className="text-xs text-zenith-muted">{visible.length} products shown.</p>
       {visible.length === 0 ? (
         <p className="text-sm text-zenith-muted">
           {query.trim() ? "No products match that search." : "No products yet."}

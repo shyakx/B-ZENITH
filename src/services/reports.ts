@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus } from "@prisma/client";
+import { OrderStatus, PaymentMethod, PaymentStatus, Prisma } from "@prisma/client";
 import { endOfDay, startOfDay } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 
@@ -8,11 +8,46 @@ const openPayment: PaymentStatus[] = [
   PaymentStatus.PAY_LATER,
 ];
 
-export async function salesSummary(from: Date, to: Date) {
+export async function salesSummary(
+  from: Date,
+  to: Date,
+  filter: {
+    waiterId?: string;
+    cashierId?: string;
+    tableId?: string;
+    method?: PaymentMethod;
+    productId?: string;
+    categoryId?: string;
+  } = {},
+) {
+  const productWhere: Prisma.OrderItemWhereInput =
+    filter.productId || filter.categoryId
+      ? {
+          productId: filter.productId || undefined,
+          ...(filter.categoryId ? { product: { categoryId: filter.categoryId } } : {}),
+        }
+      : {};
   const orderWhere = {
     createdAt: { gte: from, lte: to },
     status: { not: OrderStatus.CANCELLED },
-  } as const;
+    waiterId: filter.waiterId || undefined,
+    tableId: filter.tableId || undefined,
+    ...(filter.productId || filter.categoryId ? { items: { some: productWhere } } : {}),
+  } satisfies Prisma.OrderWhereInput;
+  const paymentWhere = {
+    createdAt: { gte: from, lte: to },
+    cashierId: filter.cashierId || undefined,
+    method: filter.method,
+    ...(filter.waiterId || filter.tableId || filter.productId || filter.categoryId
+      ? {
+          order: {
+            waiterId: filter.waiterId || undefined,
+            tableId: filter.tableId || undefined,
+            ...(filter.productId || filter.categoryId ? { items: { some: productWhere } } : {}),
+          },
+        }
+      : {}),
+  } satisfies Prisma.PaymentWhereInput;
 
   const [
     orderTotals,
@@ -43,18 +78,18 @@ export async function salesSummary(from: Date, to: Date) {
       _sum: { total: true },
     }),
     prisma.payment.aggregate({
-      where: { createdAt: { gte: from, lte: to } },
+      where: paymentWhere,
       _sum: { amount: true },
     }),
     prisma.payment.groupBy({
       by: ["cashierId"],
-      where: { createdAt: { gte: from, lte: to } },
+      where: paymentWhere,
       _count: { _all: true },
       _sum: { amount: true },
     }),
     prisma.orderItem.groupBy({
       by: ["name"],
-      where: { order: orderWhere },
+      where: { order: orderWhere, ...productWhere },
       _sum: { quantity: true, lineTotal: true },
     }),
   ]);

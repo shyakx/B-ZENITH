@@ -1,10 +1,7 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/auth/current-user";
 import { assignableRoles } from "@/lib/auth/staff-policy";
-import { roleLabel } from "@/lib/auth/roles";
-import { formatDate } from "@/lib/dates";
 import { CreateUserForm } from "@/components/admin/UserForms";
-import { Badge } from "@/components/ui/Badge";
+import { StaffDirectory } from "@/components/admin/StaffDirectory";
 import { countActiveOwners, listUsers } from "@/services/users";
 
 export default async function StaffPage() {
@@ -23,31 +20,7 @@ export default async function StaffPage() {
       <section className="mt-6">
         <h2 className="text-base font-semibold">People</h2>
         <div className="mt-2 grid gap-2">
-          {users.map((user) => (
-            <Link
-              key={user.id}
-              href={`/admin/users/${user.id}`}
-              className="block min-w-0 rounded-xl border border-zenith-border bg-white px-3 py-2.5 hover:border-zenith-gold"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-base font-semibold text-zenith-gold">{user.name}</div>
-                  <div className="mt-0.5 truncate text-sm text-zenith-muted">
-                    {roleLabel(user.role)} · {formatDate(user.createdAt)}
-                  </div>
-                </div>
-                <Badge
-                  className={
-                    user.active
-                      ? "border-emerald-200 bg-emerald-50 text-zenith-success"
-                      : "border-zenith-border bg-zenith-surface text-zenith-muted"
-                  }
-                >
-                  {user.active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </Link>
-          ))}
+          <StaffDirectory users={users} />
         </div>
       </section>
     </div>

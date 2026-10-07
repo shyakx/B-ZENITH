@@ -53,22 +53,63 @@ const orderListFilter = (filter: {
   unpaidOnly?: boolean;
   from?: Date;
   to?: Date;
-}): Prisma.OrderWhereInput => ({
-  waiterId: filter.waiterId,
-  tableId: filter.tableId,
-  status: filter.openOnly ? OrderStatus.OPEN : undefined,
-  paymentStatus: filter.unpaidOnly
-    ? { in: [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID, PaymentStatus.PAY_LATER] }
-    : undefined,
-  ...(filter.from != null || filter.to != null
-    ? {
-        createdAt: {
-          gte: filter.from,
-          lte: filter.to,
-        },
-      }
-    : {}),
-});
+  status?: OrderStatus;
+  paymentStatus?: PaymentStatus;
+  search?: string;
+  minTotal?: number;
+  maxTotal?: number;
+  productId?: string;
+  categoryId?: string;
+}): Prisma.OrderWhereInput => {
+  const search = filter.search?.trim();
+  const orderNumber = search && /^\d+$/.test(search) ? Number(search) : undefined;
+  return {
+    waiterId: filter.waiterId || undefined,
+    tableId: filter.tableId || undefined,
+    status: filter.status ?? (filter.openOnly ? OrderStatus.OPEN : undefined),
+    paymentStatus: filter.paymentStatus ?? (filter.unpaidOnly
+      ? { in: [PaymentStatus.UNPAID, PaymentStatus.PARTIALLY_PAID, PaymentStatus.PAY_LATER] }
+      : undefined),
+    ...(filter.from != null || filter.to != null
+      ? {
+          createdAt: {
+            gte: filter.from,
+            lte: filter.to,
+          },
+        }
+      : {}),
+    ...(filter.minTotal != null || filter.maxTotal != null
+      ? {
+          total: {
+            gte: filter.minTotal,
+            lte: filter.maxTotal,
+          },
+        }
+      : {}),
+    ...(filter.productId || filter.categoryId
+      ? {
+          items: {
+            some: {
+              productId: filter.productId || undefined,
+              ...(filter.categoryId ? { product: { categoryId: filter.categoryId } } : {}),
+            },
+          },
+        }
+      : {}),
+    ...(search
+      ? {
+          OR: [
+            ...(orderNumber != null && Number.isSafeInteger(orderNumber)
+              ? [{ orderNumber }]
+              : []),
+            { table: { name: { contains: search, mode: "insensitive" } } },
+            { waiter: { name: { contains: search, mode: "insensitive" } } },
+            { items: { some: { name: { contains: search, mode: "insensitive" } } } },
+          ],
+        }
+      : {}),
+  };
+};
 
 /** Exported for unit tests — same where-clause used by listOrders. */
 export function buildOrderListWhere(
@@ -430,6 +471,13 @@ type OrderListFilter = {
   from?: Date;
   to?: Date;
   take?: number;
+  status?: OrderStatus;
+  paymentStatus?: PaymentStatus;
+  search?: string;
+  minTotal?: number;
+  maxTotal?: number;
+  productId?: string;
+  categoryId?: string;
 };
 
 export async function listOrders(filter: OrderListFilter & { withItems: true }): Promise<OrderWaiterListItem[]>;
@@ -518,15 +566,54 @@ export async function getCurrentTableBill(tableId: string) {
   return { table, orders };
 }
 
-export async function listOpenOrdersByTable() {
+export async function listOpenOrdersByTable(filter: {
+  tableId?: string;
+  waiterId?: string;
+  paymentStatus?: PaymentStatus;
+  from?: Date;
+  to?: Date;
+  search?: string;
+  minBalance?: number;
+  maxBalance?: number;
+} = {}) {
+  const search = filter.search?.trim();
+  const orderNumber = search && /^\d+$/.test(search) ? Number(search) : undefined;
   const orders = await prisma.order.findMany({
-    where: currentTableBillWhere,
+    where: {
+      ...currentTableBillWhere,
+      tableId: filter.tableId || undefined,
+      waiterId: filter.waiterId || undefined,
+      paymentStatus: filter.paymentStatus
+        ? { in: [filter.paymentStatus] }
+        : currentTableBillWhere.paymentStatus,
+      ...(filter.from || filter.to
+        ? { createdAt: { gte: filter.from, lte: filter.to } }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              ...(orderNumber != null && Number.isSafeInteger(orderNumber)
+                ? [{ orderNumber }]
+                : []),
+              { table: { name: { contains: search, mode: "insensitive" as const } } },
+              { waiter: { name: { contains: search, mode: "insensitive" as const } } },
+            ],
+          }
+        : {}),
+    },
     include: orderListInclude,
     orderBy: [{ table: { sortOrder: "asc" } }, { orderNumber: "asc" }],
   });
+  const matchingOrders = orders.filter((order) => {
+    const balance = Math.max(0, order.total - order.paidAmount);
+    return (
+      (filter.minBalance == null || balance >= filter.minBalance) &&
+      (filter.maxBalance == null || balance <= filter.maxBalance)
+    );
+  });
 
   const groups = new Map<string, { tableId: string; tableName: string; orders: OrderListItem[] }>();
-  for (const order of orders) {
+  for (const order of matchingOrders) {
     const current = groups.get(order.tableId) ?? {
       tableId: order.tableId,
       tableName: order.table.name,

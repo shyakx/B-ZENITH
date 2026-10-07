@@ -697,13 +697,37 @@ export const listStock = cache(async (lowOnly = false) => {
 });
 
 export async function listMovements(
-  take = 80,
-  filter?: { type?: MovementType; locationId?: string; from?: Date; to?: Date },
+  take = 200,
+  filter?: {
+    type?: MovementType;
+    locationId?: string;
+    productId?: string;
+    categoryId?: string;
+    userId?: string;
+    search?: string;
+    from?: Date;
+    to?: Date;
+  },
 ) {
+  const search = filter?.search?.trim();
   return prisma.inventoryMovement.findMany({
     where: {
       type: filter?.type,
-      locationId: filter?.locationId,
+      locationId: filter?.locationId || undefined,
+      productId: filter?.productId || undefined,
+      userId: filter?.userId || undefined,
+      ...(filter?.categoryId ? { product: { categoryId: filter.categoryId } } : {}),
+      ...(search
+        ? {
+            OR: [
+              { product: { name: { contains: search, mode: "insensitive" } } },
+              { product: { managerReferenceName: { contains: search, mode: "insensitive" } } },
+              { reason: { contains: search, mode: "insensitive" } },
+              { reference: { contains: search, mode: "insensitive" } },
+              { user: { name: { contains: search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
       ...(filter?.from || filter?.to
         ? {
             createdAt: {
@@ -714,7 +738,14 @@ export async function listMovements(
         : {}),
     },
     include: {
-      product: { select: { id: true, name: true, baseUnit: { select: { code: true } } } },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          category: { select: { id: true, name: true } },
+          baseUnit: { select: { code: true } },
+        },
+      },
       user: { select: { id: true, name: true } },
       location: { select: { code: true, name: true } },
     },
@@ -723,8 +754,39 @@ export async function listMovements(
   });
 }
 
-export async function listReceipts(take = 80) {
+export async function listReceipts(
+  take = 200,
+  filter?: {
+    supplierId?: string;
+    receivedById?: string;
+    productId?: string;
+    locationId?: string;
+    search?: string;
+    from?: Date;
+    to?: Date;
+  },
+) {
+  const search = filter?.search?.trim();
   return prisma.stockReceipt.findMany({
+    where: {
+      supplierId: filter?.supplierId || undefined,
+      receivedById: filter?.receivedById || undefined,
+      locationId: filter?.locationId || undefined,
+      ...(filter?.productId ? { lines: { some: { productId: filter.productId } } } : {}),
+      ...(filter?.from || filter?.to
+        ? { receivedAt: { gte: filter.from, lte: filter.to } }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { supplier: { name: { contains: search, mode: "insensitive" } } },
+              { receivedBy: { name: { contains: search, mode: "insensitive" } } },
+              { reference: { contains: search, mode: "insensitive" } },
+              { lines: { some: { product: { name: { contains: search, mode: "insensitive" } } } } },
+            ],
+          }
+        : {}),
+    },
     include: {
       supplier: { select: { id: true, name: true } },
       receivedBy: { select: { id: true, name: true } },

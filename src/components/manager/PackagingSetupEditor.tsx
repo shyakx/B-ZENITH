@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveProductPackagingAction } from "@/actions/catalog";
 import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
@@ -30,17 +30,64 @@ export function PackagingSetupEditor({
   units: UnitOption[];
 }) {
   const [query, setQuery] = useState("");
-  const visible = useMemo(
-    () =>
-      products.filter((row) =>
-        matchesSearch(query, row.name, row.categoryName, row.stockUnitCode, row.packageUnitCode),
-      ),
-    [products, query],
-  );
+  const [category, setCategory] = useState("");
+  const [configuration, setConfiguration] = useState("");
+  const [packageUnit, setPackageUnit] = useState("");
+  const [wholePackage, setWholePackage] = useState("");
+  const categories = [...new Set(products.map((product) => product.categoryName))].sort((a, b) => a.localeCompare(b));
+  const packageUnits = [...new Set(products.map((product) => product.packageUnitCode).filter((value): value is string => Boolean(value)))].sort();
+  const visible = products.filter((row) => {
+    const configured = Boolean(
+      row.packageUnitId &&
+      row.packageUnitId !== row.stockUnitId &&
+      row.unitsPerPackage != null &&
+      row.unitsPerPackage > 0,
+    );
+    return (
+      matchesSearch(query, row.name, row.categoryName, row.stockUnitCode, row.packageUnitCode) &&
+      (!category || row.categoryName === category) &&
+      (!configuration || configured === (configuration === "configured")) &&
+      (!packageUnit || row.packageUnitCode === packageUnit) &&
+      (!wholePackage || row.wholePackageTransfer === (wholePackage === "yes"))
+    );
+  });
 
   return (
     <div className="space-y-4">
       <ListSearchField value={query} onChange={setQuery} placeholder="Search product…" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Category</span>
+          <select value={category} onChange={(event) => setCategory(event.target.value)} className="w-full rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">All categories</option>
+            {categories.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Setup</span>
+          <select value={configuration} onChange={(event) => setConfiguration(event.target.value)} className="w-full rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">All setups</option>
+            <option value="configured">Configured</option>
+            <option value="unconfigured">Not configured</option>
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Package unit</span>
+          <select value={packageUnit} onChange={(event) => setPackageUnit(event.target.value)} className="w-full rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">All package units</option>
+            {packageUnits.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Whole-package transfer</span>
+          <select value={wholePackage} onChange={(event) => setWholePackage(event.target.value)} className="w-full rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold">
+            <option value="">All</option>
+            <option value="yes">Required</option>
+            <option value="no">Not required</option>
+          </select>
+        </label>
+      </div>
+      <p className="text-xs text-zenith-muted">{visible.length} products shown.</p>
       <div className="space-y-3">
         {visible.map((product) => (
           <PackagingCard key={product.id} product={product} units={units} />

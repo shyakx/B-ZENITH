@@ -80,6 +80,13 @@ export async function listAllProducts() {
   });
 }
 
+export async function listProductOptions() {
+  return prisma.product.findMany({
+    select: { id: true, name: true, categoryId: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 async function defaultUnitId(productType: ProductType) {
   const code = productType === ProductType.PACKAGED_GOOD ? "BOTTLE" : productType === ProductType.RAW_MATERIAL ? "KG" : "PIECE";
   const unit = await prisma.unit.findUnique({ where: { code } });

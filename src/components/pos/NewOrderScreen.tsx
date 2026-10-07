@@ -38,6 +38,7 @@ export function NewOrderScreen({
     initialTableId ? "menu" : "table",
   );
   const [tableId, setTableId] = useState(initialTableId ?? "");
+  const [tableQuery, setTableQuery] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<Line[]>(initialLines ?? []);
@@ -149,11 +150,21 @@ export function NewOrderScreen({
   }
 
   if (step === "table") {
+    const visibleTables = tables.filter((item) =>
+      item.name.toLowerCase().includes(tableQuery.trim().toLowerCase()),
+    );
     return (
       <div className="order-page">
         <h2 className="mb-5 font-display text-2xl">Select table</h2>
+        <input
+          value={tableQuery}
+          onChange={(event) => setTableQuery(event.target.value)}
+          placeholder="Search tables"
+          aria-label="Search tables"
+          className="mb-4 min-h-11 w-full max-w-xl rounded-xl border border-zenith-border px-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
+        />
         <div className="order-tables">
-          {tables.map((item) => (
+          {visibleTables.map((item) => (
             <button
               key={item.id}
               onClick={() => chooseTable(item.id)}
@@ -163,6 +174,11 @@ export function NewOrderScreen({
             </button>
           ))}
         </div>
+        {visibleTables.length === 0 ? (
+          <p className="mt-4 text-sm text-zenith-muted">
+            {tables.length ? "No tables match that search." : "No active tables are available."}
+          </p>
+        ) : null}
       </div>
     );
   }

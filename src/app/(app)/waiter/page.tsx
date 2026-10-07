@@ -17,10 +17,9 @@ export default async function WaiterHomePage() {
   const [todaySnapshot, todayOrders, openOrders] = await Promise.all([
     waiterTodaySnapshot(user.id, from, to),
     listOrders({ waiterId: user.id, from, to, take: 30, withItems: true }),
-    listOrders({ waiterId: user.id, openOnly: true, take: 30, withItems: true }),
+    listOrders({ waiterId: user.id, openOnly: true, from, to, take: 30, withItems: true }),
   ]);
   const stats = waiterTodayStats(todaySnapshot);
-  const olderOpen = openOrders.filter((order) => order.createdAt < from);
   const noOrdersToday = todayOrders.length === 0;
 
   return (
@@ -52,7 +51,7 @@ export default async function WaiterHomePage() {
         <div className="rounded-xl border border-zenith-border bg-white p-3">
           <div className="text-2xl font-semibold text-zenith-gold">{openOrders.length}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Open now
+            Open orders today
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
@@ -97,32 +96,6 @@ export default async function WaiterHomePage() {
         </section>
       )}
 
-      {olderOpen.length > 0 ? (
-        <section className="mt-8 min-w-0">
-          <h2 className="font-display text-xl">Still open from earlier</h2>
-          <div className="mt-3 grid gap-3">
-            {olderOpen.map((order) => (
-              <article key={order.id} className="min-w-0 rounded-xl border border-zenith-border bg-white p-3">
-                <Link href={`/waiter/orders#order-${order.id}`} className="block min-w-0">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-lg font-semibold text-zenith-gold">ORDER #{order.orderNumber}</div>
-                      <div className="mt-1 text-sm">
-                        Table {order.table.name} · {itemQuantity(order)} items
-                      </div>
-                    </div>
-                    <PaymentBadge status={order.paymentStatus} />
-                  </div>
-                  <div className="mt-2 text-lg font-semibold">{formatRwf(order.total)}</div>
-                </Link>
-                <div className="mt-3">
-                  <PrintSlipLink href={`/print/slip/order/${order.id}`} className="w-full" />
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }

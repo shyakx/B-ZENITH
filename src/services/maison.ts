@@ -45,8 +45,35 @@ async function maisonRecordForPayment(db: Tx | typeof prisma, idempotencyKey: st
   return payment?.maisonRecord ?? null;
 }
 
-export async function listMaisonRecords() {
+export async function listMaisonRecords(filter: {
+  from?: Date;
+  to?: Date;
+  paymentStatus?: PaymentStatus;
+  staffId?: string;
+  search?: string;
+  minAmount?: number;
+  maxAmount?: number;
+} = {}) {
+  const search = filter.search?.trim();
   return prisma.maisonRecord.findMany({
+    where: {
+      staffId: filter.staffId || undefined,
+      paymentStatus: filter.paymentStatus,
+      ...(filter.from || filter.to ? { date: { gte: filter.from, lte: filter.to } } : {}),
+      ...(filter.minAmount != null || filter.maxAmount != null
+        ? { amount: { gte: filter.minAmount, lte: filter.maxAmount } }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { customerName: { contains: search, mode: "insensitive" } },
+              { customerPhone: { contains: search, mode: "insensitive" } },
+              { reference: { contains: search, mode: "insensitive" } },
+              { staff: { name: { contains: search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    },
     include: { staff: { select: { id: true, name: true } } },
     orderBy: { date: "desc" },
     take: 200,

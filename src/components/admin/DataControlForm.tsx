@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 import { PaymentBadge } from "@/components/ui/Badge";
 import type { PaymentStatus } from "@prisma/client";
+import { ListFilterForm, type ListFilterField } from "@/components/ui/ListFilterForm";
 
 type DayOrder = {
   id: string;
@@ -21,11 +22,11 @@ type DayOrder = {
 };
 
 export function DataControlForm({
-  date,
+  filterFields,
   orders,
   maisonCount,
 }: {
-  date: string;
+  filterFields: ListFilterField[];
   orders: DayOrder[];
   maisonCount: number;
 }) {
@@ -79,14 +80,7 @@ export function DataControlForm({
 
   return (
     <div className="space-y-6">
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        <Field label="Rwanda date">
-          <Input type="date" name="date" defaultValue={date} />
-        </Field>
-        <Button type="submit" variant="secondary">
-          Show sales
-        </Button>
-      </form>
+      <ListFilterForm fields={filterFields} action="/admin/data" />
 
       <p className="text-sm">
         {orders.length} order(s) on this date. Selected {selectedOrders.length} · {formatRwf(selectedTotal)}.
@@ -158,7 +152,7 @@ export function DataControlForm({
             disabled={busy || orders.length === 0}
             onClick={() => deleteSales(orders.map((order) => order.id))}
           >
-            Delete all sales on this date
+            Delete all matching sales ({orders.length})
           </Button>
         </div>
       </div>

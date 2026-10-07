@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { MovementType } from "@prisma/client";
 import { requireRole } from "@/lib/auth/current-user";
-import { endOfDay, formatDateTime, parseDateInput, startOfDay, toDateInput } from "@/lib/dates";
+import { formatDateTime, toDateInput } from "@/lib/dates";
 import { formatStockQty } from "@/lib/domain/units";
 import { withAutoPrint } from "@/components/print/PrintFactureLink";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { VisibleDateRange } from "@/components/ui/VisibleDate";
-import { listMovements } from "@/services/inventory";
+import { listLocations, listMovements } from "@/services/inventory";
+import { ListFilterForm, type ListFilterField } from "@/components/ui/ListFilterForm";
+import { dateRange, singleParam, type SearchParams } from "@/lib/list-filters";
+import { listCategories, listProductOptions } from "@/services/products";
+import { listUsers } from "@/services/users";
 
 const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "All actions" },
@@ -29,24 +33,78 @@ function actionLabel(type: MovementType) {
 export default async function StockMovementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string; type?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   await requireRole("MANAGER");
   const params = await searchParams;
-  const from = params.from ? parseDateInput(params.from) : startOfDay();
-  const to = params.to ? endOfDay(params.to) : endOfDay();
+  const { from, to, fromValue, toValue } = dateRange(params);
+  const typeValue = singleParam(params, "type");
   const type =
-    params.type && Object.values(MovementType).includes(params.type as MovementType)
-      ? (params.type as MovementType)
+    typeValue && Object.values(MovementType).includes(typeValue as MovementType)
+      ? (typeValue as MovementType)
       : undefined;
-
-  const movements = await listMovements(200, { from, to, type });
+  const productId = singleParam(params, "productId");
+  const categoryId = singleParam(params, "categoryId");
+  const locationId = singleParam(params, "locationId");
+  const userId = singleParam(params, "userId");
+  const search = singleParam(params, "q");
+  const [movements, products, categories, locations, staff] = await Promise.all([
+    listMovements(200, { from, to, type, productId, categoryId, locationId, userId, search }),
+    listProductOptions(),
+    listCategories(),
+    listLocations(),
+    listUsers(),
+  ]);
+  const fields: ListFilterField[] = [
+    { name: "from", label: "From", type: "date", value: fromValue },
+    { name: "to", label: "To", type: "date", value: toValue },
+    { name: "q", label: "Search", type: "search", value: search, placeholder: "Product, reason, reference, staff" },
+    {
+      name: "type",
+      label: "Action",
+      type: "select",
+      value: type ?? "",
+      options: TYPE_OPTIONS,
+    },
+    {
+      name: "productId",
+      label: "Product",
+      type: "select",
+      value: productId,
+      options: [{ value: "", label: "All products" }, ...products.map((product) => ({ value: product.id, label: product.name }))],
+    },
+    {
+      name: "categoryId",
+      label: "Category",
+      type: "select",
+      value: categoryId,
+      options: [{ value: "", label: "All categories" }, ...categories.map((category) => ({ value: category.id, label: category.name }))],
+    },
+    {
+      name: "locationId",
+      label: "Location",
+      type: "select",
+      value: locationId,
+      options: [{ value: "", label: "All locations" }, ...locations.map((location) => ({ value: location.id, label: location.name }))],
+    },
+    {
+      name: "userId",
+      label: "Staff",
+      type: "select",
+      value: userId,
+      options: [{ value: "", label: "All staff" }, ...staff.map((person) => ({ value: person.id, label: person.name }))],
+    },
+  ];
 
   const exportQuery = new URLSearchParams({
     from: toDateInput(from),
     to: toDateInput(to),
   });
   if (type) exportQuery.set("type", type);
+  for (const key of ["q", "productId", "categoryId", "locationId", "userId"] as const) {
+    const value = singleParam(params, key);
+    if (value) exportQuery.set(key, value);
+  }
   const exportHref = withAutoPrint(`/print/stock-history?${exportQuery.toString()}`);
 
   return (
@@ -55,49 +113,19 @@ export default async function StockMovementsPage({
       <div className="mb-4">
         <VisibleDateRange from={from} to={to} />
       </div>
-      <form className="mb-4 flex flex-wrap items-end gap-3">
-        <label className="space-y-1">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">From</span>
-          <input
-            type="date"
-            name="from"
-            defaultValue={toDateInput(from)}
-            className="rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
-          />
-        </label>
-        <label className="space-y-1">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">To</span>
-          <input
-            type="date"
-            name="to"
-            defaultValue={toDateInput(to)}
-            className="rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
-          />
-        </label>
-        <label className="space-y-1">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-zenith-muted">Action</span>
-          <select
-            name="type"
-            defaultValue={type ?? ""}
-            className="rounded-xl border border-zenith-border bg-white px-3 py-2 font-semibold"
-          >
-            {TYPE_OPTIONS.map((option) => (
-              <option key={option.value || "all"} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="rounded-xl bg-zenith-gold px-4 py-2 font-semibold text-white">Apply</button>
-        <Link href={exportHref} target="_blank" rel="noreferrer" className="inline-flex">
-          <Button type="button" variant="secondary">
-            Export PDF
-          </Button>
-        </Link>
-        <Link href="/manager/inventory/history" className="self-center text-sm font-semibold text-zenith-gold">
-          Purchase receipts →
-        </Link>
-      </form>
+      <div className="mb-4">
+        <ListFilterForm fields={fields} action="/manager/inventory/movements" />
+        <div className="-mt-2 flex flex-wrap items-center gap-2">
+          <Link href={exportHref} target="_blank" rel="noreferrer" className="inline-flex">
+            <Button type="button" variant="secondary">
+              Export PDF
+            </Button>
+          </Link>
+          <Link href="/manager/inventory/history" className="self-center text-sm font-semibold text-zenith-gold">
+            Purchase receipts →
+          </Link>
+        </div>
+      </div>
 
       <Card>
         {movements.length === 0 ? (
