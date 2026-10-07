@@ -148,7 +148,11 @@ export default async function ReportsPage({
         />
       </div>
 
-      <div className="mb-6 grid min-w-0 gap-6 lg:grid-cols-2">
+      <details className="mb-6 rounded-xl border border-zenith-border bg-white p-4">
+        <summary className="cursor-pointer font-semibold">
+          Orders and payments ({orders.length + payments.length})
+        </summary>
+        <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-2">
         <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <h2 className="font-display text-xl">Orders in range</h2>
@@ -207,9 +211,14 @@ export default async function ReportsPage({
             </div>
           )}
         </section>
-      </div>
+        </div>
+      </details>
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+      <details className="mb-6 rounded-xl border border-zenith-border bg-white p-4">
+        <summary className="cursor-pointer font-semibold">
+          Product, staff, and customer-credit breakdowns
+        </summary>
+        <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-2">
         <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
           <h2 className="mb-3 font-display text-xl">Product sales</h2>
           {summary.products.slice(0, 15).map((product) => (
@@ -258,7 +267,10 @@ export default async function ReportsPage({
           ))}
           {outstandingCredits.length === 0 ? <p className="text-sm text-zenith-muted">None.</p> : null}
         </section>
-        <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4 lg:col-span-2">
+        </div>
+      </details>
+
+        <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <h2 className="font-display text-xl">Inventory value</h2>
             <Link href="/manager/inventory/movements" className="text-sm font-semibold text-zenith-gold">
@@ -275,7 +287,9 @@ export default async function ReportsPage({
               <span>{formatRwf(valuation.total)}</span>
             </div>
           </div>
-          <div className="text-sm">
+          <details className="text-sm">
+            <summary className="cursor-pointer font-semibold">Top stock by location</summary>
+            <div className="mt-2">
             {stock.slice(0, 12).map((product) => {
               const unit = product.baseUnit?.code ?? null;
               return (
@@ -291,9 +305,9 @@ export default async function ReportsPage({
                 </div>
               );
             })}
-          </div>
+            </div>
+          </details>
         </section>
-      </div>
     </div>
   );
 }

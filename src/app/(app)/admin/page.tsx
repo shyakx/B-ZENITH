@@ -30,14 +30,9 @@ export default async function AdminHomePage() {
         </Link>
       </div>
 
-      <section className="mt-6">
-        <h2 className="text-base font-semibold">Staff</h2>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <CountCard label="Staff" value={counts.staff} />
-          <CountCard label="Active Staff" value={counts.active} />
-          <CountCard label="Inactive Staff" value={counts.inactive} />
-        </div>
-      </section>
+      <p className="mt-6 text-sm text-zenith-muted">
+        {counts.staff} staff · {counts.active} active · {counts.inactive} inactive
+      </p>
 
       <section className="mt-8">
         <h2 className="text-base font-semibold">Access</h2>

@@ -4,8 +4,6 @@ import { requireRole } from "@/lib/auth/current-user";
 import { endOfDay, startOfDay } from "@/lib/dates";
 import { formatRwf } from "@/lib/domain/money";
 import { staffGreeting } from "@/lib/greeting";
-import { PrintFactureLink } from "@/components/print/PrintFactureLink";
-import { PaymentBadge } from "@/components/ui/Badge";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { countOpenBillsByStatus, listOpenOrdersByTable } from "@/services/orders";
 import { countOutstandingCredits, sumPaymentsReceived } from "@/services/payments";
@@ -35,8 +33,7 @@ export default async function CashierHomePage({
 
   const openOrders = groups.flatMap((group) => group.orders);
   const stats = {
-    unpaidBills: billCounts.unpaidBills,
-    partialBills: billCounts.partialBills,
+    openBills: billCounts.unpaidBills + billCounts.partialBills,
     payLater: outstandingCount,
     cashReceivedToday,
   };
@@ -65,17 +62,11 @@ export default async function CashierHomePage({
         <VisibleDate />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-3">
         <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-2xl font-semibold text-zenith-gold">{stats.unpaidBills}</div>
+          <div className="text-2xl font-semibold text-zenith-gold">{stats.openBills}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Unpaid bills
-          </div>
-        </div>
-        <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-2xl font-semibold text-zenith-gold">{stats.partialBills}</div>
-          <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Partial bills
+            Open bills
           </div>
         </div>
         <div className="rounded-xl border border-zenith-border bg-white p-3">
@@ -105,7 +96,7 @@ export default async function CashierHomePage({
           <ListFilterForm fields={filterFields} action="/cashier" />
         </div>
         <p className="mb-2 text-xs text-zenith-muted">
-          {openOrders.length} matching open bills. Outstanding bill and credit counts above include earlier days; cash is for today.
+          {openOrders.length} matching open bills. Open bill and credit counts above include earlier days; cash is for today.
         </p>
         {openOrders.length === 0 ? (
           <div className="mt-3 rounded-xl border border-zenith-border bg-white px-4 py-5">
@@ -122,28 +113,11 @@ export default async function CashierHomePage({
                       <div className="mt-0.5 font-semibold">Order #{order.orderNumber}</div>
                       <div className="mt-0.5 text-sm">{order.waiter.name}</div>
                     </div>
-                    <PaymentBadge status={order.paymentStatus} />
                   </div>
-                  <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Total</div>
-                      <div className="font-semibold">{formatRwf(order.total)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Paid</div>
-                      <div className="font-semibold">{formatRwf(order.paidAmount)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">Balance</div>
-                      <div className="font-semibold text-zenith-gold">
-                        {formatRwf(order.total - order.paidAmount)}
-                      </div>
-                    </div>
+                  <div className="mt-2 text-sm font-semibold text-zenith-gold">
+                    Balance: {formatRwf(order.total - order.paidAmount)}
                   </div>
                 </Link>
-                <div className="mt-3">
-                  <PrintFactureLink href={`/print/order/${order.id}`} className="w-full" />
-                </div>
               </article>
             ))}
           </div>

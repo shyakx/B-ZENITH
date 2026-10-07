@@ -3,23 +3,19 @@ import { requireRole } from "@/lib/auth/current-user";
 import { startOfDay, endOfDay } from "@/lib/dates";
 import { staffGreeting } from "@/lib/greeting";
 import { formatRwf } from "@/lib/domain/money";
-import { itemQuantity, waiterTodayStats } from "@/lib/waiter-dashboard";
-import { PrintSlipLink } from "@/components/print/PrintFactureLink";
 import { Button } from "@/components/ui/Button";
 import { VisibleDate } from "@/components/ui/VisibleDate";
 import { PaymentBadge } from "@/components/ui/Badge";
-import { listOrders, waiterTodaySnapshot } from "@/services/orders";
+import { listOrders } from "@/services/orders";
 
 export default async function WaiterHomePage() {
   const user = await requireRole("WAITER");
   const from = startOfDay();
   const to = endOfDay();
-  const [todaySnapshot, todayOrders, openOrders] = await Promise.all([
-    waiterTodaySnapshot(user.id, from, to),
+  const [todayOrders, openOrders] = await Promise.all([
     listOrders({ waiterId: user.id, from, to, take: 30, withItems: true }),
     listOrders({ waiterId: user.id, openOnly: true, from, to, take: 30, withItems: true }),
   ]);
-  const stats = waiterTodayStats(todaySnapshot);
   const noOrdersToday = todayOrders.length === 0;
 
   return (
@@ -41,33 +37,11 @@ export default async function WaiterHomePage() {
         </Link>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-2xl font-semibold text-zenith-gold">{stats.orderCount}</div>
-          <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Orders today
-          </div>
-        </div>
-        <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-2xl font-semibold text-zenith-gold">{openOrders.length}</div>
-          <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Open orders today
-          </div>
-        </div>
-        <div className="rounded-xl border border-zenith-border bg-white p-3">
-          <div className="text-2xl font-semibold text-zenith-gold">{stats.tableCount}</div>
-          <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zenith-muted">
-            Tables today
-          </div>
-        </div>
-      </div>
+      <p className="mt-3 text-sm text-zenith-muted">{openOrders.length} open orders today</p>
 
       {noOrdersToday ? (
         <section className="mt-6 rounded-xl border border-zenith-border bg-white px-5 py-6 text-center">
           <p className="font-display text-xl text-zenith-gold">No orders yet today</p>
-          <Link href="/waiter/orders/new" className="mt-5 inline-block">
-            <Button>+ New order</Button>
-          </Link>
         </section>
       ) : (
         <section className="mt-8 min-w-0">
@@ -79,17 +53,12 @@ export default async function WaiterHomePage() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-lg font-semibold text-zenith-gold">ORDER #{order.orderNumber}</div>
-                      <div className="mt-1 text-sm">
-                        Table {order.table.name} · {itemQuantity(order)} items
-                      </div>
+                      <div className="mt-1 text-sm">Table {order.table.name}</div>
                     </div>
                     <PaymentBadge status={order.paymentStatus} />
                   </div>
                   <div className="mt-2 text-lg font-semibold">{formatRwf(order.total)}</div>
                 </Link>
-                <div className="mt-3">
-                  <PrintSlipLink href={`/print/slip/order/${order.id}`} className="w-full" />
-                </div>
               </article>
             ))}
           </div>

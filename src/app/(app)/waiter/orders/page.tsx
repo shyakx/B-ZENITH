@@ -104,13 +104,18 @@ export default async function MyOrdersPage({
                 <PaymentBadge status={order.paymentStatus} />
               )}
             </div>
-            <ul className="mt-3 text-zenith-muted">
-              {order.items.map((item) => (
-                <li key={item.id}>
-                  {item.name} × {item.quantity}
-                </li>
-              ))}
-            </ul>
+            <details className="mt-3 text-sm text-zenith-muted">
+              <summary className="cursor-pointer font-semibold">
+                Items ({order.items.reduce((count, item) => count + item.quantity, 0)})
+              </summary>
+              <ul className="mt-2">
+                {order.items.map((item) => (
+                  <li key={item.id}>
+                    {item.name} × {item.quantity}
+                  </li>
+                ))}
+              </ul>
+            </details>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="text-xl font-semibold">{formatRwf(order.total)}</div>
               <div className="flex min-w-0 flex-wrap items-center gap-2">

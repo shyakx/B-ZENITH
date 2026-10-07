@@ -196,13 +196,8 @@ export function ProductCatalog({
               <div className="min-w-0">
                 <div className="font-semibold">{product.name}</div>
                 <div className="mt-1 text-sm text-zenith-muted">
-                  {product.categoryName}
-                  {product.stockUnit ? ` · ${product.stockUnit}` : ""}
-                  {" · "}
-                  {product.sellOnPos ? "On sales menu" : "Not on sales menu"}
-                  {" · "}
-                  {product.active ? "Active" : "Inactive"}
-                  {product.defaultLocationName ? ` · ${product.defaultLocationName}` : ""}
+                  {product.categoryName} · {product.active ? "Active" : "Inactive"}
+                  {tab === "menu" ? ` · ${product.sellOnPos ? "On sales menu" : "Not on sales menu"}` : ""}
                 </div>
                 <div className="mt-0.5 text-sm">{product.sellingPrice}</div>
               </div>
