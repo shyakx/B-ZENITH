@@ -17,6 +17,7 @@ export type MoveKind = "receive" | "transfer" | "count" | "adjust" | "waste";
 type ProductOption = {
   id: string;
   name: string;
+  categoryName?: string;
   main?: number;
   bar?: number;
   kitchen?: number;

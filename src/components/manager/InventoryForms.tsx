@@ -13,7 +13,6 @@ import {
 } from "@/actions/inventory";
 import { formatRwf, formatRwfPerUnit, unitCostFromTotalPrice } from "@/lib/domain/money";
 import {
-  isPourUnit,
   preferredStockInUnitId,
   preferredWholePackageTransferUnitId,
   quantityWithUnit,
@@ -33,6 +32,7 @@ type ProductPackOption = {
 type ProductOption = {
   id: string;
   name: string;
+  categoryName?: string;
   main?: number;
   bar?: number;
   kitchen?: number;
@@ -88,82 +88,102 @@ function ActionFeedback({ error, message }: { error: string; message: string }) 
   );
 }
 
-function productOptionLabel(product: ProductOption, available?: (product: ProductOption) => number) {
-  const unit = product.baseUnit ? ` · ${product.baseUnit.code}` : "";
-  const qty = available ? ` (${available(product)} in Main Stock)` : "";
-  return `${product.name}${unit}${qty}`;
-}
-
 function ProductSelect({
   products,
   value,
   onChange,
   available,
-  groupPour = false,
 }: {
   products: ProductOption[];
   value?: string;
   onChange?: (id: string) => void;
   available?: (product: ProductOption) => number;
-  groupPour?: boolean;
 }) {
-  const kitchen = products.filter((product) => product.productType === "RAW_MATERIAL");
-  const other = products.filter((product) => product.productType !== "RAW_MATERIAL");
-  const pieces = products.filter((product) => isPourUnit(product.baseUnit?.code ?? ""));
-  const full = products.filter((product) => !isPourUnit(product.baseUnit?.code ?? ""));
-  const pourGrouped = groupPour && pieces.length > 0 && full.length > 0;
-  const kitchenGrouped = !pourGrouped && kitchen.length > 0 && other.length > 0;
+  const [internalValue, setInternalValue] = useState(value ?? "");
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selectedId = onChange ? value ?? "" : internalValue;
+  const selected = products.find((product) => product.id === selectedId);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = products
+    .filter((product) => {
+      if (!normalizedQuery) return true;
+      return [product.name, product.baseUnit?.name, product.baseUnit?.code]
+        .filter(Boolean)
+        .some((part) => part!.toLowerCase().includes(normalizedQuery));
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  function choose(id: string) {
+    if (onChange) onChange(id);
+    else setInternalValue(id);
+    setQuery("");
+    setOpen(false);
+  }
 
   return (
-    <Select
-      name="productId"
-      required
-      value={onChange ? value ?? "" : undefined}
-      onChange={onChange ? (event) => onChange(event.target.value) : undefined}
-    >
-      <option value="">Choose product</option>
-      {pourGrouped ? (
-        <>
-          <optgroup label="Full bottles / packs">
-            {full.map((product) => (
-              <option key={product.id} value={product.id}>
-                {productOptionLabel(product, available)}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Pieces (shots / glasses)">
-            {pieces.map((product) => (
-              <option key={product.id} value={product.id}>
-                {productOptionLabel(product, available)}
-              </option>
-            ))}
-          </optgroup>
-        </>
-      ) : kitchenGrouped ? (
-        <>
-          <optgroup label="Bar / packaged">
-            {other.map((product) => (
-              <option key={product.id} value={product.id}>
-                {productOptionLabel(product, available)}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Stock items">
-            {kitchen.map((product) => (
-              <option key={product.id} value={product.id}>
-                {productOptionLabel(product, available)}
-              </option>
-            ))}
-          </optgroup>
-        </>
-      ) : (
-        products.map((product) => (
-          <option key={product.id} value={product.id}>
-            {productOptionLabel(product, available)}
-          </option>
-        ))
-      )}
-    </Select>
+    <div className="relative">
+      <input type="hidden" name="productId" value={selectedId} required />
+      {selected ? (
+        <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-zenith-gold/50 bg-zenith-raised px-3 py-2">
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-zenith-ink">{selected.name}</p>
+            <p className="text-xs text-zenith-muted">
+              {selected.categoryName ? `${selected.categoryName} · ` : ""}
+              {selected.baseUnit?.name ?? selected.baseUnit?.code ?? "No stock unit"}
+              {available ? ` · Main Stock: ${available(selected)}` : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 text-xs font-semibold text-zenith-gold underline"
+            onClick={() => setOpen(true)}
+          >
+            Change
+          </button>
+        </div>
+      ) : null}
+      <Input
+        value={query}
+        placeholder={selected ? "Search another product…" : "Search products by name…"}
+        onFocus={() => setOpen(true)}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setOpen(false);
+        }}
+        required={!selectedId}
+        aria-label="Search products"
+      />
+      {open ? (
+        <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-zenith-border bg-white p-1 shadow-lg">
+          {filtered.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-zenith-muted">No products match “{query}”.</p>
+          ) : (
+            filtered.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                className={`block w-full rounded-lg px-3 py-2 text-left hover:bg-zenith-raised ${
+                  product.id === selectedId ? "bg-zenith-raised" : ""
+                }`}
+                onClick={() => choose(product.id)}
+              >
+                <span className="block font-semibold text-zenith-ink">{product.name}</span>
+                <span className="block text-xs text-zenith-muted">
+                  {product.categoryName ? `${product.categoryName} · ` : ""}
+                  {product.baseUnit?.name ?? product.baseUnit?.code ?? "No stock unit"}
+                  {product.productType === "RAW_MATERIAL" ? " · Stock item" : ""}
+                  {available ? ` · Main Stock: ${available(product)}` : ""}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
