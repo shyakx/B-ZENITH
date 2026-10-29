@@ -52,8 +52,8 @@ function newKey(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-async function confirmStockAction(input: {
-  confirm: string;
+async function runStockAction(input: {
+  confirm?: string;
   run: () => Promise<{ ok: true } | { ok: false; error: string }>;
   success: string;
   setError: (value: string) => void;
@@ -62,7 +62,7 @@ async function confirmStockAction(input: {
   router: { refresh: () => void };
   afterOk?: () => void;
 }) {
-  if (!window.confirm(input.confirm)) return;
+  if (input.confirm && !window.confirm(input.confirm)) return;
   input.setBusy(true);
   input.setError("");
   input.setMessage("");
@@ -252,8 +252,7 @@ export function PurchaseForm({
       return;
     }
     const packUnitId = selectedUnit.isPack ? selectedUnit.id : undefined;
-    await confirmStockAction({
-      confirm: `Receive ${quantityWithUnit(qty, selectedUnit.name)} of ${product.name} into Main Stock?`,
+    await runStockAction({
       success: `Received ${quantityWithUnit(received, stockCode)} of ${product.name} into Main Stock.`,
       setError,
       setMessage,
@@ -437,8 +436,7 @@ export function TransferForm({
         ? `Transferred ${quantityWithUnit(qty, selectedUnit.name)} (= ${quantityWithUnit(moved, stockCode)})`
         : `Transferred ${quantityWithUnit(moved, stockCode)}`,
     ].filter(Boolean);
-    await confirmStockAction({
-      confirm: `Transfer ${quantityWithUnit(qty, selectedUnit.name)} of ${product.name} from Main Stock to ${destination.name}?`,
+    await runStockAction({
       success: `Transferred ${quantityWithUnit(moved, stockCode)} of ${product.name} to ${destination.name}.`,
       setError,
       setMessage,
@@ -483,6 +481,11 @@ export function TransferForm({
             : ""}
         </p>
       ) : null}
+      {product && selectedUnit ? (
+        <p className="text-sm font-semibold text-zenith-muted">
+          Available to transfer: {Math.floor((product.main ?? 0) / selectedUnit.factor)} {unitLabel(selectedUnit.name)}
+        </p>
+      ) : null}
       {product && wholeOnly && choices.filter((unit) => unit.isPack).length === 0 ? (
         <p className="text-sm text-zenith-danger">Set packaging before transferring this product.</p>
       ) : null}
@@ -491,6 +494,7 @@ export function TransferForm({
           name="quantity"
           type="number"
           min={1}
+          max={selectedUnit && product ? Math.floor((product.main ?? 0) / selectedUnit.factor) : undefined}
           required
           value={quantity}
           onChange={(event) => setQuantity(event.target.value)}
@@ -563,7 +567,7 @@ export function WasteForm({
     const locationId = String(formData.get("locationId"));
     const location = locations.find((row) => row.id === locationId);
     const name = product?.name ?? "this product";
-    await confirmStockAction({
+    await runStockAction({
       confirm: `Record waste of ${quantity} ${product?.baseUnit?.code ?? "units"} of ${name} at ${location?.name ?? "this location"}?`,
       success: `Waste recorded for ${name}.`,
       setError,
@@ -630,7 +634,7 @@ export function AdjustForm({
     const location = locations.find((row) => row.id === locationId);
     const name = product?.name ?? "this product";
     const delta = direction === "decrease" ? -quantity : quantity;
-    await confirmStockAction({
+    await runStockAction({
       confirm: `${direction === "decrease" ? "Decrease" : "Increase"} ${name} by ${quantity} ${product?.baseUnit?.code ?? "units"} at ${location?.name ?? "this location"}?`,
       success: `Stock adjusted for ${name}.`,
       setError,
@@ -701,7 +705,7 @@ export function CountForm({
     const locationId = String(formData.get("locationId"));
     const location = locations.find((row) => row.id === locationId);
     const name = product?.name ?? "this product";
-    await confirmStockAction({
+    await runStockAction({
       confirm: `Save count of ${counted} ${product?.baseUnit?.code ?? "units"} for ${name} at ${location?.name ?? "this location"}?`,
       success: `Count saved for ${name}.`,
       setError,
@@ -752,7 +756,7 @@ export function SupplierForm({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") ?? "").trim();
-    await confirmStockAction({
+    await runStockAction({
       confirm: supplier ? `Save changes to supplier “${name}”?` : `Add supplier “${name}”?`,
       success: supplier ? "Supplier saved." : "Supplier added.",
       setError,
@@ -797,7 +801,7 @@ export function SupplierActiveButton({ id, active }: { id: string; active: boole
   const [busy, setBusy] = useState(false);
 
   async function toggle() {
-    await confirmStockAction({
+    await runStockAction({
       confirm: active ? "Deactivate this supplier?" : "Activate this supplier?",
       success: active ? "Supplier deactivated." : "Supplier activated.",
       setError,

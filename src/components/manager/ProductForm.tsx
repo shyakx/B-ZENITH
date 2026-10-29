@@ -131,7 +131,7 @@ export function ProductForm({
         </p>
       </Field>
       <Field label="Selling price (RWF)">
-        <Input name="sellingPrice" type="number" defaultValue={product?.sellingPrice ?? 0} required />
+        <Input name="sellingPrice" type="number" min={0} step={1} defaultValue={product?.sellingPrice ?? 0} required />
       </Field>
       <Field label="Category">
         <Select
@@ -175,7 +175,7 @@ export function ProductForm({
       </Field>
       <Field label="Used from">
         <Select name="defaultStockLocationId" defaultValue={product?.defaultStockLocationId ?? ""}>
-          <option value="">None</option>
+          <option value="">Use recommended location</option>
           {locations
             .filter((location) => location.code !== "MAIN")
             .map((location) => (
@@ -189,7 +189,7 @@ export function ProductForm({
         </span>
       </Field>
       <Field label="Cost price (optional)">
-        <Input name="costPrice" type="number" step="any" defaultValue={product?.costPrice ?? ""} />
+        <Input name="costPrice" type="number" min={0} step="any" defaultValue={product?.costPrice ?? ""} />
       </Field>
       <div className="flex flex-wrap items-center gap-4 text-sm md:col-span-2">
         {isStockItem ? <input type="hidden" name="trackInventory" value="on" /> : null}
@@ -227,7 +227,7 @@ export function ProductForm({
       <p className="mt-2 text-sm font-semibold md:col-span-2">Stock unit &amp; package</p>
       <Field label="Stock unit">
         <Select value={stockUnitId} onChange={(event) => setStockUnitId(event.target.value)}>
-          <option value="">Choose unit</option>
+          <option value="">Use default stock unit</option>
           {units.map((unit) => (
             <option key={unit.id} value={unit.id}>
               {unit.name}
@@ -240,7 +240,7 @@ export function ProductForm({
       </Field>
       <Field label="Package">
         <Select value={purchaseUnitId} onChange={(event) => setPurchaseUnitId(event.target.value)}>
-          <option value="">Choose package</option>
+          <option value="">No package conversion</option>
           {units.map((unit) => (
             <option key={unit.id} value={unit.id}>
               {unit.name}
