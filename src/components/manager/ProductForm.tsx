@@ -356,7 +356,7 @@ function SimilarNameWarning({
           variant="primary"
           disabled={busy}
           onClick={(event) => {
-            const form = event.currentTarget.closest("form");
+            const form = event.currentTarget.form;
             if (form) onContinue(form);
           }}
         >
