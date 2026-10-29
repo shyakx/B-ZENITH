@@ -1,31 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createMaisonAction, payMaisonAction } from "@/actions/maison";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input, Textarea } from "@/components/ui/Input";
 
 export function MaisonForm() {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  async function action(formData: FormData) {
-    const result = await createMaisonAction({
-      customerName: String(formData.get("customerName") ?? ""),
-      customerPhone: String(formData.get("customerPhone") ?? ""),
-      reference: String(formData.get("reference") ?? ""),
-      date: String(formData.get("date") ?? ""),
-      amount: Number(formData.get("amount")),
-      paidAmount: formData.get("paidAmount") ? Number(formData.get("paidAmount")) : 0,
-      notes: String(formData.get("notes") ?? ""),
-    });
-    if (!result.ok) return setError(result.error);
-    router.refresh();
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await createMaisonAction({
+        customerName: String(formData.get("customerName") ?? ""),
+        customerPhone: String(formData.get("customerPhone") ?? ""),
+        reference: String(formData.get("reference") ?? ""),
+        date: String(formData.get("date") ?? ""),
+        amount: Number(formData.get("amount")),
+        paidAmount: formData.get("paidAmount") ? Number(formData.get("paidAmount")) : 0,
+        notes: String(formData.get("notes") ?? ""),
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setMessage("Maison record saved successfully.");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <form onSubmit={action} className="grid gap-3 md:grid-cols-2">
       <Field label="Customer name">
         <Input name="customerName" required />
       </Field>
@@ -49,8 +65,16 @@ export function MaisonForm() {
           <Textarea name="notes" rows={2} />
         </Field>
       </div>
-      {error ? <p className="text-sm text-red-300 md:col-span-2">{error}</p> : null}
-      <Button className="md:col-span-2">Save record</Button>
+      <ActionFeedback
+        busy={busy}
+        busyMessage="Saving Maison record…"
+        message={message}
+        error={error}
+        onDismissError={() => setError("")}
+      />
+      <Button disabled={busy} className="md:col-span-2">
+        {busy ? "Saving record…" : "Save record"}
+      </Button>
     </form>
   );
 }
@@ -58,27 +82,42 @@ export function MaisonForm() {
 export function MaisonPayButton({ id, remaining }: { id: string; remaining: number }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
-  async function action(formData: FormData) {
-    const result = await payMaisonAction({
-      id,
-      amount: Number(formData.get("amount")),
-      idempotencyKey,
-    });
-    if (!result.ok) return setError(result.error);
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
     setError("");
-    setIdempotencyKey(crypto.randomUUID());
-    router.refresh();
+    try {
+      const result = await payMaisonAction({
+        id,
+        amount: Number(new FormData(event.currentTarget).get("amount")),
+        idempotencyKey,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setIdempotencyKey(crypto.randomUUID());
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (remaining <= 0) return null;
 
   return (
-    <form action={action} className="flex gap-2">
+    <form onSubmit={action} className="flex flex-wrap gap-2">
       <Input name="amount" type="number" min={1} max={remaining} defaultValue={remaining} />
-      <Button>Pay</Button>
-      {error ? <p className="text-sm text-red-300">{error}</p> : null}
+      <Button disabled={busy}>{busy ? "Paying…" : "Pay"}</Button>
+      <ActionFeedback
+        busy={busy}
+        busyMessage="Recording Maison payment…"
+        error={error}
+        onDismissError={() => setError("")}
+      />
     </form>
   );
 }

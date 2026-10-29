@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   adjustStockAction,
@@ -21,6 +21,7 @@ import {
   unitLabel,
 } from "@/lib/domain/units";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input, Select } from "@/components/ui/Input";
 
 type ProductPackOption = {
@@ -77,15 +78,6 @@ async function confirmStockAction(input: {
   } finally {
     input.setBusy(false);
   }
-}
-
-function ActionFeedback({ error, message }: { error: string; message: string }) {
-  return (
-    <>
-      {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
-      {message ? <p className="text-sm font-semibold text-zenith-success">{message}</p> : null}
-    </>
-  );
 }
 
 function ProductSelect({
@@ -252,7 +244,9 @@ export function PurchaseForm({
     setUnitId(preferredStockInUnitId(next));
   }
 
-  async function action(formData: FormData) {
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     if (!product || !selectedUnit || !Number.isInteger(qty) || qty <= 0) {
       setError("Choose a product, package, and quantity.");
       return;
@@ -288,7 +282,7 @@ export function PurchaseForm({
   }
 
   return (
-    <form action={action} className="grid gap-3">
+    <form onSubmit={action} className="grid gap-3">
       <Field label="Supplier">
         {activeSuppliers.length === 0 ? (
           <p className="text-sm">
@@ -387,7 +381,7 @@ export function PurchaseForm({
       <Field label="Notes">
         <Input name="notes" />
       </Field>
-      <ActionFeedback error={error} message={message} />
+      <ActionFeedback busy={busy} busyMessage="Receiving stock…" error={error} message={message} onDismissError={() => setError("")} />
       <Button disabled={busy || !product || !unitId || activeSuppliers.length === 0}>
         {busy ? "Receiving…" : "Receive Stock"}
       </Button>
@@ -429,7 +423,9 @@ export function TransferForm({
     setUnitId(preferredWholePackageTransferUnitId(next));
   }
 
-  async function action(formData: FormData) {
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     if (!selectedUnit || moved <= 0) return setError("Choose how many to transfer and the package.");
     if (wholeOnly && !selectedUnit.isPack) {
       return setError("This product allows whole packages only. Choose the package unit.");
@@ -460,7 +456,7 @@ export function TransferForm({
   }
 
   return (
-    <form action={action} className="grid gap-3">
+    <form onSubmit={action} className="grid gap-3">
       <Field label="From">
         <Input value="Main Stock" disabled readOnly />
       </Field>
@@ -535,7 +531,7 @@ export function TransferForm({
           ) : null}
         </div>
       ) : null}
-      <ActionFeedback error={error} message={message} />
+      <ActionFeedback busy={busy} busyMessage="Transferring stock…" error={error} message={message} onDismissError={() => setError("")} />
       <Button disabled={busy || !product || !unitId || choices.length === 0}>
         {busy ? "Transferring…" : "Transfer Stock"}
       </Button>
@@ -560,7 +556,9 @@ export function WasteForm({
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const product = products.find((row) => row.id === productId);
 
-  async function action(formData: FormData) {
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     const quantity = Number(formData.get("quantity"));
     const locationId = String(formData.get("locationId"));
     const location = locations.find((row) => row.id === locationId);
@@ -585,7 +583,7 @@ export function WasteForm({
   }
 
   return (
-    <form action={action} className="grid gap-3">
+    <form onSubmit={action} className="grid gap-3">
       <Field label="What was wasted?">
         <ProductSelect products={products} value={productId} onChange={setProductId} />
       </Field>
@@ -598,7 +596,7 @@ export function WasteForm({
       <Field label="Why?">
         <Input name="reason" required />
       </Field>
-      <ActionFeedback error={error} message={message} />
+      <ActionFeedback busy={busy} busyMessage="Saving waste record…" error={error} message={message} onDismissError={() => setError("")} />
       <Button variant="danger" disabled={busy}>
         {busy ? "Saving…" : "Record Waste"}
       </Button>
@@ -623,7 +621,9 @@ export function AdjustForm({
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const product = products.find((row) => row.id === productId);
 
-  async function action(formData: FormData) {
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     const quantity = Number(formData.get("quantity"));
     const direction = String(formData.get("direction"));
     const locationId = String(formData.get("locationId"));
@@ -650,7 +650,7 @@ export function AdjustForm({
   }
 
   return (
-    <form action={action} className="grid gap-3">
+    <form onSubmit={action} className="grid gap-3">
       <Field label="Location">
         <LocationSelect locations={locations} />
       </Field>
@@ -669,7 +669,7 @@ export function AdjustForm({
       <Field label="Reason">
         <Input name="reason" required />
       </Field>
-      <ActionFeedback error={error} message={message} />
+      <ActionFeedback busy={busy} busyMessage="Saving stock adjustment…" error={error} message={message} onDismissError={() => setError("")} />
       <Button variant="secondary" disabled={busy}>
         {busy ? "Saving…" : "Save Adjustment"}
       </Button>
@@ -694,7 +694,9 @@ export function CountForm({
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const product = products.find((row) => row.id === productId);
 
-  async function action(formData: FormData) {
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     const counted = Number(formData.get("counted"));
     const locationId = String(formData.get("locationId"));
     const location = locations.find((row) => row.id === locationId);
@@ -718,7 +720,7 @@ export function CountForm({
   }
 
   return (
-    <form action={action} className="grid gap-3">
+    <form onSubmit={action} className="grid gap-3">
       <Field label="Where are you counting?">
         <LocationSelect locations={locations} />
       </Field>
@@ -728,7 +730,7 @@ export function CountForm({
       <Field label={`Counted${product?.baseUnit ? ` (${product.baseUnit.code})` : ""}`}>
         <Input name="counted" type="number" min={0} required />
       </Field>
-      <ActionFeedback error={error} message={message} />
+      <ActionFeedback busy={busy} busyMessage="Saving stock count…" error={error} message={message} onDismissError={() => setError("")} />
       <Button variant="secondary" disabled={busy}>
         {busy ? "Saving…" : "Save Count"}
       </Button>
@@ -746,7 +748,9 @@ export function SupplierForm({
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function action(formData: FormData) {
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") ?? "").trim();
     await confirmStockAction({
       confirm: supplier ? `Save changes to supplier “${name}”?` : `Add supplier “${name}”?`,
@@ -767,7 +771,7 @@ export function SupplierForm({
   }
 
   return (
-    <form action={action} className="grid gap-3">
+    <form onSubmit={action} className="grid gap-3">
       <Field label="Name">
         <Input name="name" defaultValue={supplier?.name} required />
       </Field>
@@ -780,7 +784,7 @@ export function SupplierForm({
       <Field label="Notes">
         <Input name="notes" defaultValue={supplier?.notes ?? ""} />
       </Field>
-      <ActionFeedback error={error} message={message} />
+      <ActionFeedback busy={busy} busyMessage="Saving supplier…" error={error} message={message} onDismissError={() => setError("")} />
       <Button disabled={busy}>{busy ? "Saving…" : supplier ? "Save supplier" : "Add supplier"}</Button>
     </form>
   );
@@ -809,7 +813,7 @@ export function SupplierActiveButton({ id, active }: { id: string; active: boole
       <Button variant="secondary" disabled={busy} onClick={toggle}>
         {busy ? "Saving…" : active ? "Deactivate" : "Activate"}
       </Button>
-      <ActionFeedback error={error} message={message} />
+      <ActionFeedback busy={busy} busyMessage="Updating supplier…" error={error} message={message} onDismissError={() => setError("")} />
     </div>
   );
 }

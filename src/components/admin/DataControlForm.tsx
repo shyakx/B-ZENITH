@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { purgeMaisonAction, purgeSalesAction } from "@/actions/admin-purge";
 import { formatRwf } from "@/lib/domain/money";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input } from "@/components/ui/Input";
 import { PaymentBadge } from "@/components/ui/Badge";
 import type { PaymentStatus } from "@prisma/client";
@@ -164,6 +165,13 @@ export function DataControlForm({
           Delete all Maison stays
         </Button>
       </div>
+      <ActionFeedback
+        busy={busy}
+        busyMessage="Deleting records…"
+        message={message}
+        error={error}
+        onDismissError={() => setError("")}
+      />
     </div>
   );
 }

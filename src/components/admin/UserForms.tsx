@@ -10,6 +10,7 @@ import {
 } from "@/actions/users";
 import { ROLES, roleLabel, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input, Select } from "@/components/ui/Input";
 
 function isStaffRole(value: string): value is Role {
@@ -95,12 +96,13 @@ export function CreateUserForm({ assignableRoles }: { assignableRoles: Role[] })
           {busy ? "Creating…" : "Create staff"}
         </Button>
       </div>
-      {error ? <p className="text-sm font-semibold text-zenith-danger md:col-span-4">{error}</p> : null}
-      {success ? (
-        <p className="text-sm font-semibold text-zenith-success md:col-span-4">
-          Staff member created successfully.
-        </p>
-      ) : null}
+      <ActionFeedback
+        busy={busy}
+        busyMessage="Creating staff account…"
+        message={success ? "Staff member created successfully." : ""}
+        error={error}
+        onDismissError={() => setError("")}
+      />
     </form>
   );
 }
@@ -363,8 +365,13 @@ export function StaffActions({
         </section>
       ) : null}
 
-      {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
-      {message ? <p className="text-sm font-semibold text-zenith-success">{message}</p> : null}
+      <ActionFeedback
+        busy={busy}
+        busyMessage="Updating staff account…"
+        message={message}
+        error={error}
+        onDismissError={() => setError("")}
+      />
     </div>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Minus, Plus } from "lucide-react";
 import { createOrderAction } from "@/actions/orders";
 import { formatRwf, sumLineTotals } from "@/lib/domain/money";
 import { clearDraftOrderKey, getOrCreateDraftOrderKey } from "@/lib/domain/order-draft-key";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { CategoryPicker } from "@/components/pos/CategoryPicker";
 import { PrintSlipLink } from "@/components/print/PrintFactureLink";
 
@@ -45,16 +46,12 @@ export function NewOrderScreen({
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [key, setKey] = useState("");
+  const [key, setKey] = useState(() => getOrCreateDraftOrderKey());
   const [submitted, setSubmitted] = useState<{
     id: string;
     orderNumber: number;
     total: number;
   } | null>(null);
-
-  useEffect(() => {
-    setKey(getOrCreateDraftOrderKey());
-  }, []);
 
   const table = tables.find((item) => item.id === tableId);
   const visible = useMemo(() => {
@@ -109,12 +106,19 @@ export function NewOrderScreen({
     }
     setKey(idempotencyKey);
     setBusy(true);
-    const result = await createOrderAction({
-      tableId,
-      items: cart.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
-      note,
-      idempotencyKey,
-    });
+    let result: Awaited<ReturnType<typeof createOrderAction>>;
+    try {
+      result = await createOrderAction({
+        tableId,
+        items: cart.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+        note,
+        idempotencyKey,
+      });
+    } catch {
+      setBusy(false);
+      setError("The order could not be submitted. Your order is still on screen; please try again.");
+      return;
+    }
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -127,7 +131,13 @@ export function NewOrderScreen({
 
   if (step === "done" && submitted) {
     return (
-      <div className="mx-auto w-full min-w-0 max-w-lg rounded-xl border border-zenith-border bg-white p-5 text-center sm:p-6">
+      <>
+        <ActionFeedback
+          busy={false}
+          busyMessage="Submitting order…"
+          message={`Order #${submitted.orderNumber} submitted successfully.`}
+        />
+        <div className="mx-auto w-full min-w-0 max-w-lg rounded-xl border border-zenith-border bg-white p-5 text-center sm:p-6">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zenith-muted">Submitted</p>
         <h2 className="mt-2 break-words font-display text-2xl text-zenith-gold sm:text-3xl">
           ORDER #{submitted.orderNumber}
@@ -145,7 +155,8 @@ export function NewOrderScreen({
             </Button>
           </Link>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
@@ -210,6 +221,12 @@ export function NewOrderScreen({
             <span className="text-zenith-gold">{formatRwf(total)}</span>
           </div>
           {error ? <p className="mt-4 text-zenith-danger">{error}</p> : null}
+          <ActionFeedback
+            busy={busy}
+            busyMessage="Submitting order…"
+            error={error}
+            onDismissError={() => setError("")}
+          />
           <Button className="pos-tap mt-6 h-12 w-full text-base" disabled={busy} onClick={submit}>
             {busy ? "Submitting…" : "Submit order"}
           </Button>

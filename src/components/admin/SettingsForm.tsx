@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { saveSettingsAction } from "@/actions/settings";
 import type { BusinessSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { parseReceiptPaperMm } from "@/lib/settings";
 
@@ -12,25 +13,33 @@ export function SettingsForm({ settings }: { settings: BusinessSettings }) {
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  async function action(formData: FormData) {
+  async function action(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     setBusy(true);
     setSaved(false);
-    const result = await saveSettingsAction({
-      businessName: String(formData.get("businessName") ?? ""),
-      address: String(formData.get("address") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
-      tin: String(formData.get("tin") ?? ""),
-      receiptFooter: String(formData.get("receiptFooter") ?? ""),
-      receiptPaperMm: parseReceiptPaperMm(String(formData.get("receiptPaperMm") ?? "")),
-    });
-    setBusy(false);
-    if (!result.ok) return setError(result.error);
-    setError("");
-    setSaved(true);
+    try {
+      const result = await saveSettingsAction({
+        businessName: String(formData.get("businessName") ?? ""),
+        address: String(formData.get("address") ?? ""),
+        phone: String(formData.get("phone") ?? ""),
+        tin: String(formData.get("tin") ?? ""),
+        receiptFooter: String(formData.get("receiptFooter") ?? ""),
+        receiptPaperMm: parseReceiptPaperMm(String(formData.get("receiptPaperMm") ?? "")),
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setError("");
+      setSaved(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <form action={action} className="grid gap-5">
+    <form onSubmit={action} className="grid gap-5">
       <div>
         <Field label="Business name">
           <Input name="businessName" defaultValue={settings.businessName} />
@@ -73,8 +82,13 @@ export function SettingsForm({ settings }: { settings: BusinessSettings }) {
         </Field>
         <p className="mt-2 text-sm">This message appears at the bottom of the facture.</p>
       </div>
-      {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
-      {saved ? <p className="text-sm font-semibold text-zenith-success">Settings saved.</p> : null}
+      <ActionFeedback
+        busy={busy}
+        busyMessage="Saving settings…"
+        message={saved ? "Settings saved successfully." : ""}
+        error={error}
+        onDismissError={() => setError("")}
+      />
       <Button disabled={busy}>{busy ? "Saving…" : "Save settings"}</Button>
     </form>
   );

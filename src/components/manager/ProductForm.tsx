@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { BusinessArea, ProductType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { deleteCategoryAction, deleteProductAction, previewDeleteProductAction, saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input, Select } from "@/components/ui/Input";
 import type { SimilarNameMatch } from "@/lib/errors";
 import { isPourUnit } from "@/lib/domain/units";
@@ -59,12 +60,6 @@ export function ProductForm({
   const [wholePackageTransfer, setWholePackageTransfer] = useState(product?.wholePackageTransfer ?? false);
   const isStockItem = productType === ProductType.RAW_MATERIAL;
 
-  useEffect(() => {
-    if (!message || busy) return;
-    const timeout = window.setTimeout(() => setMessage(""), 3500);
-    return () => window.clearTimeout(timeout);
-  }, [busy, message]);
-
   const purchaseUnit = units.find((unit) => unit.id === purchaseUnitId);
   const stockUnit = units.find((unit) => unit.id === stockUnitId);
   const selectedCategory = categories.find((category) => category.id === categoryId);
@@ -79,22 +74,30 @@ export function ProductForm({
     setMessage(product ? "Saving product changes…" : "Saving product…");
     const chosenCategoryId = String(formData.get("categoryId") ?? categoryId);
     const enteredName = String(formData.get("name") ?? "");
-    const result = await saveProductAction({
-      id: product?.id,
-      name: enteredName,
-      categoryId: chosenCategoryId,
-      sellingPrice: Number(formData.get("sellingPrice")),
-      costPrice: formData.get("costPrice") ? Number(formData.get("costPrice")) : null,
-      trackInventory: formData.get("trackInventory") === "on",
-      active: formData.get("active") === "on",
-      productType: String(formData.get("productType")) as ProductType,
-      sellOnPos: formData.get("sellOnPos") === "on",
-      baseUnitId: stockUnitId || null,
-      defaultStockLocationId: String(formData.get("defaultStockLocationId") ?? "") || null,
-      purchaseUnitId: purchaseUnitId || null,
-      purchaseContains: showContains ? Number(contains) : 1,
-      wholePackageTransfer: showContains ? wholePackageTransfer : false,
-    });
+    let result: Awaited<ReturnType<typeof saveProductAction>>;
+    try {
+      result = await saveProductAction({
+        id: product?.id,
+        name: enteredName,
+        categoryId: chosenCategoryId,
+        sellingPrice: Number(formData.get("sellingPrice")),
+        costPrice: formData.get("costPrice") ? Number(formData.get("costPrice")) : null,
+        trackInventory: formData.get("trackInventory") === "on",
+        active: formData.get("active") === "on",
+        productType: String(formData.get("productType")) as ProductType,
+        sellOnPos: formData.get("sellOnPos") === "on",
+        baseUnitId: stockUnitId || null,
+        defaultStockLocationId: String(formData.get("defaultStockLocationId") ?? "") || null,
+        purchaseUnitId: purchaseUnitId || null,
+        purchaseContains: showContains ? Number(contains) : 1,
+        wholePackageTransfer: showContains ? wholePackageTransfer : false,
+      });
+    } catch {
+      setBusy(false);
+      setMessage("");
+      setError("Unable to save the product. Please try again.");
+      return;
+    }
     setBusy(false);
     if (!result.ok) {
       setMessage("");
@@ -285,30 +288,13 @@ export function ProductForm({
       <Button disabled={busy || !categoryId} className="md:col-span-2">
         {busy ? "Saving product…" : product ? "Save product" : "Add product"}
       </Button>
-      {busy || message || error ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" role="presentation">
-          <div
-            role={error ? "alert" : "status"}
-            aria-live="polite"
-            className={`w-full max-w-md rounded-2xl border p-8 text-center shadow-2xl ${
-              error
-                ? "border-zenith-danger/50 bg-zenith-raised text-zenith-danger"
-                : busy
-                  ? "border-zenith-gold/50 bg-zenith-raised text-zenith-ink"
-                  : "border-zenith-success/50 bg-zenith-raised text-zenith-success"
-            }`}
-          >
-            {busy ? <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-zenith-gold/30 border-t-zenith-gold" /> : null}
-            <p className="text-xl font-bold">{error ? "Product could not be saved" : busy ? "Saving product" : "Success"}</p>
-            <p className="mt-3 text-base">{error || message}</p>
-            {error ? (
-              <Button type="button" variant="secondary" className="mt-6" onClick={() => setError("")}>
-                Close
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      <ActionFeedback
+        busy={busy}
+        busyMessage={product ? "Saving product changes…" : "Saving product…"}
+        message={message}
+        error={error}
+        onDismissError={() => setError("")}
+      />
     </form>
   );
 }

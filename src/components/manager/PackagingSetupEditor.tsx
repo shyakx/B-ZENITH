@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveProductPackagingAction } from "@/actions/catalog";
 import { ListSearchField, matchesSearch } from "@/components/manager/ListSearchField";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input, Select } from "@/components/ui/Input";
 
 export type PackagingRow = {
@@ -224,8 +225,13 @@ function PackagingCard({ product, units }: { product: PackagingRow; units: UnitO
         <Button type="button" disabled={busy || !dirty} onClick={onSave}>
           {busy ? "Saving…" : "Save packaging"}
         </Button>
-        {error ? <span className="text-sm text-zenith-danger">{error}</span> : null}
-        {message ? <span className="text-sm text-zenith-success">{message}</span> : null}
+        <ActionFeedback
+          busy={busy}
+          busyMessage="Saving packaging…"
+          message={message}
+          error={error}
+          onDismissError={() => setError("")}
+        />
       </div>
     </article>
   );

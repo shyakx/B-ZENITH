@@ -6,6 +6,7 @@ import { markPayLaterAction, recordPaymentAction, recordTablePaymentAction } fro
 import { formatRwf } from "@/lib/domain/money";
 import { PrintFactureLink } from "@/components/print/PrintFactureLink";
 import { Button } from "@/components/ui/Button";
+import { ActionFeedback } from "@/components/ui/ActionFeedback";
 import { Field, Input } from "@/components/ui/Input";
 import { PaymentBadge } from "@/components/ui/Badge";
 import type { PaymentStatus } from "@prisma/client";
@@ -83,18 +84,25 @@ export function PaymentPanel({
 
     setBusy(true);
     setError("");
-    const result =
-      mode === "order"
-        ? await recordPaymentAction({
-            orderId: targetId,
-            amount: value,
-            idempotencyKey: key,
-          })
-        : await recordTablePaymentAction({
-            tableId: targetId,
-            amount: value,
-            idempotencyKey: key,
-          });
+    let result: Awaited<ReturnType<typeof recordPaymentAction>> | Awaited<ReturnType<typeof recordTablePaymentAction>>;
+    try {
+      result =
+        mode === "order"
+          ? await recordPaymentAction({
+              orderId: targetId,
+              amount: value,
+              idempotencyKey: key,
+            })
+          : await recordTablePaymentAction({
+              tableId: targetId,
+              amount: value,
+              idempotencyKey: key,
+            });
+    } catch {
+      setBusy(false);
+      setError("Payment status could not be confirmed. Check the transaction status before retrying.");
+      return;
+    }
     setBusy(false);
 
     if (!result.ok) {
@@ -121,11 +129,18 @@ export function PaymentPanel({
     }
     setBusy(true);
     setError("");
-    const result = await markPayLaterAction({
-      orderId: targetId,
-      customerName,
-      customerPhone,
-    });
+    let result: Awaited<ReturnType<typeof markPayLaterAction>>;
+    try {
+      result = await markPayLaterAction({
+        orderId: targetId,
+        customerName,
+        customerPhone,
+      });
+    } catch {
+      setBusy(false);
+      setError("The pay-later status could not be confirmed. Please check the order before retrying.");
+      return;
+    }
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -136,7 +151,13 @@ export function PaymentPanel({
 
   if (success) {
     return (
-      <div className="space-y-4 rounded-2xl border-2 border-zenith-gold bg-zenith-raised p-4">
+      <>
+        <ActionFeedback
+          busy={false}
+          busyMessage="Recording payment…"
+          message="Payment recorded successfully."
+        />
+        <div className="space-y-4 rounded-2xl border-2 border-zenith-gold bg-zenith-raised p-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-zenith-gold">Payment recorded</p>
           <p className="mt-1 font-display text-3xl text-zenith-gold">{formatRwf(success.amount)}</p>
@@ -175,7 +196,8 @@ export function PaymentPanel({
             Record another payment
           </Button>
         ) : null}
-      </div>
+        </div>
+      </>
     );
   }
 
@@ -203,7 +225,12 @@ export function PaymentPanel({
           <p className="mt-2 text-lg font-semibold">Amount received: {formatRwf(value)}</p>
           <p className="mt-1 text-base">New remaining balance: {formatRwf(nextRemaining)}</p>
         </div>
-        {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
+        <ActionFeedback
+          busy={busy}
+          busyMessage="Recording payment…"
+          error={error}
+          onDismissError={() => setError("")}
+        />
         <div className="grid grid-cols-2 gap-3">
           <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>
             Cancel
@@ -229,7 +256,12 @@ export function PaymentPanel({
         />
       </Field>
       <p className="text-sm font-semibold">Balance {formatRwf(remaining)} · Cash</p>
-      {error ? <p className="text-sm font-semibold text-zenith-danger">{error}</p> : null}
+      <ActionFeedback
+        busy={busy}
+        busyMessage="Marking order as pay later…"
+        error={error}
+        onDismissError={() => setError("")}
+      />
       <Button className="h-14 w-full text-lg" disabled={busy} onClick={askConfirm}>
         {mode === "table" ? "Pay table" : "Record payment"}
       </Button>
