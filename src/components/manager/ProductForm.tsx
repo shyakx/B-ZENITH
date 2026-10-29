@@ -70,7 +70,7 @@ export function ProductForm({
   async function submitProduct(formData: FormData) {
     setBusy(true);
     setError("");
-    setMessage("");
+    setMessage(product ? "Saving product changes…" : "Saving product…");
     const chosenCategoryId = String(formData.get("categoryId") ?? categoryId);
     const enteredName = String(formData.get("name") ?? "");
     const result = await saveProductAction({
@@ -91,6 +91,7 @@ export function ProductForm({
     });
     setBusy(false);
     if (!result.ok) {
+      setMessage("");
       setError(result.error);
       return;
     }
@@ -274,10 +275,26 @@ export function ProductForm({
           </span>
         </label>
       ) : null}
-      {error ? <p className="text-sm text-zenith-danger md:col-span-2">{error}</p> : null}
-      {message ? <p className="text-sm text-zenith-success md:col-span-2">{message}</p> : null}
+      {error ? (
+        <p role="alert" className="rounded-xl border border-zenith-danger/40 bg-zenith-danger/10 p-4 text-base font-semibold text-zenith-danger md:col-span-2">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className={`rounded-xl border p-4 text-base font-semibold shadow-sm md:col-span-2 ${
+            busy
+              ? "border-zenith-gold/50 bg-zenith-gold/10 text-zenith-ink"
+              : "border-zenith-success/40 bg-zenith-success/10 text-zenith-success"
+          }`}
+        >
+          {message}
+        </p>
+      ) : null}
       <Button disabled={busy || !categoryId} className="md:col-span-2">
-        {product ? "Save product" : "Add product"}
+        {busy ? "Saving product…" : product ? "Save product" : "Add product"}
       </Button>
     </form>
   );
