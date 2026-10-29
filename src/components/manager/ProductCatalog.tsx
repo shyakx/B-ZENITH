@@ -63,6 +63,16 @@ export function ProductCatalog({
   const availableCategories = categories.filter((category) =>
     pool.some((item) => item.categoryArea === category.area && item.categoryName === category.name),
   );
+  const matchesProductQuery = (product: CatalogItem) =>
+    matchesSearch(
+      query,
+      product.name,
+      product.categoryName,
+      categoryAreaStaffLabel(product.categoryArea),
+      product.stockUnit,
+      product.sellingPrice,
+      product.active ? "active" : "inactive",
+    );
   const visible = pool.filter((product) => {
       const matchesStatus = status === "all" || (status === "active" ? product.active : !product.active);
       return matchesStatus &&
@@ -73,16 +83,14 @@ export function ProductCatalog({
         (!inventory || product.trackInventory === (inventory === "tracked")) &&
         (!location ||
           (location === "__none" ? !product.defaultLocationName : product.defaultLocationName === location)) &&
-        matchesSearch(
-          query,
-          product.name,
-          product.categoryName,
-          categoryAreaStaffLabel(product.categoryArea),
-          product.stockUnit,
-          product.sellingPrice,
-          product.active ? "active" : "inactive",
-        );
+        matchesProductQuery(product);
     });
+  const otherPool = tab === "menu" ? materials : menu;
+  const otherTabMatches = query.trim() ? otherPool.filter(matchesProductQuery).length : 0;
+  const inactiveMatches =
+    query.trim() && status === "active"
+      ? pool.filter((product) => !product.active && matchesProductQuery(product)).length
+      : 0;
 
   return (
     <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
@@ -179,6 +187,28 @@ export function ProductCatalog({
         </label>
       </div>
       <p className="mt-2 text-xs text-zenith-muted">{visible.length} products shown.</p>
+      {otherTabMatches > 0 || inactiveMatches > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-2 text-sm">
+          {otherTabMatches > 0 ? (
+            <button
+              type="button"
+              className="rounded-lg border border-zenith-gold/50 bg-zenith-raised px-3 py-2 text-left font-semibold text-zenith-gold"
+              onClick={() => setTab(tab === "menu" ? "materials" : "menu")}
+            >
+              {otherTabMatches} matching {otherTabMatches === 1 ? "product is" : "products are"} in the {tab === "menu" ? "Stock items" : "Products"} tab — show them
+            </button>
+          ) : null}
+          {inactiveMatches > 0 ? (
+            <button
+              type="button"
+              className="rounded-lg border border-zenith-gold/50 bg-zenith-raised px-3 py-2 text-left font-semibold text-zenith-gold"
+              onClick={() => setStatus("all")}
+            >
+              {inactiveMatches} matching {inactiveMatches === 1 ? "product is" : "products are"} inactive — show all statuses
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-3 grid max-h-[70vh] min-w-0 gap-2 overflow-y-auto pr-1">
         {visible.length === 0 ? (
