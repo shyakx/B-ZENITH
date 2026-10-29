@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { BusinessArea, ProductType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { deleteCategoryAction, deleteProductAction, previewDeleteProductAction, saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
@@ -113,12 +113,13 @@ export function ProductForm({
     router.refresh();
   }
 
-  async function onSubmit(formData: FormData) {
-    await submitProduct(formData);
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitProduct(new FormData(event.currentTarget));
   }
 
   return (
-    <form action={onSubmit} className="grid gap-3 md:grid-cols-2">
+    <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-2">
       <p className="text-sm font-semibold md:col-span-2">Product</p>
       <Field label="Name">
         <Input name="name" defaultValue={product?.name} required />
