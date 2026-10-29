@@ -5,6 +5,7 @@ import { formatRwf } from "@/lib/domain/money";
 import { CategoryCatalog } from "@/components/manager/CategoryCatalog";
 import { ProductCatalog } from "@/components/manager/ProductCatalog";
 import { ProductForm } from "@/components/manager/ProductForm";
+import { PageHeader, StatCard } from "@/components/ui/PageHeader";
 import { listLocations, listUnits } from "@/services/inventory";
 import { listAllProducts, listCategories } from "@/services/products";
 
@@ -61,17 +62,38 @@ export default async function ProductsPage() {
     productCount: category._count.products,
   }));
 
+  const activeProducts = items.filter((item) => item.active).length;
+  const trackedProducts = items.filter((item) => item.trackInventory).length;
+  const salesProducts = items.filter((item) => item.sellOnPos && item.active).length;
+
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl">
-      <h1 className="font-display text-2xl text-zenith-gold">Products</h1>
-      <p className="mt-2 text-sm">
+      <PageHeader
+        title="Products"
+        subtitle="Create products once, then keep prices, stock settings, and sales visibility easy to review."
+        action={
+          <Link
+            href="#add-product"
+            className="inline-flex min-h-10 items-center justify-center rounded-xl bg-zenith-gold px-4 py-2 text-sm font-semibold text-white hover:bg-zenith-gold-bright"
+          >
+            Add product
+          </Link>
+        }
+      />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Active products" value={String(activeProducts)} hint="Available for daily use" />
+        <StatCard label="Stock tracked" value={String(trackedProducts)} hint="Shown in inventory operations" />
+        <StatCard label="Sales menu" value={String(salesProducts)} hint="Visible to order takers" />
+      </div>
+      <p className="mt-3 text-sm">
         <Link href="/manager/tables" className="font-semibold text-zenith-gold">
           Manage tables →
         </Link>
       </p>
 
-      <section className="mt-6 min-w-0 rounded-xl border border-zenith-border bg-white p-4">
+      <section id="add-product" className="mt-6 min-w-0 scroll-mt-4 rounded-xl border-2 border-zenith-gold/30 bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-zenith-ink">Add Product</h2>
+        <p className="mt-1 text-sm text-zenith-muted">Start with the name, price, and category. Stock details are only needed for tracked items.</p>
         <div className="mt-3">
           <ProductForm categories={categories} locations={locations} units={units} />
         </div>

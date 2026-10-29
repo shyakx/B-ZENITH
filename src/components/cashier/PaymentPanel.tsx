@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { markPayLaterAction, recordPaymentAction, recordTablePaymentAction } from "@/actions/payments";
 import { formatRwf } from "@/lib/domain/money";
@@ -44,7 +45,9 @@ export function PaymentPanel({
   const [customerPhone, setCustomerPhone] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"payment" | "payLater" | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [payLaterSuccess, setPayLaterSuccess] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [success, setSuccess] = useState<{
     amount: number;
@@ -83,6 +86,7 @@ export function PaymentPanel({
     }
 
     setBusy(true);
+    setBusyAction("payment");
     setError("");
     let result: Awaited<ReturnType<typeof recordPaymentAction>> | Awaited<ReturnType<typeof recordTablePaymentAction>>;
     try {
@@ -100,10 +104,12 @@ export function PaymentPanel({
             });
     } catch {
       setBusy(false);
+      setBusyAction(null);
       setError("Payment status could not be confirmed. Check the transaction status before retrying.");
       return;
     }
     setBusy(false);
+    setBusyAction(null);
 
     if (!result.ok) {
       setError(result.error);
@@ -128,6 +134,7 @@ export function PaymentPanel({
       return;
     }
     setBusy(true);
+    setBusyAction("payLater");
     setError("");
     let result: Awaited<ReturnType<typeof markPayLaterAction>>;
     try {
@@ -138,14 +145,17 @@ export function PaymentPanel({
       });
     } catch {
       setBusy(false);
+      setBusyAction(null);
       setError("The pay-later status could not be confirmed. Please check the order before retrying.");
       return;
     }
     setBusy(false);
+    setBusyAction(null);
     if (!result.ok) {
       setError(result.error);
       return;
     }
+    setPayLaterSuccess(true);
     router.refresh();
   }
 
@@ -214,6 +224,39 @@ export function PaymentPanel({
     );
   }
 
+  if (payLaterSuccess) {
+    return (
+      <>
+        <ActionFeedback
+          busy={false}
+          busyMessage="Saving pay-later details..."
+          message="Pay-later transaction recorded successfully."
+        />
+        <div className="space-y-4 rounded-2xl border-2 border-zenith-gold bg-zenith-raised p-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-zenith-gold">Pay later recorded</p>
+            <p className="mt-1 text-lg font-semibold">Table {tableName}</p>
+            <p className="mt-1 text-sm text-zenith-muted">
+              The balance remains in Customer credit until it is settled.
+            </p>
+          </div>
+          <PrintFactureLink href={`/print/order/${targetId}`} label="Print facture" className="w-full" />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="secondary" className="w-full" onClick={() => setPayLaterSuccess(false)}>
+              Back to bill
+            </Button>
+            <Link
+              href="/cashier/outstanding"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-zenith-gold px-4 py-2 text-sm font-semibold text-white hover:bg-zenith-gold-bright"
+            >
+              View customer credit
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (confirming) {
     const value = parseAmount(amount);
     const nextRemaining = Number.isInteger(value) ? Math.max(0, remaining - value) : remaining;
@@ -255,10 +298,19 @@ export function PaymentPanel({
           onChange={(event) => setAmount(event.target.value)}
         />
       </Field>
-      <p className="text-sm font-semibold">Balance {formatRwf(remaining)} · Cash</p>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <p className="font-semibold">Remaining balance: {formatRwf(remaining)} · Cash</p>
+        <button
+          type="button"
+          className="font-semibold text-zenith-gold underline underline-offset-2"
+          onClick={() => setAmount(String(remaining))}
+        >
+          Use full balance
+        </button>
+      </div>
       <ActionFeedback
         busy={busy}
-        busyMessage="Marking order as pay later…"
+        busyMessage={busyAction === "payLater" ? "Saving pay-later details..." : "Recording cash payment..."}
         error={error}
         onDismissError={() => setError("")}
       />
@@ -300,7 +352,7 @@ export function PaymentPanel({
             />
           </Field>
           <Button variant="secondary" className="w-full" disabled={busy} onClick={payLater}>
-            Pay later
+            {busyAction === "payLater" ? "Saving..." : "Mark pay later"}
           </Button>
         </div>
       ) : null}

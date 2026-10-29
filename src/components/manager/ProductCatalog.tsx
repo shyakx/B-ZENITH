@@ -57,6 +57,16 @@ export function ProductCatalog({
   const [pos, setPos] = useState("");
   const [inventory, setInventory] = useState("");
   const [location, setLocation] = useState("");
+  const hasFilters = Boolean(
+    query.trim() ||
+      status !== "active" ||
+      categoryId ||
+      productType ||
+      area ||
+      pos ||
+      inventory ||
+      location,
+  );
   const menu = items.filter((item) => item.productType !== ProductType.RAW_MATERIAL);
   const materials = items.filter((item) => item.productType === ProductType.RAW_MATERIAL);
   const pool = tab === "menu" ? menu : materials;
@@ -92,6 +102,27 @@ export function ProductCatalog({
       ? pool.filter((product) => !product.active && matchesProductQuery(product)).length
       : 0;
 
+  function changeTab(nextTab: "menu" | "materials") {
+    setTab(nextTab);
+    setCategoryId("");
+    setProductType("");
+    setArea("");
+    setPos("");
+    setInventory("");
+    setLocation("");
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setStatus("active");
+    setCategoryId("");
+    setProductType("");
+    setArea("");
+    setPos("");
+    setInventory("");
+    setLocation("");
+  }
+
   return (
     <section className="min-w-0 rounded-xl border border-zenith-border bg-white p-4">
       <div>
@@ -111,19 +142,21 @@ export function ProductCatalog({
       <div className="mt-1 flex flex-wrap gap-2">
         <button
           type="button"
+          aria-pressed={tab === "menu"}
           className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
             tab === "menu" ? "bg-zenith-gold text-white" : "border border-zenith-border bg-white"
           }`}
-          onClick={() => setTab("menu")}
+          onClick={() => changeTab("menu")}
         >
           Products
         </button>
         <button
           type="button"
+          aria-pressed={tab === "materials"}
           className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
             tab === "materials" ? "bg-zenith-gold text-white" : "border border-zenith-border bg-white"
           }`}
-          onClick={() => setTab("materials")}
+          onClick={() => changeTab("materials")}
         >
           Stock items
         </button>
@@ -186,7 +219,21 @@ export function ProductCatalog({
           </select>
         </label>
       </div>
-      <p className="mt-2 text-xs text-zenith-muted">{visible.length} products shown.</p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-zenith-muted">
+          {visible.length} {visible.length === 1 ? "product" : "products"} shown
+          {hasFilters ? " with the current filters" : ""}.
+        </p>
+        {hasFilters ? (
+          <button
+            type="button"
+            className="rounded-lg border border-zenith-border bg-white px-3 py-1.5 text-xs font-semibold text-zenith-gold hover:bg-zenith-raised"
+            onClick={clearFilters}
+          >
+            Clear search and filters
+          </button>
+        ) : null}
+      </div>
       {otherTabMatches > 0 || inactiveMatches > 0 ? (
         <div className="mt-2 flex flex-wrap gap-2 text-sm">
           {otherTabMatches > 0 ? (
@@ -213,7 +260,7 @@ export function ProductCatalog({
       <div className="mt-3 grid max-h-[70vh] min-w-0 gap-2 overflow-y-auto pr-1">
         {visible.length === 0 ? (
           <p className="rounded-lg border border-zenith-border px-3 py-4 text-sm text-zenith-muted">
-            {query.trim()
+            {hasFilters
               ? "No products match these filters."
               : tab === "materials"
                 ? "No stock items yet."
@@ -230,6 +277,12 @@ export function ProductCatalog({
                   {tab === "menu" ? ` · ${product.sellOnPos ? "On sales menu" : "Not on sales menu"}` : ""}
                 </div>
                 <div className="mt-0.5 text-sm">{product.sellingPrice}</div>
+                <div className="mt-1 text-xs text-zenith-muted">
+                  {product.trackInventory
+                    ? `${product.stockUnit || "Stock unit not set"} · ${product.defaultLocationName || "Recommended location"}`
+                    : "Inventory not tracked"}
+                </div>
+                <div className="mt-0.5 text-xs text-zenith-muted">{product.stockLine}</div>
               </div>
               <ProductEditor
                 categories={categories}

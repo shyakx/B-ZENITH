@@ -188,7 +188,7 @@ export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
                             href={moveHref("transfer", row.id)}
                             className="rounded-md border border-zenith-border px-2 py-1 text-xs font-semibold"
                           >
-                            Move
+                            Transfer
                           </Link>
                         ) : null}
                         <Link

@@ -59,6 +59,7 @@ export function ProductForm({
   const [sellOnPos, setSellOnPos] = useState(product?.sellOnPos ?? true);
   const [wholePackageTransfer, setWholePackageTransfer] = useState(product?.wholePackageTransfer ?? false);
   const isStockItem = productType === ProductType.RAW_MATERIAL;
+  const inventoryTracked = isStockItem || trackInventory;
 
   const purchaseUnit = units.find((unit) => unit.id === purchaseUnitId);
   const stockUnit = units.find((unit) => unit.id === stockUnitId);
@@ -173,21 +174,23 @@ export function ProductForm({
           {productTypeStaffHelp(productType)}
         </span>
       </Field>
-      <Field label="Used from">
-        <Select name="defaultStockLocationId" defaultValue={product?.defaultStockLocationId ?? ""}>
-          <option value="">Use recommended location</option>
-          {locations
-            .filter((location) => location.code !== "MAIN")
-            .map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-        </Select>
-        <span className="block text-xs font-normal normal-case tracking-normal text-zenith-muted">
-          Choose where this item is normally used.
-        </span>
-      </Field>
+      {inventoryTracked ? (
+        <Field label="Used from">
+          <Select name="defaultStockLocationId" defaultValue={product?.defaultStockLocationId ?? ""}>
+            <option value="">Use recommended location</option>
+            {locations
+              .filter((location) => location.code !== "MAIN")
+              .map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+          </Select>
+          <span className="block text-xs font-normal normal-case tracking-normal text-zenith-muted">
+            Choose where this item is normally used.
+          </span>
+        </Field>
+      ) : null}
       <Field label="Cost price (optional)">
         <Input name="costPrice" type="number" min={0} step="any" defaultValue={product?.costPrice ?? ""} />
       </Field>
@@ -224,7 +227,9 @@ export function ProductForm({
         </label>
       </div>
 
-      <p className="mt-2 text-sm font-semibold md:col-span-2">Stock unit &amp; package</p>
+      {inventoryTracked ? (
+        <>
+          <p className="mt-2 text-sm font-semibold md:col-span-2">Stock unit &amp; package</p>
       <Field label="Stock unit">
         <Select value={stockUnitId} onChange={(event) => setStockUnitId(event.target.value)}>
           <option value="">Use default stock unit</option>
@@ -285,6 +290,12 @@ export function ProductForm({
           </span>
         </label>
       ) : null}
+        </>
+      ) : (
+        <p className="rounded-lg border border-zenith-border bg-zenith-raised px-3 py-2 text-sm text-zenith-muted md:col-span-2">
+          Stock details are hidden because this product is not tracked in inventory. Enable “Track stock” above if this changes.
+        </p>
+      )}
       <Button disabled={busy || !categoryId} className="md:col-span-2">
         {busy ? "Saving product…" : product ? "Save product" : "Add product"}
       </Button>

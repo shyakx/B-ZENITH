@@ -43,10 +43,18 @@ export default async function InventoryOverviewPage({
     defaultLocationCode: row.defaultLocationCode,
     managerReferenceName: row.managerReferenceName,
   }));
+  const outOfStock = rows.filter((row) => row.total === 0).length;
+  const lowStock = rows.filter((row) => row.total > 0 && row.total <= 5).length;
 
   return (
     <div>
       <PageHeader title="Stock" subtitle="Receive, transfer, and check current levels." />
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <PageHeaderStat label="Tracked items" value={String(rows.length)} hint="Available in stock workspace" />
+        <PageHeaderStat label="Out of stock" value={String(outOfStock)} hint="Need receiving or review" />
+        <PageHeaderStat label="Low stock" value={String(lowStock)} hint="1 to 5 units remaining" />
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm font-semibold">
         <Link className="rounded-lg border border-zenith-border px-3 py-1.5" href="/manager/inventory/movements">
@@ -79,6 +87,16 @@ export default async function InventoryOverviewPage({
         <h2 className="mb-3 font-display text-xl text-zenith-gold">Current levels</h2>
         <StockWorkbench rows={rows} />
       </section>
+    </div>
+  );
+}
+
+function PageHeaderStat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-xl border border-zenith-border bg-white p-3">
+      <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label}</div>
+      <div className="mt-1 text-xl font-semibold text-zenith-gold">{value}</div>
+      <div className="mt-1 text-sm text-zenith-muted">{hint}</div>
     </div>
   );
 }

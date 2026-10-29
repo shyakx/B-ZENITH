@@ -207,7 +207,10 @@ export function NewOrderScreen({
             {cart.map((line) => (
               <li key={line.product.id} className="flex justify-between gap-3">
                 <span className="min-w-0 break-words">
-                  {line.product.name} × {line.quantity}
+                  <span className="block">{line.product.name} × {line.quantity}</span>
+                  <span className="mt-0.5 block text-sm text-zenith-muted">
+                    {formatRwf(line.product.sellingPrice)} each
+                  </span>
                 </span>
                 <span className="shrink-0 font-semibold">
                   {formatRwf(line.product.sellingPrice * line.quantity)}
@@ -271,6 +274,8 @@ export function NewOrderScreen({
             {visible.map((product) => (
               <button
                 key={product.id}
+                type="button"
+                aria-label={`Add ${product.name} to the order`}
                 onClick={() => add(product)}
                 className="order-card flex min-h-20 flex-col rounded-xl border-2 border-zenith-border bg-white p-2.5 text-left hover:border-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold sm:min-h-[5.5rem] sm:p-3"
               >
@@ -278,6 +283,11 @@ export function NewOrderScreen({
                   {product.category.name}
                 </div>
                 <div className="mt-1 text-base font-semibold leading-snug sm:text-lg">{product.name}</div>
+                {cart.some((line) => line.product.id === product.id) ? (
+                  <div className="mt-1 text-xs font-semibold text-zenith-gold">
+                    Added: {cart.find((line) => line.product.id === product.id)?.quantity}
+                  </div>
+                ) : null}
                 <div className="mt-auto pt-3 text-base font-semibold text-zenith-gold">
                   {formatRwf(product.sellingPrice)}
                 </div>
@@ -297,9 +307,16 @@ export function NewOrderScreen({
             ) : (
               cart.map((line) => (
                 <div key={line.product.id} className="order-line rounded-xl bg-zenith-surface">
-                  <div className="order-line-name text-sm font-semibold leading-snug">{line.product.name}</div>
+                  <div className="order-line-name">
+                    <div className="text-sm font-semibold leading-snug">{line.product.name}</div>
+                    <div className="mt-0.5 text-xs text-zenith-muted">
+                      {formatRwf(line.product.sellingPrice)} each
+                    </div>
+                  </div>
                   <div className="order-line-qty">
                     <button
+                      type="button"
+                      aria-label={`Remove one ${line.product.name}`}
                       onClick={() => setQty(line.product.id, line.quantity - 1)}
                       className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
                     >
@@ -307,6 +324,8 @@ export function NewOrderScreen({
                     </button>
                     <span className="w-6 text-center text-sm font-semibold">{line.quantity}</span>
                     <button
+                      type="button"
+                      aria-label={`Add one ${line.product.name}`}
                       onClick={() => setQty(line.product.id, line.quantity + 1)}
                       className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white text-zenith-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zenith-gold"
                     >

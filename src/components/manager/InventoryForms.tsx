@@ -100,7 +100,7 @@ function ProductSelect({
   const filtered = products
     .filter((product) => {
       if (!normalizedQuery) return true;
-      return [product.name, product.baseUnit?.name, product.baseUnit?.code]
+      return [product.name, product.categoryName, product.baseUnit?.name, product.baseUnit?.code]
         .filter(Boolean)
         .some((part) => part!.toLowerCase().includes(normalizedQuery));
     })
@@ -123,7 +123,7 @@ function ProductSelect({
             <p className="text-xs text-zenith-muted">
               {selected.categoryName ? `${selected.categoryName} · ` : ""}
               {selected.baseUnit?.name ?? selected.baseUnit?.code ?? "No stock unit"}
-              {available ? ` · Main Stock: ${available(selected)}` : ""}
+              {available ? ` · Available: ${available(selected)}` : ""}
             </p>
           </div>
           <button
@@ -168,7 +168,7 @@ function ProductSelect({
                   {product.categoryName ? `${product.categoryName} · ` : ""}
                   {product.baseUnit?.name ?? product.baseUnit?.code ?? "No stock unit"}
                   {product.productType === "RAW_MATERIAL" ? " · Stock item" : ""}
-                  {available ? ` · Main Stock: ${available(product)}` : ""}
+                  {available ? ` · Available: ${available(product)}` : ""}
                 </span>
               </button>
             ))
