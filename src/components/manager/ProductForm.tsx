@@ -98,8 +98,8 @@ export function ProductForm({
     if (category) {
       setMessage(
         product
-          ? `Saved in category ${category.name} (${categoryAreaStaffLabel(category.area)}).`
-          : `Added to category ${category.name} (${categoryAreaStaffLabel(category.area)}).`,
+          ? `Product saved successfully in category ${category.name} (${categoryAreaStaffLabel(category.area)}).`
+          : `Product added successfully to category ${category.name} (${categoryAreaStaffLabel(category.area)}).`,
       );
     }
     // Keep the success message visible while refreshing the server-loaded catalog.
