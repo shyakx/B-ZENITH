@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BusinessArea, ProductType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { deleteCategoryAction, deleteProductAction, previewDeleteProductAction, saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
@@ -46,6 +46,7 @@ export function ProductForm({
   product?: ProductFields;
 }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -123,7 +124,7 @@ export function ProductForm({
   }
 
   return (
-    <form action={onSubmit} className="grid gap-3 md:grid-cols-2">
+    <form ref={formRef} action={onSubmit} className="grid gap-3 md:grid-cols-2">
       <p className="text-sm font-semibold md:col-span-2">Product</p>
       <Field label="Name">
         <Input name="name" defaultValue={product?.name} required />
@@ -297,7 +298,9 @@ export function ProductForm({
               `Use existing product “${similarMatches[0]?.name ?? ""}” instead of creating a duplicate.`,
             );
           }}
-          onContinue={(form) => submitProduct(new FormData(form), true)}
+          onContinue={() => {
+            if (formRef.current) void submitProduct(new FormData(formRef.current), true);
+          }}
         />
       ) : null}
       {error ? <p className="text-sm text-zenith-danger md:col-span-2">{error}</p> : null}
