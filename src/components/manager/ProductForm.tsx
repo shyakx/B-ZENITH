@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BusinessArea, ProductType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { deleteCategoryAction, deleteProductAction, previewDeleteProductAction, saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
@@ -58,6 +58,12 @@ export function ProductForm({
   const [sellOnPos, setSellOnPos] = useState(product?.sellOnPos ?? true);
   const [wholePackageTransfer, setWholePackageTransfer] = useState(product?.wholePackageTransfer ?? false);
   const isStockItem = productType === ProductType.RAW_MATERIAL;
+
+  useEffect(() => {
+    if (!message || busy) return;
+    const timeout = window.setTimeout(() => setMessage(""), 3500);
+    return () => window.clearTimeout(timeout);
+  }, [busy, message]);
 
   const purchaseUnit = units.find((unit) => unit.id === purchaseUnitId);
   const stockUnit = units.find((unit) => unit.id === stockUnitId);
@@ -275,27 +281,33 @@ export function ProductForm({
           </span>
         </label>
       ) : null}
-      {error ? (
-        <p role="alert" className="rounded-xl border border-zenith-danger/40 bg-zenith-danger/10 p-4 text-base font-semibold text-zenith-danger md:col-span-2">
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p
-          role="status"
-          aria-live="polite"
-          className={`rounded-xl border p-4 text-base font-semibold shadow-sm md:col-span-2 ${
-            busy
-              ? "border-zenith-gold/50 bg-zenith-gold/10 text-zenith-ink"
-              : "border-zenith-success/40 bg-zenith-success/10 text-zenith-success"
-          }`}
-        >
-          {message}
-        </p>
-      ) : null}
       <Button disabled={busy || !categoryId} className="md:col-span-2">
         {busy ? "Saving product…" : product ? "Save product" : "Add product"}
       </Button>
+      {busy || message || error ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" role="presentation">
+          <div
+            role={error ? "alert" : "status"}
+            aria-live="polite"
+            className={`w-full max-w-md rounded-2xl border p-8 text-center shadow-2xl ${
+              error
+                ? "border-zenith-danger/50 bg-zenith-raised text-zenith-danger"
+                : busy
+                  ? "border-zenith-gold/50 bg-zenith-raised text-zenith-ink"
+                  : "border-zenith-success/50 bg-zenith-raised text-zenith-success"
+            }`}
+          >
+            {busy ? <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-zenith-gold/30 border-t-zenith-gold" /> : null}
+            <p className="text-xl font-bold">{error ? "Product could not be saved" : busy ? "Saving product" : "Success"}</p>
+            <p className="mt-3 text-base">{error || message}</p>
+            {error ? (
+              <Button type="button" variant="secondary" className="mt-6" onClick={() => setError("")}>
+                Close
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
