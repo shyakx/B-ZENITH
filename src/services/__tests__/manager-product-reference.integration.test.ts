@@ -3,7 +3,7 @@ import { BusinessArea, ProductType } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 import { hasPermission } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
-import { updateManagerProductReference } from "@/services/products";
+import { updateManagerProductReference, upsertProduct } from "@/services/products";
 import { listInventoryMovementReport } from "@/services/inventory";
 import { ensureTrackedProductStocks, getLocationByCode, syncCompatibilityStock } from "@/services/stock";
 import { cleanupInventoryArtifacts } from "./inventory-helpers";
@@ -26,6 +26,48 @@ afterAll(async () => {
 });
 
 describe("manager product reference", () => {
+  it("applies product defaults and rejects invalid cost prices", async () => {
+    const manager = await prisma.user.findFirst({ where: { name: "Patrick", role: "MANAGER" } });
+    if (!manager) throw new Error("Seed manager Patrick is required.");
+
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const category = await prisma.category.create({
+      data: { name: `Defaults ${stamp}`, area: BusinessArea.BAR },
+    });
+    createdCategoryIds.push(category.id);
+    const bar = await getLocationByCode(prisma, "BAR");
+    const bottle = await prisma.unit.findUnique({ where: { code: "BOTTLE" } });
+
+    const product = await upsertProduct({
+      name: `Defaulted product ${stamp}`,
+      categoryId: category.id,
+      sellingPrice: 2000,
+      costPrice: null,
+      trackInventory: true,
+      active: true,
+      productType: ProductType.PACKAGED_GOOD,
+      sellOnPos: true,
+      userId: manager.id,
+    });
+    createdProductIds.push(product.id);
+
+    expect(product.baseUnitId).toBe(bottle?.id);
+    expect(product.defaultStockLocationId).toBe(bar.id);
+    await expect(
+      upsertProduct({
+        name: `Invalid cost ${stamp}`,
+        categoryId: category.id,
+        sellingPrice: 2000,
+        costPrice: -1,
+        trackInventory: true,
+        active: true,
+        productType: ProductType.PACKAGED_GOOD,
+        sellOnPos: true,
+        userId: manager.id,
+      }),
+    ).rejects.toThrow("Cost price must be zero or greater.");
+  });
+
   it("lets inventory managers edit nicknames without changing stock math fields", async () => {
     expect(hasPermission("MANAGER", "manageInventory")).toBe(true);
     expect(hasPermission("WAITER", "manageInventory")).toBe(false);

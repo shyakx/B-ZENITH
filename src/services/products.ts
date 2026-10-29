@@ -124,6 +124,9 @@ export async function upsertProduct(input: {
   if (!Number.isInteger(input.sellingPrice) || input.sellingPrice < 0) {
     throw new AppError("Selling price must be a whole number.");
   }
+  if (input.costPrice != null && (!Number.isFinite(input.costPrice) || input.costPrice < 0)) {
+    throw new AppError("Cost price must be zero or greater.");
+  }
 
   const category = await prisma.category.findUnique({ where: { id: input.categoryId } });
   if (!category) throw new AppError("Category not found.");
@@ -131,9 +134,9 @@ export async function upsertProduct(input: {
   const productType = input.productType ?? ProductType.MENU_ITEM;
   const trackInventory = productType === ProductType.RAW_MATERIAL ? true : input.trackInventory;
   const sellOnPos = productType === ProductType.RAW_MATERIAL ? false : (input.sellOnPos ?? sellOnPosForType(productType));
-  const baseUnitId = input.baseUnitId ?? (await defaultUnitId(productType));
+  const baseUnitId = input.baseUnitId || (await defaultUnitId(productType));
   const defaultStockLocationId =
-    input.defaultStockLocationId ?? (await defaultLocationId(productType, trackInventory));
+    input.defaultStockLocationId || (await defaultLocationId(productType, trackInventory));
   const wholePackageTransfer = Boolean(input.wholePackageTransfer);
 
   if (trackInventory && defaultStockLocationId) {
