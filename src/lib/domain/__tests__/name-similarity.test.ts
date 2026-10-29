@@ -29,6 +29,8 @@ describe("catalogNameSimilarity", () => {
   it("keeps genuinely different products separate", () => {
     expect(catalogNameSimilarity("Chicken", "Chicken Wings")).toBeNull();
     expect(catalogNameSimilarity("Chicken", "Chicken Burger")).toBeNull();
+    expect(catalogNameSimilarity("Fanta B", "Fanta")).toBeNull();
+    expect(catalogNameSimilarity("Fanta", "Fanta B")).toBeNull();
     expect(catalogNameSimilarity("Water 500ml", "Water 1L")).toBeNull();
     expect(catalogNameSimilarity("Heineken", "Primus")).toBeNull();
   });

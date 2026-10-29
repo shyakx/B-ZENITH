@@ -289,7 +289,7 @@ export function ProductForm({
           enteredName={pendingName}
           matches={similarMatches}
           busy={busy}
-          continueLabel={product ? "Continue with this name" : "Continue creating new product"}
+          continueLabel={product ? "Save with this name anyway" : "Create product anyway"}
           onUseExisting={() => {
             setSimilarMatches([]);
             setMessage(
@@ -343,13 +343,16 @@ function SimilarNameWarning({
           Also similar: {matches.slice(1).map((row) => row.name).join(", ")}
         </p>
       ) : null}
-      <p className="text-sm text-zenith-ink">Are you sure this is a different {label}?</p>
+      <p className="text-sm text-zenith-ink">
+        This is only a warning. If this is a different {label}, you can continue.
+      </p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="secondary" disabled={busy} onClick={onUseExisting}>
           Use existing {label}
         </Button>
         <Button
           type="button"
+          variant="primary"
           disabled={busy}
           onClick={(event) => {
             const form = event.currentTarget.closest("form");
@@ -655,7 +658,7 @@ export function CategoryRow({
                 setSimilarMatches([]);
                 setMessage(`Keep using “${similarMatches[0]?.name ?? ""}” — rename cancelled.`);
               }}
-              continueLabel="Continue with this name"
+              continueLabel="Save category name anyway"
               onContinue={(form) => submitCategory(new FormData(form), true)}
             />
           ) : null}
