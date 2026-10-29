@@ -116,8 +116,6 @@ export async function upsertProduct(input: {
   purchaseUnitId?: string | null;
   purchaseContains?: number | null;
   wholePackageTransfer?: boolean;
-  /** Manager confirmed create/rename despite a similar existing name. */
-  confirmSimilarName?: boolean;
   userId: string;
 }) {
   const name = input.name.trim();
@@ -160,10 +158,6 @@ export async function upsertProduct(input: {
     const current = await prisma.product.findUnique({ where: { id: input.id } });
     if (!current) throw new AppError("Product not found.");
 
-    if (!input.confirmSimilarName && current.name.trim().toLowerCase() !== name.toLowerCase()) {
-      await assertNoSimilarProductName(name, input.id);
-    }
-
     const updated = await prisma.product.update({
       where: { id: input.id },
       data: {
@@ -201,10 +195,6 @@ export async function upsertProduct(input: {
     return updated;
   }
 
-  if (!input.confirmSimilarName) {
-    await assertNoSimilarProductName(name);
-  }
-
   const created = await prisma.product.create({
     data: {
       name,
@@ -225,20 +215,6 @@ export async function upsertProduct(input: {
   }
   await saveHowYouBuy(created.id, baseUnitId, input.purchaseUnitId, input.purchaseContains);
   return created;
-}
-
-async function assertNoSimilarProductName(name: string, excludeId?: string) {
-  const candidates = await prisma.product.findMany({
-    where: { active: true },
-    select: { id: true, name: true },
-  });
-  const similar = findSimilarCatalogNames(name, candidates, { excludeId, limit: 3 });
-  if (similar.length > 0) {
-    throw new SimilarNameError(
-      "Similar product already exists",
-      similar.map((row) => ({ id: row.id, name: row.name, kind: row.kind })),
-    );
-  }
 }
 
 export async function previewProductDelete(input: { id: string }) {

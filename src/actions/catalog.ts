@@ -21,7 +21,6 @@ export async function saveProductAction(input: {
   purchaseUnitId?: string | null;
   purchaseContains?: number | null;
   wholePackageTransfer?: boolean;
-  confirmSimilarName?: boolean;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requirePermission("manageProducts");

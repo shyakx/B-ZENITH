@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { BusinessArea, ProductType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { deleteCategoryAction, deleteProductAction, previewDeleteProductAction, saveCategoryAction, saveProductAction, saveTableAction } from "@/actions/catalog";
@@ -46,7 +46,6 @@ export function ProductForm({
   product?: ProductFields;
 }) {
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -58,8 +57,6 @@ export function ProductForm({
   const [trackInventory, setTrackInventory] = useState(product?.trackInventory ?? true);
   const [sellOnPos, setSellOnPos] = useState(product?.sellOnPos ?? true);
   const [wholePackageTransfer, setWholePackageTransfer] = useState(product?.wholePackageTransfer ?? false);
-  const [pendingName, setPendingName] = useState("");
-  const [similarMatches, setSimilarMatches] = useState<SimilarNameMatch[]>([]);
   const isStockItem = productType === ProductType.RAW_MATERIAL;
 
   const purchaseUnit = units.find((unit) => unit.id === purchaseUnitId);
@@ -70,11 +67,10 @@ export function ProductForm({
     isPourUnit(stockUnit?.code ?? "") &&
     (!showContains || isPourUnit(purchaseUnit?.code ?? ""));
 
-  async function submitProduct(formData: FormData, confirmSimilarName = false) {
+  async function submitProduct(formData: FormData) {
     setBusy(true);
     setError("");
     setMessage("");
-    if (!confirmSimilarName) setSimilarMatches([]);
     const chosenCategoryId = String(formData.get("categoryId") ?? categoryId);
     const enteredName = String(formData.get("name") ?? "");
     const result = await saveProductAction({
@@ -92,21 +88,12 @@ export function ProductForm({
       purchaseUnitId: purchaseUnitId || null,
       purchaseContains: showContains ? Number(contains) : 1,
       wholePackageTransfer: showContains ? wholePackageTransfer : false,
-      confirmSimilarName,
     });
     setBusy(false);
     if (!result.ok) {
-      if (result.similar?.length) {
-        setPendingName(enteredName.trim());
-        setSimilarMatches(result.similar);
-        setError("");
-        return;
-      }
-      setSimilarMatches([]);
       setError(result.error);
       return;
     }
-    setSimilarMatches([]);
     const category = categories.find((entry) => entry.id === chosenCategoryId);
     if (category) {
       setMessage(
@@ -120,14 +107,17 @@ export function ProductForm({
   }
 
   async function onSubmit(formData: FormData) {
-    await submitProduct(formData, false);
+    await submitProduct(formData);
   }
 
   return (
-    <form ref={formRef} action={onSubmit} className="grid gap-3 md:grid-cols-2">
+    <form action={onSubmit} className="grid gap-3 md:grid-cols-2">
       <p className="text-sm font-semibold md:col-span-2">Product</p>
       <Field label="Name">
         <Input name="name" defaultValue={product?.name} required />
+        <p className="mt-1 text-xs text-zenith-muted">
+          Similar product names are allowed. Use a clear name and variant when needed, for example “Heineken C”.
+        </p>
       </Field>
       <Field label="Selling price (RWF)">
         <Input name="sellingPrice" type="number" defaultValue={product?.sellingPrice ?? 0} required />
@@ -284,28 +274,9 @@ export function ProductForm({
           </span>
         </label>
       ) : null}
-      {similarMatches.length > 0 ? (
-        <SimilarNameWarning
-          className="md:col-span-2"
-          kind="product"
-          enteredName={pendingName}
-          matches={similarMatches}
-          busy={busy}
-          continueLabel={product ? "Save with this name anyway" : "Create product anyway"}
-          onUseExisting={() => {
-            setSimilarMatches([]);
-            setMessage(
-              `Use existing product “${similarMatches[0]?.name ?? ""}” instead of creating a duplicate.`,
-            );
-          }}
-          onContinue={() => {
-            if (formRef.current) void submitProduct(new FormData(formRef.current), true);
-          }}
-        />
-      ) : null}
       {error ? <p className="text-sm text-zenith-danger md:col-span-2">{error}</p> : null}
       {message ? <p className="text-sm text-zenith-success md:col-span-2">{message}</p> : null}
-      <Button disabled={busy || !categoryId || similarMatches.length > 0} className="md:col-span-2">
+      <Button disabled={busy || !categoryId} className="md:col-span-2">
         {product ? "Save product" : "Add product"}
       </Button>
     </form>
