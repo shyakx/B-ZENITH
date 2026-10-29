@@ -45,7 +45,6 @@ export function ProductForm({
   units: { id: string; code: string; name: string }[];
   product?: ProductFields;
 }) {
-  const router = useRouter();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -114,7 +113,10 @@ export function ProductForm({
           : `Added to category ${category.name} (${categoryAreaStaffLabel(category.area)}).`,
       );
     }
-    router.refresh();
+    // Reload the catalog from the database after a save. The product list is a
+    // separate server-loaded client component and can otherwise retain its
+    // previous item props after the similarity-confirmation flow.
+    window.location.reload();
   }
 
   async function onSubmit(formData: FormData) {
