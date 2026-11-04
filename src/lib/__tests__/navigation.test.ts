@@ -58,7 +58,12 @@ describe("route-aware navigation", () => {
 
   it("gives ADMIN explicit all-access navigation covering every role", () => {
     expect(ROLE_NAV.ADMIN.map((item) => item.label)).toEqual([
-      "Home",
+      "Control center",
+      "Staff",
+      "Access",
+      "Settings",
+      "Audit",
+      "Data control",
       "Business today",
       "Waiter home",
       "POS / Orders",
@@ -77,15 +82,15 @@ describe("route-aware navigation", () => {
       "Suppliers",
       "Reports",
       "Maison",
-      "Staff",
-      "Access",
-      "Settings",
-      "Data control",
-      "Audit",
     ]);
     const hrefs = ROLE_NAV.ADMIN.map((item) => item.href);
     expect(hrefs).toEqual([
       "/admin",
+      "/admin/users",
+      "/admin/access",
+      "/admin/settings",
+      "/admin/audit",
+      "/admin/data",
       "/owner",
       "/waiter",
       "/waiter/orders/new",
@@ -104,11 +109,6 @@ describe("route-aware navigation", () => {
       "/manager/inventory/suppliers",
       "/manager/reports",
       "/manager/maison",
-      "/admin/users",
-      "/admin/access",
-      "/admin/settings",
-      "/admin/data",
-      "/admin/audit",
     ]);
     for (const role of ["WAITER", "CASHIER", "MANAGER", "OWNER"] as const) {
       expect(ROLE_NAV[role].every((item) => hrefs.includes(item.href))).toBe(true);
@@ -152,12 +152,13 @@ describe("route-aware navigation", () => {
       ROLE_NAV.ADMIN.map((item) => item.href),
     );
     expect(admin.map((group) => group.label)).toEqual([
+      "Administration",
+      "Maintenance",
       "Business",
       "Catalog",
       "Inventory",
       "Reports",
       "Maison",
-      "Administration",
     ]);
   });
 

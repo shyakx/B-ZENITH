@@ -98,6 +98,20 @@ body {
   border-right: 1px solid var(--color-zenith-border);
 }
 
+/* Admin has a dedicated control-center treatment; other roles keep the standard sidebar. */
+.app-sidebar-admin {
+  background: #3d2314;
+  border-right-color: #5c3822;
+}
+
+.app-sidebar-admin .app-sidebar-wordmark {
+  color: #e3c58f;
+}
+
+.app-sidebar-admin .app-sidebar-role {
+  color: #d8c5b5;
+}
+
 .app-sidebar-brand {
   display: flex;
   min-width: 0;
@@ -143,6 +157,10 @@ body {
   padding: 0.15rem 0.7rem 0.75rem;
 }
 
+.app-sidebar-admin .app-sidebar-nav {
+  padding-top: 0.55rem;
+}
+
 .app-nav-group {
   display: flex;
   flex-direction: column;
@@ -153,6 +171,12 @@ body {
   margin-top: 0.7rem;
 }
 
+.app-sidebar-admin .app-nav-group + .app-nav-group {
+  margin-top: 0.85rem;
+  border-top: 1px solid rgba(228, 214, 200, 0.22);
+  padding-top: 0.8rem;
+}
+
 .app-nav-group-label {
   margin: 0 0 0.2rem 0.45rem;
   font-size: 0.6875rem;
@@ -161,6 +185,10 @@ body {
   line-height: 1.2;
   text-transform: uppercase;
   color: var(--color-zenith-muted);
+}
+
+.app-sidebar-admin .app-nav-group-label {
+  color: #d8c5b5;
 }
 
 .app-nav-item {
@@ -183,6 +211,14 @@ body {
   background: var(--color-zenith-raised);
 }
 
+.app-sidebar-admin .app-nav-item {
+  color: #f4ebe3;
+}
+
+.app-sidebar-admin .app-nav-item:hover {
+  background: #5c3822;
+}
+
 .app-nav-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--color-zenith-gold);
@@ -192,6 +228,16 @@ body {
   background: var(--color-zenith-gold);
   color: #ffffff;
   box-shadow: inset 3px 0 0 var(--color-zenith-accent);
+}
+
+.app-sidebar-admin .app-nav-item.is-active {
+  background: #c4a574;
+  color: #24160f;
+  box-shadow: inset 3px 0 0 #f4ebe3;
+}
+
+.app-sidebar-admin .app-nav-item.is-active:hover {
+  background: #d6b982;
 }
 
 .app-nav-item.is-active:hover {
@@ -238,6 +284,63 @@ body {
   margin-top: auto;
   border-top: 1px solid var(--color-zenith-border);
   padding: 0.85rem 0.85rem 1rem;
+}
+
+.app-sidebar-admin .app-sidebar-session {
+  border-top-color: rgba(228, 214, 200, 0.22);
+}
+
+.app-sidebar-admin .app-session-btn {
+  border-color: #765640;
+  background: #4a2b1b;
+  color: #f4ebe3;
+}
+
+.app-sidebar-admin .app-session-btn:hover {
+  background: #5c3822;
+}
+
+.app-topbar-admin {
+  background: #3d2314;
+  border-bottom-color: #5c3822;
+  color: #f4ebe3;
+}
+
+.app-topbar-admin .text-zenith-gold {
+  color: #e3c58f;
+}
+
+.app-topbar-admin button {
+  border-color: #765640;
+  color: #f4ebe3;
+}
+
+.app-topbar-admin button:hover {
+  background: #5c3822;
+}
+
+.app-topbar-action {
+  display: inline-flex;
+  min-height: 2.15rem;
+  align-items: center;
+  border: 1px solid #765640;
+  border-radius: 0.55rem;
+  padding: 0.35rem 0.7rem;
+  color: #f4ebe3;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.app-topbar-action:hover {
+  background: #5c3822;
+  border-color: #c4a574;
+}
+
+.app-topbar-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #e3c58f;
 }
 
 .app-session-actions {
