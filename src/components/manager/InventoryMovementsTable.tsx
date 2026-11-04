@@ -36,7 +36,7 @@ export function InventoryMovementsTable({ rows }: { rows: MovementReportRow[] })
       <ListSearchField
         value={query}
         onChange={setQuery}
-        placeholder="Search by product, nickname, category, or unit…"
+        placeholder="Search stock movements…"
       />
       <div className="overflow-x-auto text-sm">
         <table className="w-full min-w-[960px] text-left">

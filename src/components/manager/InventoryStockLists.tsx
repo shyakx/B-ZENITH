@@ -87,7 +87,7 @@ export function InventoryStockLists({
 
   return (
     <div>
-      <ListSearchField value={query} onChange={setQuery} placeholder="Search stock by product, nickname, or unit…" />
+      <ListSearchField value={query} onChange={setQuery} placeholder="Search stock…" />
       {query.trim() && filteredMaterials.length === 0 && filteredPackaged.length === 0 ? (
         <p className="mb-4 text-sm text-zenith-muted">No stock rows match that search.</p>
       ) : null}

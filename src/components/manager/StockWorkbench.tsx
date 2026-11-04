@@ -70,7 +70,7 @@ export function StockWorkbench({ rows }: { rows: StockWorkbenchRow[] }) {
       <ListSearchField
         value={query}
         onChange={setQuery}
-        placeholder="Search product, category, or location…"
+        placeholder="Search stock…"
         label="Search stock"
         showLabel
       />

@@ -3,6 +3,7 @@ import { formatPaymentDate, formatPaymentTime } from "@/lib/domain/payment-histo
 import { commandeStationLabel, type CommandeStation } from "@/lib/domain/commande-slip";
 import type { BusinessSettings } from "@/lib/settings";
 import type { OrderWithDetails } from "@/services/orders";
+import { CloudSyncCredit } from "@/components/print/CloudSyncCredit";
 
 type SlipItem = OrderWithDetails["items"][number];
 
@@ -88,6 +89,8 @@ export function PreFactureDocument({
           <strong>{formatRwfAmount(total)} RWF</strong>
         </div>
       </div>
+
+      <CloudSyncCredit />
     </div>
   );
 }

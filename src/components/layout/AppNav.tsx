@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ArrowLeftRight,
   Banknote,
@@ -102,7 +102,6 @@ function NavLink({
           <Icon size={16} strokeWidth={1.9} />
           <span>{item.label}</span>
         </span>
-        <span className="app-mobile-sheet-link-hint">{item.hint}</span>
       </Link>
     );
   }
@@ -115,10 +114,7 @@ function NavLink({
       title={`${item.label} — ${item.hint}`}
     >
       <Icon size={18} strokeWidth={1.9} className="app-nav-icon" />
-      <span className="app-nav-copy">
-        <span className="app-nav-label">{item.label}</span>
-        <span className="app-nav-hint">{item.hint}</span>
-      </span>
+      <span className="app-nav-label">{item.label}</span>
     </Link>
   );
 }
@@ -131,12 +127,9 @@ export function AppNav({
   variant: "sidebar" | "mobile";
 }) {
   const pathname = usePathname() ?? "";
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const menuOpen = menuPath === pathname;
   const hrefs = items.map((item) => item.href);
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
 
   if (variant === "mobile") {
     const activeItem = items.find((item) => isNavActive(pathname, item.href, hrefs));
@@ -147,10 +140,10 @@ export function AppNav({
         <button
           type="button"
           className="app-mobile-nav-toggle"
-          onClick={() => setMenuOpen((open) => !open)}
           aria-haspopup="true"
           aria-expanded={menuOpen}
           aria-controls="mobile-nav-panel"
+          onClick={() => setMenuPath(menuOpen ? null : pathname)}
         >
           <span className="app-mobile-nav-toggle-main">
             {menuOpen ? <X size={16} /> : <Menu size={16} />}
@@ -172,7 +165,7 @@ export function AppNav({
                       item={item}
                       active={isNavActive(pathname, item.href, hrefs)}
                       variant="mobileSheet"
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => setMenuPath(null)}
                     />
                   ))}
                 </div>

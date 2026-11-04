@@ -46,7 +46,7 @@ export function ProductNamesUnitsEditor({ products }: { products: Row[] }) {
       <ListSearchField
         value={query}
         onChange={setQuery}
-        placeholder="Search by product, nickname, category, or unit…"
+        placeholder="Search products…"
       />
       <div className="mb-3 grid gap-3 sm:grid-cols-3">
         <label className="space-y-1">

@@ -51,9 +51,9 @@ export default async function InventoryOverviewPage({
       <PageHeader title="Stock" subtitle="Receive, transfer, and check current levels." />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <PageHeaderStat label="Tracked items" value={String(rows.length)} hint="Available in stock workspace" />
-        <PageHeaderStat label="Out of stock" value={String(outOfStock)} hint="Need receiving or review" />
-        <PageHeaderStat label="Low stock" value={String(lowStock)} hint="1 to 5 units remaining" />
+        <PageHeaderStat label="Tracked items" value={String(rows.length)} />
+        <PageHeaderStat label="Out of stock" value={String(outOfStock)} />
+        <PageHeaderStat label="Low stock" value={String(lowStock)} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm font-semibold">
@@ -91,12 +91,11 @@ export default async function InventoryOverviewPage({
   );
 }
 
-function PageHeaderStat({ label, value, hint }: { label: string; value: string; hint: string }) {
+function PageHeaderStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-zenith-border bg-white p-3">
       <div className="text-xs font-semibold uppercase tracking-wider text-zenith-muted">{label}</div>
       <div className="mt-1 text-xl font-semibold text-zenith-gold">{value}</div>
-      <div className="mt-1 text-sm text-zenith-muted">{hint}</div>
     </div>
   );
 }
